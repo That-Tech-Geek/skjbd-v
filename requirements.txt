@@ -3,6 +3,7 @@ cohere
 PyMuPDF
 python-docx
 python-igraph
+matplotlib
 plotly
 requests
 Pillow
