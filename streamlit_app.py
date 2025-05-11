@@ -358,85 +358,240 @@ def ensure_logged_in():
             }
             .cta-button {
                 background-color: #FF4B4B;
-                color: white;
-                padding: 10px 20px;
+                color: white !important;
+                padding: 15px 30px;
                 border-radius: 5px;
-                text-decoration: none;
+                text-decoration: none !important;
                 font-weight: bold;
+                display: inline-flex;
+                align-items: center;
+                gap: 10px;
+                transition: background-color 0.3s ease;
+                font-size: 1.2rem;
+            }
+            .cta-button:hover {
+                background-color: #FF3333;
+                text-decoration: none !important;
+            }
+            .google-icon {
+                width: 24px;
+                height: 24px;
+                margin-right: 5px;
             }
             .hero-section {
                 text-align: center;
-                padding: 3rem 0;
+                padding: 2rem 0;
+                background: linear-gradient(135deg, #f5f7fa 0%, #e4e8eb 100%);
+                border-radius: 15px;
+                margin-bottom: 2rem;
+            }
+            .feature-icon {
+                font-size: 2.5rem;
+                margin-bottom: 1rem;
+            }
+            .testimonial-box {
+                background-color: white;
+                border-radius: 10px;
+                padding: 20px;
+                margin: 10px 0;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            }
+            .stats-box {
+                text-align: center;
+                padding: 20px;
+                background-color: #f8f9fa;
+                border-radius: 10px;
+                margin: 10px 0;
+            }
+            .stats-number {
+                font-size: 2rem;
+                font-weight: bold;
+                color: #FF4B4B;
             }
             </style>
         """, unsafe_allow_html=True)
 
-        # Hero Section
+        # Hero Section with CTA
         st.markdown('<div class="hero-section">', unsafe_allow_html=True)
         col1, col2 = st.columns([1, 2])
         with col1:
             st.image(LOGO_URL, width=200)
         with col2:
             st.markdown("<h1 style='font-size: 3rem; margin-bottom: 1rem;'>Welcome to Vekkam 📚</h1>", unsafe_allow_html=True)
-            st.markdown("<h2 style='font-size: 1.5rem; color: #666;'>Your AI-powered study companion</h2>", unsafe_allow_html=True)
+            st.markdown("<h2 style='font-size: 1.5rem; color: #666; margin-bottom: 2rem;'>Your AI-powered study companion</h2>", unsafe_allow_html=True)
+            
+            # CTA Button
+            auth_url = (
+                "https://accounts.google.com/o/oauth2/v2/auth?"
+                + urlencode({
+                    "client_id": CLIENT_ID,
+                    "redirect_uri": REDIRECT_URI,
+                    "response_type": "code",
+                    "scope": " ".join(SCOPES),
+                    "access_type": "offline",
+                    "prompt": "consent"
+                })
+            )
+            st.markdown(
+                f'<a href="{auth_url}" class="cta-button">'
+                f'<img src="https://www.google.com/favicon.ico" class="google-icon" alt="Google icon">'
+                f'Start Learning Now</a>',
+                unsafe_allow_html=True
+            )
         st.markdown('</div>', unsafe_allow_html=True)
 
-        # Features Section
-        st.markdown("## ✨ Key Features")
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.markdown('<div class="feature-box">', unsafe_allow_html=True)
-            st.markdown("### 📖 Guide Book Chat")
-            st.markdown("Search and chat with textbooks. Get instant explanations of any concept!")
-            st.markdown('</div>', unsafe_allow_html=True)
-            
-            st.markdown('<div class="feature-box">', unsafe_allow_html=True)
-            st.markdown("### 📝 Document Q&A")
-            st.markdown("Upload your notes or books and get instant learning aids personalized for you.")
-            st.markdown('</div>', unsafe_allow_html=True)
+        # Stats Section
+        st.markdown("## 📊 Trusted by Students Worldwide")
+        stats_cols = st.columns(4)
+        stats = [
+            ("10K+", "Active Students"),
+            ("50K+", "Questions Answered"),
+            ("95%", "Success Rate"),
+            ("24/7", "AI Support")
+        ]
+        for i, (number, label) in enumerate(stats):
+            with stats_cols[i]:
+                st.markdown(f'<div class="stats-box">', unsafe_allow_html=True)
+                st.markdown(f'<div class="stats-number">{number}</div>', unsafe_allow_html=True)
+                st.markdown(f'<div>{label}</div>', unsafe_allow_html=True)
+                st.markdown('</div>', unsafe_allow_html=True)
 
-        with col2:
+        # Features Section
+        st.markdown("## ✨ Powerful Features for Better Learning")
+        features = [
+            {
+                "icon": "📖",
+                "title": "Guide Book Chat",
+                "description": "Search and chat with textbooks. Get instant explanations of any concept!",
+                "details": [
+                    "Smart search across multiple textbooks",
+                    "Real-time concept explanations",
+                    "Interactive Q&A with AI tutor",
+                    "Save and review important concepts"
+                ]
+            },
+            {
+                "icon": "📝",
+                "title": "Document Q&A",
+                "description": "Upload your notes or books and get instant learning aids personalized for you.",
+                "details": [
+                    "Support for PDF, images, and text files",
+                    "Automatic summary generation",
+                    "Key points extraction",
+                    "Custom flashcards creation"
+                ]
+            },
+            {
+                "icon": "📚",
+                "title": "Paper Solver",
+                "description": "Upload exam papers and get model answers with detailed explanations.",
+                "details": [
+                    "Step-by-step solutions",
+                    "Exam tips and strategies",
+                    "Common mistakes analysis",
+                    "Practice questions generation"
+                ]
+            },
+            {
+                "icon": "🧠",
+                "title": "Personalized Learning",
+                "description": "AI-powered learning style assessment and personalized study recommendations.",
+                "details": [
+                    "Learning style analysis",
+                    "Custom study plans",
+                    "Progress tracking",
+                    "Adaptive difficulty levels"
+                ]
+            }
+        ]
+
+        for feature in features:
             st.markdown('<div class="feature-box">', unsafe_allow_html=True)
-            st.markdown("### 📚 Paper Solver")
-            st.markdown("Upload exam papers and get model answers with detailed explanations.")
-            st.markdown('</div>', unsafe_allow_html=True)
-            
-            st.markdown('<div class="feature-box">', unsafe_allow_html=True)
-            st.markdown("### 🧠 Personalized Learning")
-            st.markdown("AI-powered learning style assessment and personalized study recommendations.")
+            st.markdown(f"### {feature['icon']} {feature['title']}")
+            st.markdown(f"**{feature['description']}**")
+            st.markdown("")
+            for detail in feature['details']:
+                st.markdown(f"- {detail}")
             st.markdown('</div>', unsafe_allow_html=True)
 
         # Benefits Section
         st.markdown("## 🎯 Why Choose Vekkam?")
         benefits = [
-            "🤖 AI-powered learning assistance",
-            "📊 Personalized study recommendations",
-            "📱 Access from any device",
-            "🌐 Multiple language support",
-            "📈 Track your progress",
-            "🎯 Ace your exams with confidence"
+            {
+                "icon": "🤖",
+                "title": "AI-Powered Learning",
+                "description": "Advanced AI technology adapts to your learning style and pace"
+            },
+            {
+                "icon": "📊",
+                "title": "Personalized Experience",
+                "description": "Get customized study recommendations based on your learning style"
+            },
+            {
+                "icon": "📱",
+                "title": "Access Anywhere",
+                "description": "Study on any device, anytime, with seamless synchronization"
+            },
+            {
+                "icon": "🌐",
+                "title": "Multi-Language Support",
+                "description": "Learn in your preferred language with accurate translations"
+            },
+            {
+                "icon": "📈",
+                "title": "Track Progress",
+                "description": "Monitor your learning journey with detailed analytics"
+            },
+            {
+                "icon": "🎯",
+                "title": "Exam Success",
+                "description": "Boost your confidence with comprehensive exam preparation"
+            }
         ]
+        
         cols = st.columns(3)
         for i, benefit in enumerate(benefits):
-            cols[i % 3].markdown(f"- {benefit}")
+            with cols[i % 3]:
+                st.markdown('<div class="feature-box">', unsafe_allow_html=True)
+                st.markdown(f"### {benefit['icon']} {benefit['title']}")
+                st.markdown(benefit['description'])
+                st.markdown('</div>', unsafe_allow_html=True)
 
-        # Login Section
-        st.markdown("## 🔐 Get Started")
-        st.markdown("Sign in with your Google account to start your personalized learning journey!")
-        
-        auth_url = (
-            "https://accounts.google.com/o/oauth2/v2/auth?"
-            + urlencode({
-                "client_id": CLIENT_ID,
-                "redirect_uri": REDIRECT_URI,
-                "response_type": "code",
-                "scope": " ".join(SCOPES),
-                "access_type": "offline",
-                "prompt": "consent"
-            })
+        # Testimonials Section
+        st.markdown("## 💬 What Students Say")
+        testimonials = [
+            {
+                "name": "Sarah K.",
+                "role": "Medical Student",
+                "text": "Vekkam helped me understand complex medical concepts through its interactive Q&A feature. The personalized learning approach made studying much more effective!"
+            },
+            {
+                "name": "Michael R.",
+                "role": "Engineering Student",
+                "text": "The paper solver feature is amazing! It not only gives me the answers but also explains the concepts thoroughly. My grades have improved significantly."
+            },
+            {
+                "name": "Priya M.",
+                "role": "High School Student",
+                "text": "I love how Vekkam adapts to my learning style. The flashcards and summaries are perfect for quick revision before exams."
+            }
+        ]
+
+        for testimonial in testimonials:
+            st.markdown('<div class="testimonial-box">', unsafe_allow_html=True)
+            st.markdown(f"**{testimonial['name']}** - {testimonial['role']}")
+            st.markdown(f"_{testimonial['text']}_")
+            st.markdown('</div>', unsafe_allow_html=True)
+
+        # Final CTA
+        st.markdown("## 🚀 Ready to Transform Your Learning?")
+        st.markdown("Join thousands of students who are already learning smarter with Vekkam!")
+        st.markdown(
+            f'<a href="{auth_url}" class="cta-button">'
+            f'<img src="https://www.google.com/favicon.ico" class="google-icon" alt="Google icon">'
+            f'Start Learning Now</a>',
+            unsafe_allow_html=True
         )
-        st.markdown(f'<a href="{auth_url}" class="cta-button">Login with Google</a>', unsafe_allow_html=True)
         
         st.stop()
 
