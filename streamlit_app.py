@@ -340,8 +340,89 @@ def ensure_logged_in():
             st.stop()
         st.session_state.user = ui.json()
 
-    # If still not logged in, show Login link
+    # If not logged in, show landing page
     if not st.session_state.token:
+        # Landing page layout
+        st.markdown("""
+            <style>
+            .main {
+                padding: 2rem;
+            }
+            .feature-box {
+                background-color: #f0f2f6;
+                border-radius: 10px;
+                padding: 20px;
+                margin: 10px 0;
+            }
+            .cta-button {
+                background-color: #FF4B4B;
+                color: white;
+                padding: 10px 20px;
+                border-radius: 5px;
+                text-decoration: none;
+                font-weight: bold;
+            }
+            .hero-section {
+                text-align: center;
+                padding: 3rem 0;
+            }
+            </style>
+        """, unsafe_allow_html=True)
+
+        # Hero Section
+        st.markdown('<div class="hero-section">', unsafe_allow_html=True)
+        col1, col2 = st.columns([1, 2])
+        with col1:
+            st.image(LOGO_URL, width=200)
+        with col2:
+            st.markdown("<h1 style='font-size: 3rem; margin-bottom: 1rem;'>Welcome to Vekkam 📚</h1>", unsafe_allow_html=True)
+            st.markdown("<h2 style='font-size: 1.5rem; color: #666;'>Your AI-powered study companion</h2>", unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+
+        # Features Section
+        st.markdown("## ✨ Key Features")
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.markdown('<div class="feature-box">', unsafe_allow_html=True)
+            st.markdown("### 📖 Guide Book Chat")
+            st.markdown("Search and chat with textbooks. Get instant explanations of any concept!")
+            st.markdown('</div>', unsafe_allow_html=True)
+            
+            st.markdown('<div class="feature-box">', unsafe_allow_html=True)
+            st.markdown("### 📝 Document Q&A")
+            st.markdown("Upload your notes or books and get instant learning aids personalized for you.")
+            st.markdown('</div>', unsafe_allow_html=True)
+
+        with col2:
+            st.markdown('<div class="feature-box">', unsafe_allow_html=True)
+            st.markdown("### 📚 Paper Solver")
+            st.markdown("Upload exam papers and get model answers with detailed explanations.")
+            st.markdown('</div>', unsafe_allow_html=True)
+            
+            st.markdown('<div class="feature-box">', unsafe_allow_html=True)
+            st.markdown("### 🧠 Personalized Learning")
+            st.markdown("AI-powered learning style assessment and personalized study recommendations.")
+            st.markdown('</div>', unsafe_allow_html=True)
+
+        # Benefits Section
+        st.markdown("## 🎯 Why Choose Vekkam?")
+        benefits = [
+            "🤖 AI-powered learning assistance",
+            "📊 Personalized study recommendations",
+            "📱 Access from any device",
+            "🌐 Multiple language support",
+            "📈 Track your progress",
+            "🎯 Ace your exams with confidence"
+        ]
+        cols = st.columns(3)
+        for i, benefit in enumerate(benefits):
+            cols[i % 3].markdown(f"- {benefit}")
+
+        # Login Section
+        st.markdown("## 🔐 Get Started")
+        st.markdown("Sign in with your Google account to start your personalized learning journey!")
+        
         auth_url = (
             "https://accounts.google.com/o/oauth2/v2/auth?"
             + urlencode({
@@ -353,7 +434,8 @@ def ensure_logged_in():
                 "prompt": "consent"
             })
         )
-        st.markdown(f"[**Login with Google**]({auth_url})")
+        st.markdown(f'<a href="{auth_url}" class="cta-button">Login with Google</a>', unsafe_allow_html=True)
+        
         st.stop()
 
 # Run OAuth check at startup
@@ -386,39 +468,21 @@ if learning_style is None:
         ],
         "Visual/Verbal": [
             ("I remember best what I see (pictures, diagrams, charts).", "Visual"),
-            ("I find it easier to follow spoken instructions than written ones.", "Verbal"),
+            ("I remember best what I hear or read.", "Verbal"),
             ("I prefer to learn through images and spatial understanding.", "Visual"),
-            ("I often take notes to help me remember.", "Verbal"),
-            ("I visualize information in my mind.", "Visual"),
-            ("I prefer reading to watching videos.", "Verbal"),
-            ("I use color and layout to organize my notes.", "Visual"),
-            ("I find it easier to express myself in writing.", "Verbal"),
-            ("I am drawn to infographics and visual summaries.", "Visual"),
-            ("I enjoy listening to lectures or podcasts.", "Verbal"),
+            ("I prefer to learn through words and explanations.", "Verbal"),
         ],
         "Active/Reflective": [
             ("I learn best by doing and trying things out.", "Active"),
-            ("I prefer to think things through before acting.", "Reflective"),
-            ("I enjoy group work and discussions.", "Active"),
-            ("I need time alone to process new information.", "Reflective"),
-            ("I like to experiment and take risks in learning.", "Active"),
-            ("I often review my notes quietly after class.", "Reflective"),
-            ("I am energized by interacting with others.", "Active"),
-            ("I prefer to observe before participating.", "Reflective"),
-            ("I learn by teaching others or explaining concepts aloud.", "Active"),
-            ("I keep a journal or log to reflect on my learning.", "Reflective"),
+            ("I learn best by thinking and reflecting.", "Reflective"),
+            ("I prefer group work and discussions.", "Active"),
+            ("I prefer to work alone and think things through.", "Reflective"),
         ],
         "Sequential/Global": [
             ("I learn best in a step-by-step, logical order.", "Sequential"),
             ("I like to see the big picture before the details.", "Global"),
             ("I prefer to follow clear, linear instructions.", "Sequential"),
             ("I often make connections between ideas in a holistic way.", "Global"),
-            ("I am comfortable breaking tasks into smaller parts.", "Sequential"),
-            ("I sometimes jump to conclusions without all the steps.", "Global"),
-            ("I like outlines and structured notes.", "Sequential"),
-            ("I understand concepts better when I see how they fit together.", "Global"),
-            ("I prefer to finish one thing before starting another.", "Sequential"),
-            ("I enjoy brainstorming and exploring many ideas at once.", "Global"),
         ],
     }
     if "learning_style_answers" not in st.session_state:
@@ -429,10 +493,10 @@ if learning_style is None:
             key = f"{dichotomy}_{i}"
             st.session_state.learning_style_answers[key] = st.radio(
                 q,
-                likert,
+                [f"Strongly {side}", f"Somewhat {side}", "Neutral", f"Somewhat Opposite", f"Strongly Opposite"],
                 key=key
             )
-    if st.button("Submit Learning Style Test"):
+    if st.button("Submit"):
         # Scoring: Strongly Disagree=0, ..., Neutral=50, ..., Strongly Agree=100 (for positive phrasing)
         # For each question, if side matches dichotomy, score as is; if not, reverse
         score_map = {0: 0, 1: 17, 2: 33, 3: 50, 4: 67, 5: 83, 6: 100}
