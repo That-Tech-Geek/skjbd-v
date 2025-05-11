@@ -18,6 +18,26 @@ import contextlib
 import csv
 from fpdf import FPDF
 import webbrowser
+import fitz
+import docx
+from pptx import Presentation
+import streamlit.components.v1 as components
+
+def extract_text(file):
+    name = file.name.lower()
+    if name.endswith(".pdf"):
+        with fitz.open(stream=file.read(), filetype="pdf") as doc:
+            return "".join(page.get_text() for page in doc)
+    if name.endswith(".docx"):
+        return "\n".join(p.text for p in docx.Document(file).paragraphs)
+    if name.endswith(".pptx"):
+        return "\n".join(shape.text for slide in Presentation(file).slides for shape in slide.shapes if hasattr(shape, 'text'))
+    if name.endswith(".txt"):
+        return StringIO(file.getvalue().decode('utf-8')).read()
+    if name.endswith((".jpg",".jpeg",".png")):
+        return pytesseract.image_to_string(Image.open(file))
+    return ""
+
 
 # --- Visual/Equation/Code Understanding Helper (MUST BE DEFINED BEFORE USAGE) ---
 def add_to_google_calendar(deadline):
@@ -480,14 +500,36 @@ def ask_concept(pages, concept):
     return call_gemini(f"Concept: '{concept}'. Sections:\n{combined}\nExplain with context and examples.")
 
 # --- Learning Aids & Mind Map ---
-def generate_summary(text):         return call_gemini(f"Summarize for exam, list formulae:\n{text}")
-def generate_questions(text):       return call_gemini(f"Generate 15 quiz questions:\n{text}")
-def generate_flashcards(text):      return call_gemini(f"Create flashcards (Q&A):\n{text}")
-def generate_mnemonics(text):       return call_gemini(f"Generate mnemonics:\n{text}")
-def generate_key_terms(text):       return call_gemini(f"List key terms with definitions:\n{text}")
-def generate_cheatsheet(text):      return call_gemini(f"Create a cheat sheet:\n{text}")
-def generate_highlights(text):      return call_gemini(f"List key facts and highlights:\n{text}")
-def generate_critical_points(text): return call_gemini(f"Detailed but concise run-through:\n{text}")
+def generate_summary(text): 
+    return call_gemini(f"Summarize this for an exam and separately list any formulae that are mentioned in the text. If there aren't any, skip this section. Output only.:\n\n{text}", temperature=0.5)
+
+def generate_questions(text): 
+    return call_gemini(f"Generate 15 quiz questions for an exam (ignore authors, ISSN, etc.). Output only.:\n\n{text}", temperature=0.7, max_tokens=8192)
+
+def generate_flashcards(text): 
+    return call_gemini(f"Create flashcards (Q&A). Output only.:\n\n{text}", temperature=0.7, max_tokens=8192)
+
+def generate_mnemonics(text): 
+    return call_gemini(f"Generate mnemonics. Output only.:\n\n{text}", temperature=0.7, max_tokens=8192)
+
+def generate_key_terms(text): 
+    return call_gemini(f"List all the key terms in the doc, with definitions. Output only.:\n\n{text}", temperature=0.7, max_tokens=8192)
+
+def generate_cheatsheet(text): 
+    return call_gemini(f"Create a cheat sheet. Output only.:\n\n{text}", temperature=0.7, max_tokens=8192)
+
+def generate_highlights(text): 
+    return call_gemini(f"List key facts and highlights. Output only.:\n\n{text}", temperature=0.7, max_tokens=8192)
+
+def generate_critical_points(text):
+    return call_gemini(f"I haven't studied for the exam, so run me over the doc in detail but concise, so that I'm ready for the exam. Output only.:\n\n{text}", temperature=0.7, max_tokens=8192)
+
+def render_section(title, content):
+    st.subheader(title)
+    if content.strip().startswith("<"):
+        components.html(content, height=600, scrolling=True)
+    else:
+        st.markdown(content, unsafe_allow_html=True)
 
 def plot_mind_map(json_text):
     try:
@@ -617,23 +659,25 @@ def export_summary_to_pdf(summary, filename="summary.pdf"):
     return filename
 
 # --- Gemini Call ---
-def call_gemini(prompt, temp=0.7, max_tokens=2048):
-    lang = st.session_state.get("language", "en")
-    lang_name = [k for k, v in languages.items() if v == lang][0]
-    prompt = f"Please answer in {lang_name}.\n" + prompt
-    url = (
-        f"https://generativelanguage.googleapis.com/v1beta/"
-        f"models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
-    )
+def call_gemini(prompt, temperature=0.7, max_tokens=8192):
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
+    headers = {"Content-Type": "application/json"}
     payload = {
         "contents": [{"parts": [{"text": prompt}]}],
-        "generationConfig": {"temperature": temp, "maxOutputTokens": max_tokens}
+        "generationConfig": {
+            "temperature": temperature,
+            "maxOutputTokens": max_tokens
+        }
     }
-    with show_lottie_loading(t("Thinking with Gemini AI...")):
-        response = requests.post(url, json=payload)
-        response.raise_for_status()
-        data = response.json()
-        return data["candidates"][0]["content"]["parts"][0]["text"]
+    for attempt in range(3):
+        res = requests.post(url, headers=headers, json=payload)
+        if res.status_code == 200:
+            return res.json()['candidates'][0]['content']['parts'][0]['text']
+        if res.status_code == 429:  # Rate limit
+            time.sleep(30)
+            continue
+        break
+    return f"<p>API error {res.status_code}</p>"
 
 # Language selector in sidebar
 if "language" not in st.session_state:
