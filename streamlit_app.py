@@ -786,6 +786,7 @@ def export_summary_to_pdf(summary, filename="summary.pdf"):
         pdf.cell(200, 10, txt=line, ln=1, align='L')
     pdf.output(filename)
     return filename
+LOGO_URL = "https://github.com/rekfdjkzbdfvkgjerkdfnfcbvgewhs/Vekkam/blob/main/logo.png"  # <-- Replace with your actual raw GitHub URL
 
 # Language selector in sidebar
 if "language" not in st.session_state:
@@ -794,7 +795,6 @@ lang_choice = st.sidebar.selectbox("🌐 Language", list(languages.keys()), inde
 st.session_state["language"] = languages[lang_choice]
 
 # --- App Branding ---
-LOGO_URL = "https://github.com/rekfdjkzbdfvkgjerkdfnfcbvgewhs/Vekkam/blob/main/logo.png"  # <-- Replace with your actual raw GitHub URL
 st.markdown("""
     <style>
     .block-container {padding-top: 1.5rem;}
