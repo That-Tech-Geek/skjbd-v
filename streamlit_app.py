@@ -728,6 +728,22 @@ elif tab == "Paper Solver/Exam Guide":
                     st.markdown(f"**Q{i}:** {q}")
                     st.write(a)
                     st.info(fb)
+
+        def detect_deadlines(text):
+    prompt = (
+        "Extract all assignment or exam deadlines (with date and description) from the following text. "
+        "Return a JSON list of objects with 'date' and 'description'.\n\n" + text[:5000]
+    )
+    import json
+    try:
+        deadlines_json = call_gemini(prompt)
+        deadlines = json.loads(deadlines_json)
+        if isinstance(deadlines, dict):
+            deadlines = list(deadlines.values())
+        return deadlines
+    except Exception:
+        return []
+        
         # --- Auto Deadline Detection ---
         deadlines = detect_deadlines(text)
         if deadlines:
@@ -1016,23 +1032,7 @@ def extract_visuals_and_code(text, file=None):
         visuals.append(("Diagram", "[Image uploaded]") )
     # For PDFs, could add more advanced image extraction if needed
     return visuals
-
-# --- Calendar Integration Helper (MUST BE DEFINED BEFORE USAGE) ---
-def detect_deadlines(text):
-    prompt = (
-        "Extract all assignment or exam deadlines (with date and description) from the following text. "
-        "Return a JSON list of objects with 'date' and 'description'.\n\n" + text[:5000]
-    )
-    import json
-    try:
-        deadlines_json = call_gemini(prompt)
-        deadlines = json.loads(deadlines_json)
-        if isinstance(deadlines, dict):
-            deadlines = list(deadlines.values())
-        return deadlines
-    except Exception:
-        return []
-
+    
 def add_to_google_calendar(deadline):
     # Opens a Google Calendar event creation link in the browser
     import urllib.parse
