@@ -502,34 +502,62 @@ def ask_concept(pages, concept):
     combined = "\n---\n".join(f"Page {p}: {t}" for p, t in found.items())
     return call_gemini(f"Concept: '{concept}'. Sections:\n{combined}\nExplain with context and examples.")
 
-# --- Learning Aids & Mind Map ---
+# --- AI Learning Aids Functions ---
 def generate_summary(text): 
-    return call_gemini(f"Summarize this for an exam and separately list any formulae that are mentioned in the text. If there aren't any, skip this section. Output only.:\n\n{text}", temperature=0.5)
+    return call_gemini(
+        f"Summarize this for an exam and separately list any formulae that are mentioned in the text. "
+        f"If there aren't any, skip this section. Output only.:\n\n{text}",
+        temperature=0.5
+    )
 
 def generate_questions(text): 
-    return call_gemini(f"Generate 15 quiz questions for an exam (ignore authors, ISSN, etc.). Output only.:\n\n{text}", temperature=0.7, max_tokens=8192)
+    return call_gemini(
+        f"Generate 15 quiz questions for an exam (ignore authors, ISSN, etc.). Output only.:\n\n{text}",
+        temperature=0.7, max_tokens=8192
+    )
 
 def generate_flashcards(text): 
-    return call_gemini(f"Create flashcards (Q&A). Output only.:\n\n{text}", temperature=0.7, max_tokens=8192)
+    return call_gemini(
+        f"Create flashcards (Q&A). Output only.:\n\n{text}",
+        temperature=0.7, max_tokens=8192
+    )
 
 def generate_mnemonics(text): 
-    return call_gemini(f"Generate mnemonics. Output only.:\n\n{text}", temperature=0.7, max_tokens=8192)
+    return call_gemini(
+        f"Generate mnemonics. Output only.:\n\n{text}",
+        temperature=0.7, max_tokens=8192
+    )
 
 def generate_key_terms(text): 
-    return call_gemini(f"List all the key terms in the doc, with definitions. Output only.:\n\n{text}", temperature=0.7, max_tokens=8192)
+    return call_gemini(
+        f"List all the key terms in the doc, with definitions. Output only.:\n\n{text}",
+        temperature=0.7, max_tokens=8192
+    )
 
 def generate_cheatsheet(text): 
-    return call_gemini(f"Create a cheat sheet. Output only.:\n\n{text}", temperature=0.7, max_tokens=8192)
+    return call_gemini(
+        f"Create a cheat sheet. Output only.:\n\n{text}",
+        temperature=0.7, max_tokens=8192
+    )
 
 def generate_highlights(text): 
-    return call_gemini(f"List key facts and highlights. Output only.:\n\n{text}", temperature=0.7, max_tokens=8192)
+    return call_gemini(
+        f"List key facts and highlights. Output only.:\n\n{text}",
+        temperature=0.7, max_tokens=8192
+    )
 
 def generate_critical_points(text):
-    return call_gemini(f"I haven't studied for the exam, so run me over the doc in detail but concise, so that I'm ready for the exam. Output only.:\n\n{text}", temperature=0.7, max_tokens=8192)
+    return call_gemini(
+        f"I haven't studied for the exam, so run me over the doc in detail but concise, "
+        f"so that I'm ready for the exam. Output only.:\n\n{text}",
+        temperature=0.7, max_tokens=8192
+    )
 
+# --- Helper to render each section in Streamlit ---
 def render_section(title, content):
     st.subheader(title)
     if content.strip().startswith("<"):
+        # raw HTML content
         components.html(content, height=600, scrolling=True)
     else:
         st.markdown(content, unsafe_allow_html=True)
@@ -961,12 +989,32 @@ elif tab == t("Document Q&A"):
         # --- Generate learning aids for each file ---
         for idx, (text, fname) in enumerate(zip(texts, file_names)):
             st.subheader(f"Learning Aids for {fname}")
-            with st.spinner("Generating summary..."):
-                summary = call_gemini(f"Summarize for exam, list formulae:\n{text[:3000]}")
-            st.markdown(f"**Summary:**\n{summary}")
-            all_summaries.append(summary)
-            with st.spinner("Generating flashcards..."):
-                flashcards_raw = call_gemini(f"Create flashcards (Q&A, JSON list of objects with 'question' and 'answer'):\n{text[:3000]}")
+            
+            # Generate and display all learning aids
+            render_section("📌 Summary", generate_summary(text))
+            render_section("📝 Quiz Questions", generate_questions(text))
+
+            with st.expander("📚 Flashcards"):
+                render_section("Flashcards", generate_flashcards(text))
+
+            with st.expander("🧠 Mnemonics"):
+                render_section("Mnemonics", generate_mnemonics(text))
+
+            with st.expander("🔑 Key Terms"):
+                render_section("Key Terms", generate_key_terms(text))
+
+            with st.expander("📋 Cheat Sheet"):
+                render_section("Cheat Sheet", generate_cheatsheet(text))
+
+            with st.expander("⭐ Highlights"):
+                render_section("Highlights", generate_highlights(text))
+
+            with st.expander("📌 Critical Points"):
+                render_section("Critical Points", generate_critical_points(text))
+
+            # Store for batch export
+            all_summaries.append(generate_summary(text))
+            flashcards_raw = generate_flashcards(text)
             try:
                 flashcards_json = json.loads(flashcards_raw)
                 flashcards = [(fc['question'], fc['answer']) for fc in flashcards_json]
@@ -978,11 +1026,7 @@ elif tab == t("Document Q&A"):
                         q, a = line.split(':', 1)
                         flashcards.append((q.strip(), a.strip()))
             all_flashcards.extend(flashcards)
-            st.markdown("**Flashcards:**")
-            for i, (q, a) in enumerate(flashcards, 1):
-                with st.expander(f"Q{i}"):
-                    st.markdown(f"**Q:** {q}")
-                    st.markdown(f"**A:** {a}")
+
         # --- Batch Export ---
         if all_flashcards:
             st.info("Export all generated flashcards as an Anki-compatible CSV file.")
