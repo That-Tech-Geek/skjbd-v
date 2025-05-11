@@ -981,7 +981,7 @@ with st.sidebar.expander("❓ How to use this app", expanded=False):
     """)
 
 # --- Main UI ---
-quiz_tabs = [t("Guide Book Chat"), t("Document Q&A"), t("Learning Style Test"), t("Paper Solver/Exam Guide"), "🗓️ Daily Quiz"]
+quiz_tabs = [t("Guide Book Chat"), t("Document Q&A"), t("Learning Style Test"), t("Paper Solver/Exam Guide"), "🗓️ Daily Quiz", "⚡ 6-Hour Battle Plan"]
 tab = st.sidebar.selectbox(t("Feature"), quiz_tabs)
 
 if tab == "Guide Book Chat":
@@ -1581,3 +1581,155 @@ if not st.session_state['onboarding_complete']:
             st.session_state['onboarding_complete'] = True
             
     st.stop()
+
+elif tab == "⚡ 6-Hour Battle Plan":
+    st.header("⚡ 6-Hour Battle Plan")
+    st.info("Upload your syllabus, guide books, and study materials. We'll create a focused 6-hour study plan to help you ace your exam!")
+
+    # File upload section
+    st.subheader("📚 Upload Your Materials")
+    uploaded_files = st.file_uploader(
+        "Upload your syllabus, guide books, and study materials (PDF/Image/TXT)",
+        type=["pdf", "jpg", "jpeg", "png", "txt"],
+        accept_multiple_files=True,
+        help="Upload all relevant study materials. The more you provide, the better the plan will be!"
+    )
+
+    # Additional information
+    st.subheader("📝 Additional Information")
+    exam_date = st.date_input("When is your exam?", help="This helps us prioritize topics")
+    exam_duration = st.number_input("Exam duration (in hours)", min_value=1, max_value=6, value=3, help="How long is your exam?")
+    weak_topics = st.text_area("Topics you find challenging (optional)", help="List topics you find difficult, separated by commas")
+    strong_topics = st.text_area("Topics you're confident in (optional)", help="List topics you're good at, separated by commas")
+
+    if st.button("Generate Battle Plan"):
+        if not uploaded_files:
+            st.warning("Please upload at least one study material.")
+            st.stop()
+
+        with show_lottie_loading("Analyzing your materials and creating a battle plan..."):
+            # Extract text from all files
+            all_text = []
+            for file in uploaded_files:
+                ext = file.name.lower().split('.')[-1]
+                if ext == "pdf":
+                    reader = PdfReader(file)
+                    text = "\n".join([page.extract_text() for page in reader.pages])
+                elif ext in ("jpg", "jpeg", "png"):
+                    text = pytesseract.image_to_string(Image.open(file))
+                else:
+                    text = StringIO(file.getvalue().decode()).read()
+                all_text.append(text)
+
+            combined_text = "\n---\n".join(all_text)
+
+            # Generate the battle plan
+            battle_plan_prompt = (
+                f"Create a detailed 6-hour study plan for an exam based on the following materials. "
+                f"Consider:\n"
+                f"1. Exam date: {exam_date}\n"
+                f"2. Exam duration: {exam_duration} hours\n"
+                f"3. Challenging topics: {weak_topics}\n"
+                f"4. Strong topics: {strong_topics}\n\n"
+                f"The plan should include:\n"
+                f"- Topic prioritization based on importance and difficulty\n"
+                f"- Time allocation for each topic\n"
+                f"- Key concepts to focus on\n"
+                f"- Quick review strategies\n"
+                f"- Practice questions to attempt\n"
+                f"- Break times and energy management tips\n\n"
+                f"Study Materials:\n{combined_text}"
+            )
+
+            battle_plan = call_gemini(battle_plan_prompt)
+
+            # Display the battle plan in a structured way
+            st.markdown("## 📋 Your 6-Hour Battle Plan")
+            st.markdown(battle_plan)
+
+            # Add a section for quick tips
+            st.markdown("---")
+            st.markdown("## 💡 Quick Tips")
+            tips_prompt = (
+                f"Based on the study materials and the created battle plan, provide:\n"
+                f"1. 5 key formulas/concepts to memorize\n"
+                f"2. 3 common mistakes to avoid\n"
+                f"3. 3 last-minute revision tips\n\n"
+                f"Materials: {combined_text}\n"
+                f"Battle Plan: {battle_plan}"
+            )
+            tips = call_gemini(tips_prompt)
+            st.markdown(tips)
+
+            # Add a section for practice questions
+            st.markdown("---")
+            st.markdown("## 📝 Essential Practice Questions")
+            practice_prompt = (
+                f"Create 5 essential practice questions that cover the most important topics from the materials. "
+                f"For each question, provide:\n"
+                f"1. The question\n"
+                f"2. A brief solution\n"
+                f"3. Key points to remember\n\n"
+                f"Materials: {combined_text}\n"
+                f"Battle Plan: {battle_plan}"
+            )
+            practice_questions = call_gemini(practice_prompt)
+            st.markdown(practice_questions)
+
+            # Add a section for mental preparation
+            st.markdown("---")
+            st.markdown("## 🧠 Mental Preparation")
+            mental_prompt = (
+                f"Provide advice on:\n"
+                f"1. How to stay calm during the exam\n"
+                f"2. Time management strategies\n"
+                f"3. How to handle difficult questions\n"
+                f"4. Post-exam review tips\n\n"
+                f"Based on the exam duration of {exam_duration} hours and the topics covered."
+            )
+            mental_prep = call_gemini(mental_prompt)
+            st.markdown(mental_prep)
+
+            # Add export options
+            st.markdown("---")
+            st.markdown("## 📤 Export Options")
+            col1, col2 = st.columns(2)
+            with col1:
+                if st.button("📱 Export to PDF"):
+                    pdf_content = f"""
+                    BATTLE PLAN
+                    ==========
+                    
+                    {battle_plan}
+                    
+                    QUICK TIPS
+                    ==========
+                    {tips}
+                    
+                    PRACTICE QUESTIONS
+                    ==================
+                    {practice_questions}
+                    
+                    MENTAL PREPARATION
+                    =================
+                    {mental_prep}
+                    """
+                    filename = export_summary_to_pdf(pdf_content, "battle_plan.pdf")
+                    st.success(f"Battle plan exported to {filename}")
+            
+            with col2:
+                if st.button("📅 Add to Calendar"):
+                    # Create calendar event for study session
+                    event_title = "6-Hour Study Battle Plan"
+                    event_desc = f"""
+                    Battle Plan:
+                    {battle_plan}
+                    
+                    Quick Tips:
+                    {tips}
+                    """
+                    add_to_google_calendar({
+                        "date": exam_date.strftime("%Y-%m-%d"),
+                        "description": event_title
+                    })
+                    st.success("Added to your calendar!")
