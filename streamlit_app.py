@@ -25,7 +25,7 @@ import streamlit.components.v1 as components
 import time
 
 # --- Gemini Call ---
-def call_gemini(prompt, temp=0.7, max_tokens=2048):
+def call_gemini(prompt, temperature=0.7, max_tokens=2048):
     lang = st.session_state.get("language", "en")
     lang_name = [k for k, v in languages.items() if v == lang][0]
     prompt = f"Please answer in {lang_name}.\n" + prompt
@@ -40,7 +40,7 @@ def call_gemini(prompt, temp=0.7, max_tokens=2048):
     )
     payload = {
         "contents": [{"parts": [{"text": prompt}]}],
-        "generationConfig": {"temperature": temp, "maxOutputTokens": max_tokens}
+        "generationConfig": {"temperature": temperature, "maxOutputTokens": max_tokens}
     }
     try:
         with show_lottie_loading(t("Thinking with Gemini AI...")):
