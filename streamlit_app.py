@@ -19,6 +19,22 @@ import csv
 from fpdf import FPDF
 import webbrowser
 
+# --- Calendar Integration Helper (MUST BE DEFINED BEFORE USAGE) ---
+def detect_deadlines(text):
+    prompt = (
+        "Extract all assignment or exam deadlines (with date and description) from the following text. "
+        "Return a JSON list of objects with 'date' and 'description'.\n\n" + text[:5000]
+    )
+    import json
+    try:
+        deadlines_json = call_gemini(prompt)
+        deadlines = json.loads(deadlines_json)
+        if isinstance(deadlines, dict):
+            deadlines = list(deadlines.values())
+        return deadlines
+    except Exception:
+        return []
+
 # --- Lottie Loading Helper (MUST BE DEFINED BEFORE USAGE) ---
 def load_lottieurl(url):
     r = reqs.get(url)
