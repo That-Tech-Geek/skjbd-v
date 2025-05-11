@@ -1465,20 +1465,32 @@ if not st.session_state['onboarding_complete']:
                 )
         if st.button("Finish Onboarding"):
             # Scoring: Strongly Disagree=0, ..., Neutral=50, ..., Strongly Agree=100 (for positive phrasing)
-            # For each question, if side matches dichotomy, score as is; if not, reverse
-            score_map = {0: 0, 1: 17, 2: 33, 3: 50, 4: 67, 5: 83, 6: 100}
             scores = {}
             for dichotomy, qs in questions.items():
                 total = 0
                 for i, (q, side) in enumerate(qs):
                     key = f"{dichotomy}_{i}"
                     val = st.session_state.learning_style_answers[key]
-                    idx = likert.index(val)
-                    # If the question is for the first side, score as is; if for the opposite, reverse
-                    if side == dichotomy.split("/")[0]:
-                        score = score_map[idx]
-                    else:
-                        score = score_map[6 - idx]
+                    # Direct mapping of responses to scores
+                    if val == "Strongly Disagree":
+                        score = 0
+                    elif val == "Disagree":
+                        score = 17
+                    elif val == "Somewhat Disagree":
+                        score = 33
+                    elif val == "Neutral":
+                        score = 50
+                    elif val == "Somewhat Agree":
+                        score = 67
+                    elif val == "Agree":
+                        score = 83
+                    else:  # Strongly Agree
+                        score = 100
+                    
+                    # If the question is for the opposite side, reverse the score
+                    if side != dichotomy.split("/")[0]:
+                        score = 100 - score
+                    
                     total += score
                 scores[dichotomy] = int(total / len(qs))
             save_learning_style(user.get("email", ""), scores)
@@ -1492,3 +1504,4 @@ if not st.session_state['onboarding_complete']:
             st.session_state['onboarding_complete'] = True
             st.experimental_rerun()
     st.stop()
+</rewritten_file>
