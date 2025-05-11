@@ -129,22 +129,23 @@ def load_lottieurl(url):
 import contextlib
 @contextlib.contextmanager
 def show_lottie_loading(message="Loading..."):
-    lottie_url = "https://assets10.lottiefiles.com/packages/lf20_kyu7xb1v.json"
-    lottie_json = load_lottieurl(lottie_url)
-    lottie_placeholder = st.empty()
-    msg_placeholder = st.empty()
-    # Generate a unique key using timestamp
-    unique_key = f"lottie_{int(time.time() * 1000)}"
-    lottie_placeholder_lottie = st_lottie(lottie_json, height=200, key=unique_key)
-    msg_placeholder.info(message)
-    try:
-        yield
-    finally:
-        # Clear both the lottie animation and message immediately
-        lottie_placeholder.empty()
-        msg_placeholder.empty()
-        # Force a rerun to ensure the UI updates
-        
+    with st.container():
+        lottie_url = "https://assets10.lottiefiles.com/packages/lf20_kyu7xb1v.json"
+        lottie_json = load_lottieurl(lottie_url)
+        lottie_placeholder = st.empty()
+        msg_placeholder = st.empty()
+        # Generate a unique key using timestamp
+        unique_key = f"lottie_{int(time.time() * 1000)}"
+        lottie_placeholder_lottie = st_lottie(lottie_json, height=200, key=unique_key)
+        msg_placeholder.info(message)
+        try:
+            yield
+        finally:
+            # Clear both the lottie animation and message immediately
+            lottie_placeholder.empty()
+            msg_placeholder.empty()
+            # Force a rerun to ensure the UI updates
+            
 
 # --- Configuration from st.secrets ---
 raw_uri       = st.secrets.get("google", {}).get("redirect_uri", "")
@@ -984,19 +985,92 @@ quiz_tabs = [t("Guide Book Chat"), t("Document Q&A"), t("Learning Style Test"), 
 tab = st.sidebar.selectbox(t("Feature"), quiz_tabs)
 
 if tab == "Guide Book Chat":
-    st.header("📖 " + t("Guide Book Chat"))
-    st.info("Search for a textbook and ask about any concept. The AI will find and explain it for you!")
-    title   = st.text_input("Title")
-    author  = st.text_input("Author")
-    edition = st.text_input("Edition")
-    concept = st.text_input("Ask about concept:")
-    if st.button("Chat") and concept:
-        url = fetch_pdf_url(title, author, edition)
-        if not url:
-            st.error("PDF not found")
-        else:
-            pages = extract_pages_from_url(url)
-            st.write(ask_concept(pages, concept))
+    st.header("❓ Ask Your Questions")
+    st.info("Ask any question or upload an image of your question. Our AI will help you understand and solve it!")
+
+    # Create two columns for text input and image upload
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        question = st.text_area("Type your question here:", height=150, 
+            placeholder="Example: Can you explain how photosynthesis works?")
+    
+    with col2:
+        uploaded_image = st.file_uploader("Or upload an image of your question:", 
+            type=["jpg", "jpeg", "png"],
+            help="Upload a clear image of your question or problem")
+
+    # Process the question (either from text or image)
+    if st.button("Get Answer"):
+        with show_lottie_loading("Analyzing your question..."):
+            if uploaded_image:
+                # Extract text from image
+                image_text = pytesseract.image_to_string(Image.open(uploaded_image))
+                if not image_text.strip():
+                    st.error("Could not read text from the image. Please try uploading a clearer image.")
+                    st.stop()
+                question = image_text
+
+            if not question.strip():
+                st.warning("Please either type a question or upload an image.")
+                st.stop()
+
+            # Generate a comprehensive answer
+            prompt = (
+                f"You are an expert tutor. Please help the student understand and solve this question. "
+                f"Provide a clear, step-by-step explanation that includes:\n"
+                f"1. Key concepts involved\n"
+                f"2. Step-by-step solution or explanation\n"
+                f"3. Examples or analogies to help understanding\n"
+                f"4. Common mistakes to avoid\n"
+                f"5. Related concepts to explore\n\n"
+                f"Question: {question}"
+            )
+            
+            answer = call_gemini(prompt)
+            
+            # Display the answer in a nicely formatted way
+            st.markdown("### 📝 Answer")
+            st.markdown(answer)
+            
+            # Add a section for follow-up questions
+            st.markdown("---")
+            st.markdown("### 💭 Follow-up Questions")
+            follow_up_prompt = (
+                f"Based on the student's question and the answer provided, suggest 3 follow-up questions "
+                f"that would help deepen their understanding of the topic. Make them specific and thought-provoking.\n\n"
+                f"Original Question: {question}\n"
+                f"Answer: {answer}"
+            )
+            follow_ups = call_gemini(follow_up_prompt)
+            st.markdown(follow_ups)
+
+            # Add a section for practice problems
+            st.markdown("---")
+            st.markdown("### 📚 Practice Problems")
+            practice_prompt = (
+                f"Create 2 practice problems related to the concepts in the question. "
+                f"For each problem, provide:\n"
+                f"1. The problem statement\n"
+                f"2. A hint\n"
+                f"3. The solution\n\n"
+                f"Original Question: {question}\n"
+                f"Answer: {answer}"
+            )
+            practice_problems = call_gemini(practice_prompt)
+            st.markdown(practice_problems)
+
+            # Add a section for additional resources
+            st.markdown("---")
+            st.markdown("### 🔍 Additional Resources")
+            resources_prompt = (
+                f"Suggest 3-4 additional resources (videos, articles, interactive tools) that would help "
+                f"the student better understand the topic. Include brief descriptions of each resource.\n\n"
+                f"Original Question: {question}\n"
+                f"Answer: {answer}"
+            )
+            resources = call_gemini(resources_prompt)
+            st.markdown(resources)
 
 elif tab == "Learning Style Test":
     st.header("Learning Style Test")
