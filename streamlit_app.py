@@ -1131,51 +1131,197 @@ if tab == "Guide Book Chat":
 
 elif tab == "Learning Style Test":
     st.header("Learning Style Test")
-    st.write("Answer the following questions to determine your learning style.")
     
-    # Questions for each dichotomy
-    questions = {
-        "Sensing/Intuitive": [
-            ("I prefer learning facts and concrete details.", "Sensing"),
-            ("I enjoy exploring abstract concepts and theories.", "Intuitive"),
-            ("I trust experience more than words and symbols.", "Sensing"),
-            ("I like to imagine possibilities and what could be.", "Intuitive"),
-        ],
-        "Visual/Verbal": [
-            ("I remember best what I see (pictures, diagrams, charts).", "Visual"),
-            ("I remember best what I hear or read.", "Verbal"),
-            ("I prefer to learn through images and spatial understanding.", "Visual"),
-            ("I prefer to learn through words and explanations.", "Verbal"),
-        ],
-        "Active/Reflective": [
-            ("I learn best by doing and trying things out.", "Active"),
-            ("I learn best by thinking and reflecting.", "Reflective"),
-            ("I prefer group work and discussions.", "Active"),
-            ("I prefer to work alone and think things through.", "Reflective"),
-        ],
-        "Sequential/Global": [
-            ("I learn best in a step-by-step, logical order.", "Sequential"),
-            ("I like to see the big picture before the details.", "Global"),
-            ("I prefer to follow clear, linear instructions.", "Sequential"),
-            ("I often make connections between ideas in a holistic way.", "Global"),
-        ],
-    }
+    # Check if user already has learning style scores
+    learning_style = get_learning_style(user.get("email", ""))
     
-    # Store answers in session state
-    if "learning_style_answers" not in st.session_state:
-        st.session_state.learning_style_answers = {}
-    
-    for dichotomy, qs in questions.items():
-        st.subheader(dichotomy)
-        for i, (q, side) in enumerate(qs):
-            key = f"{dichotomy}_{i}"
-            st.session_state.learning_style_answers[key] = st.radio(
-                q,
-                ["Strongly Disagree", "Disagree", "Somewhat Disagree", "Neutral", "Somewhat Agree", "Agree", "Strongly Agree"],
-                key=key
-            )
-    
-    st.button("Submit")
+    if learning_style:
+        st.success("✅ You've already completed the learning style test!")
+        st.markdown("### Your Learning Style Profile")
+        
+        # Display scores in a more visual way
+        for dichotomy, score in learning_style.items():
+            st.markdown(f"#### {dichotomy}")
+            # Create a progress bar for each dimension
+            left_style, right_style = dichotomy.split("/")
+            left_score = 100 - score
+            right_score = score
+            
+            col1, col2, col3 = st.columns([1, 2, 1])
+            with col1:
+                st.markdown(f"**{left_style}**")
+            with col2:
+                st.progress(score/100)
+            with col3:
+                st.markdown(f"**{right_style}**")
+            
+            # Add description based on score
+            if score > 60:
+                st.info(f"You show a strong preference for {right_style} learning.")
+            elif score < 40:
+                st.info(f"You show a strong preference for {left_style} learning.")
+            else:
+                st.info("You show a balanced preference in this dimension.")
+        
+        # Add personalized learning recommendations
+        st.markdown("### 📚 Personalized Learning Recommendations")
+        recommendations = []
+        
+        # Sensing/Intuitive recommendations
+        if learning_style['Sensing/Intuitive'] > 60:
+            recommendations.append("""
+            **For your Intuitive learning style:**
+            - Focus on understanding concepts and theories
+            - Look for patterns and connections between topics
+            - Try to predict outcomes and explore possibilities
+            - Use mind maps and concept diagrams
+            """)
+        else:
+            recommendations.append("""
+            **For your Sensing learning style:**
+            - Focus on concrete facts and examples
+            - Use step-by-step problem-solving approaches
+            - Practice with real-world applications
+            - Create detailed notes with specific examples
+            """)
+            
+        # Visual/Verbal recommendations
+        if learning_style['Visual/Verbal'] > 60:
+            recommendations.append("""
+            **For your Visual learning style:**
+            - Use diagrams, charts, and mind maps
+            - Watch educational videos
+            - Create visual summaries of topics
+            - Use color coding in your notes
+            """)
+        else:
+            recommendations.append("""
+            **For your Verbal learning style:**
+            - Read and write detailed explanations
+            - Participate in discussions
+            - Record and listen to lectures
+            - Create written summaries
+            """)
+            
+        # Active/Reflective recommendations
+        if learning_style['Active/Reflective'] > 60:
+            recommendations.append("""
+            **For your Active learning style:**
+            - Engage in group study sessions
+            - Practice explaining concepts to others
+            - Use hands-on activities
+            - Take breaks to discuss and apply concepts
+            """)
+        else:
+            recommendations.append("""
+            **For your Reflective learning style:**
+            - Take time to think about concepts
+            - Write summaries and reflections
+            - Study in quiet environments
+            - Review and analyze your notes
+            """)
+            
+        # Sequential/Global recommendations
+        if learning_style['Sequential/Global'] > 60:
+            recommendations.append("""
+            **For your Global learning style:**
+            - Start with overviews before details
+            - Look for connections between topics
+            - Use mind maps to see the big picture
+            - Try to understand concepts holistically
+            """)
+        else:
+            recommendations.append("""
+            **For your Sequential learning style:**
+            - Follow step-by-step learning paths
+            - Break down complex topics
+            - Create detailed outlines
+            - Practice with structured exercises
+            """)
+        
+        # Display recommendations in expandable sections
+        for i, rec in enumerate(recommendations):
+            with st.expander(f"Recommendations {i+1}"):
+                st.markdown(rec)
+        
+        # Add option to retake test if desired
+        if st.button("🔄 Retake Learning Style Test"):
+            st.session_state['learning_style_answers'] = {}
+            
+            
+    else:
+        st.write("Answer the following questions to determine your learning style. This will help us personalize your experience.")
+        likert = [
+            "Strongly Disagree", "Disagree", "Somewhat Disagree", "Neutral", "Somewhat Agree", "Agree", "Strongly Agree"
+        ]
+        questions = {
+            "Sensing/Intuitive": [
+                ("I am more interested in what is actual than what is possible.", "Sensing"),
+                ("I often focus on the big picture rather than the details.", "Intuitive"),
+                ("I trust my gut feelings over concrete evidence.", "Intuitive"),
+                ("I enjoy tasks that require attention to detail.", "Sensing"),
+                ("I prefer practical solutions over theoretical ideas.", "Sensing"),
+                ("I am drawn to abstract concepts and patterns.", "Intuitive"),
+                ("I notice details that others might miss.", "Sensing"),
+                ("I like to imagine possibilities and what could be.", "Intuitive"),
+                ("I rely on past experiences to guide me.", "Sensing"),
+                ("I am energized by exploring new ideas.", "Intuitive"),
+            ],
+            "Visual/Verbal": [
+                ("I remember best what I see (pictures, diagrams, charts).", "Visual"),
+                ("I remember best what I hear or read.", "Verbal"),
+                ("I prefer to learn through images and spatial understanding.", "Visual"),
+                ("I prefer to learn through words and explanations.", "Verbal"),
+            ],
+            "Active/Reflective": [
+                ("I learn best by doing and trying things out.", "Active"),
+                ("I learn best by thinking and reflecting.", "Reflective"),
+                ("I prefer group work and discussions.", "Active"),
+                ("I prefer to work alone and think things through.", "Reflective"),
+            ],
+            "Sequential/Global": [
+                ("I learn best in a step-by-step, logical order.", "Sequential"),
+                ("I like to see the big picture before the details.", "Global"),
+                ("I prefer to follow clear, linear instructions.", "Sequential"),
+                ("I often make connections between ideas in a holistic way.", "Global"),
+            ],
+        }
+        if "learning_style_answers" not in st.session_state:
+            st.session_state.learning_style_answers = {}
+        for dichotomy, qs in questions.items():
+            st.subheader(dichotomy)
+            for i, (q, side) in enumerate(qs):
+                key = f"{dichotomy}_{i}"
+                st.session_state.learning_style_answers[key] = st.radio(
+                    q,
+                    ["Strongly Disagree", "Disagree", "Somewhat Disagree", "Neutral", "Somewhat Agree", "Agree", "Strongly Agree"],
+                    key=key
+                )
+        if st.button("Submit"):
+            # Scoring: Strongly Disagree=0, ..., Neutral=50, ..., Strongly Agree=100 (for positive phrasing)
+            # For each question, if side matches dichotomy, score as is; if not, reverse
+            score_map = {0: 0, 1: 17, 2: 33, 3: 50, 4: 67, 5: 83, 6: 100}
+            scores = {}
+            for dichotomy, qs in questions.items():
+                total = 0
+                for i, (q, side) in enumerate(qs):
+                    key = f"{dichotomy}_{i}"
+                    val = st.session_state.learning_style_answers[key]
+                    idx = likert.index(val)
+                    # If the question is for the first side, score as is; if for the opposite, reverse
+                    if side == dichotomy.split("/")[0]:
+                        score = score_map[idx]
+                    else:
+                        score = score_map[6 - idx]
+                    total += score
+                scores[dichotomy] = int(total / len(qs))
+            with show_lottie_loading("Saving your learning style and personalizing your experience..."):
+                save_learning_style(user.get("email", ""), scores)
+                st.session_state.learning_style_answers = {}
+            st.success("Learning style saved! Reloading...")
+            st.balloons()
+            
+        st.stop()
 
 elif tab == "Paper Solver/Exam Guide":
     st.header("📝 " + t("Paper Solver/Exam Guide"))
