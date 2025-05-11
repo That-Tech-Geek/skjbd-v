@@ -984,6 +984,47 @@ with st.sidebar.expander("❓ How to use this app", expanded=False):
 quiz_tabs = [t("Guide Book Chat"), t("Document Q&A"), t("Learning Style Test"), t("Paper Solver/Exam Guide"), "🗓️ Daily Quiz", "⚡ 6-Hour Battle Plan"]
 tab = st.sidebar.selectbox(t("Feature"), quiz_tabs)
 
+# Add this after the existing imports
+def search_educational_resources(query, num_results=5):
+    """Search for educational resources using Google Programmable Search Engine."""
+    if not CSE_API_KEY or not CSE_ID:
+        return []
+    
+    try:
+        # Construct the search URL
+        search_url = "https://www.googleapis.com/customsearch/v1"
+        params = {
+            "key": CSE_API_KEY,
+            "cx": CSE_ID,
+            "q": query,
+            "num": num_results,
+            "safe": "active",
+            "lr": "lang_en",  # English language results
+            "as_sitesearch": "edu",  # Prioritize educational sites
+            "as_filetype": "pdf"  # Include PDF resources
+        }
+        
+        response = requests.get(search_url, params=params)
+        response.raise_for_status()
+        results = response.json().get("items", [])
+        
+        # Format the results
+        formatted_results = []
+        for item in results:
+            formatted_results.append({
+                "title": item.get("title", ""),
+                "link": item.get("link", ""),
+                "snippet": item.get("snippet", ""),
+                "file_type": item.get("fileFormat", ""),
+                "source": item.get("displayLink", "")
+            })
+        
+        return formatted_results
+    except Exception as e:
+        st.error(f"Error searching for resources: {str(e)}")
+        return []
+
+# Modify the Guide Book Chat section to include resource search
 if tab == "Guide Book Chat":
     st.header("❓ Ask Your Questions")
     st.info("Ask any question or upload an image of your question. Our AI will help you understand and solve it!")
@@ -1015,6 +1056,10 @@ if tab == "Guide Book Chat":
                 st.warning("Please either type a question or upload an image.")
                 st.stop()
 
+            # Search for relevant resources
+            with show_lottie_loading("Searching for relevant resources..."):
+                search_results = search_educational_resources(question)
+            
             # Generate a comprehensive answer
             prompt = (
                 f"You are an expert tutor. Please help the student understand and solve this question. "
@@ -1032,6 +1077,18 @@ if tab == "Guide Book Chat":
             # Display the answer in a nicely formatted way
             st.markdown("### 📝 Answer")
             st.markdown(answer)
+            
+            # Display relevant resources if found
+            if search_results:
+                st.markdown("---")
+                st.markdown("### 📚 Relevant Resources")
+                for i, result in enumerate(search_results, 1):
+                    with st.expander(f"{i}. {result['title']}"):
+                        st.markdown(f"**Source:** {result['source']}")
+                        st.markdown(f"**Description:** {result['snippet']}")
+                        st.markdown(f"[Open Resource]({result['link']})")
+                        if result['file_type']:
+                            st.markdown(f"**Type:** {result['file_type']}")
             
             # Add a section for follow-up questions
             st.markdown("---")
@@ -1733,3 +1790,37 @@ elif tab == "⚡ 6-Hour Battle Plan":
                         "description": event_title
                     })
                     st.success("Added to your calendar!")
+
+# Add this to the sidebar section (after the language selector):
+st.sidebar.markdown("---")
+st.sidebar.markdown("### 🚀 Support Vekkam")
+st.sidebar.markdown(
+    f'''
+    <div style="text-align:center;">
+        <a href="https://www.producthunt.com/products/vekkam" target="_blank" id="ph-upvote-link">
+            <img src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=456789&theme=light" alt="Upvote Vekkam on Product Hunt" style="width: 150px; margin-bottom: 8px;"/>
+        </a><br>
+        <span style="font-size:1em; font-weight:bold; color:#da552f;">🔥 {ph_stats['votes']} upvotes</span><br>
+        <a href="https://www.producthunt.com/products/vekkam" target="_blank" style="font-size:0.9em; font-weight:bold; color:#da552f; text-decoration:none;">👉 Upvote & Comment!</a>
+    </div>
+    ''', unsafe_allow_html=True
+)
+
+# Add upvote nudge to sidebar
+if 'ph_upvoted' not in st.session_state:
+    st.session_state['ph_upvoted'] = False
+if not st.session_state['ph_upvoted']:
+    if st.sidebar.button("👍 I upvoted Vekkam!"):
+        st.session_state['ph_upvoted'] = True
+        st.sidebar.success("Thank you for supporting us! 🎉")
+else:
+    st.sidebar.info("Thanks for your upvote! 🧡")
+
+# Add recent comments to sidebar if available
+if ph_stats['comments']:
+    st.sidebar.markdown("### 💬 Recent Comments")
+    for c in ph_stats['comments']:
+        st.sidebar.markdown(
+            f'<div style="margin-bottom:0.5em; font-size:0.9em;"><img src="{c["avatar"]}" width="24" style="vertical-align:middle;border-radius:50%;margin-right:4px;"/> <b>{c["user"]}</b><br><span style="font-size:0.85em;">{c["body"]}</span></div>',
+            unsafe_allow_html=True
+        )
