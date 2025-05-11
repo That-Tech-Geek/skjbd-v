@@ -23,6 +23,8 @@ import docx
 from pptx import Presentation
 import streamlit.components.v1 as components
 import time
+import networkx as nx
+import matplotlib.pyplot as plt
 
 # --- Gemini Call ---
 def call_gemini(prompt, temperature=0.7, max_tokens=2048):
@@ -1952,3 +1954,154 @@ if ph_stats['comments']:
             f'<div style="margin-bottom:0.5em; font-size:0.9em;"><img src="{c["avatar"]}" width="24" style="vertical-align:middle;border-radius:50%;margin-right:4px;"/> <b>{c["user"]}</b><br><span style="font-size:0.85em;">{c["body"]}</span></div>',
             unsafe_allow_html=True
         )
+
+def generate_mind_map(text):
+    """
+    Generate a mind map from text using Gemini AI and render it using igraph and plotly.
+    """
+    prompt = (
+        "You are a mind map generator. Create a detailed mind map from the following text. "
+        "Return ONLY a JSON object with the following structure:\n"
+        "{\n"
+        '  "title": "Main topic",\n'
+        '  "children": [\n'
+        '    {\n'
+        '      "title": "Subtopic 1",\n'
+        '      "children": [\n'
+        '        {"title": "Detail 1"},\n'
+        '        {"title": "Detail 2"}\n'
+        '      ]\n'
+        '    },\n'
+        '    {\n'
+        '      "title": "Subtopic 2",\n'
+        '      "children": [\n'
+        '        {"title": "Detail 3"},\n'
+        '        {"title": "Detail 4"}\n'
+        '      ]\n'
+        '    }\n'
+        '  ]\n'
+        "}\n\n"
+        "Rules:\n"
+        "1. The JSON must be valid and properly formatted\n"
+        "2. Each node must have a 'title' field\n"
+        "3. Parent nodes can have a 'children' array\n"
+        "4. Leaf nodes should not have a 'children' field\n"
+        "5. Keep titles concise but descriptive\n"
+        "6. Organize information hierarchically\n"
+        "7. Include all important concepts from the text\n"
+        "8. Maximum depth should be 3 levels\n\n"
+        f"Text to analyze:\n{text}"
+    )
+    
+    # Get mind map data from Gemini
+    mind_map_json = call_gemini(prompt)
+    
+    try:
+        # Parse the JSON response
+        mind_map = json.loads(mind_map_json)
+        
+        # Create igraph graph
+        g = ig.Graph(directed=True)
+        
+        # Add nodes and edges recursively
+        def add_node(node, parent=None):
+            nonlocal counter
+            nid = counter
+            counter += 1
+            label = node.get("title", "Node")
+            g.add_vertex(name=str(nid), label=label)
+            if parent is not None:
+                g.add_edge(parent, str(nid))
+            if "children" in node:
+                for child in node["children"]:
+                    add_node(child, str(nid))
+        
+        counter = 0
+        add_node(mind_map)
+        
+        # Calculate layout
+        layout = g.layout("tree")
+        
+        # Create edge traces
+        edge_x = []
+        edge_y = []
+        for edge in g.es:
+            x0, y0 = layout[g.vs[edge.source].index]
+            x1, y1 = layout[g.vs[edge.target].index]
+            edge_x.extend([x0, x1, None])
+            edge_y.extend([y0, y1, None])
+        
+        edge_trace = go.Scatter(
+            x=edge_x, y=edge_y,
+            line=dict(width=1, color='#888'),
+            hoverinfo='none',
+            mode='lines'
+        )
+        
+        # Create node traces
+        node_x = []
+        node_y = []
+        node_text = []
+        for node in g.vs:
+            x, y = layout[node.index]
+            node_x.append(x)
+            node_y.append(y)
+            node_text.append(node["label"])
+        
+        node_trace = go.Scatter(
+            x=node_x, y=node_y,
+            mode='markers+text',
+            hoverinfo='text',
+            text=node_text,
+            textposition="top center",
+            marker=dict(
+                showscale=True,
+                colorscale='YlGnBu',
+                size=20,
+                colorbar=dict(
+                    thickness=15,
+                    title='Node Connections',
+                    xanchor='left',
+                    titleside='right'
+                )
+            )
+        )
+        
+        # Create figure
+        fig = go.Figure(
+            data=[edge_trace, node_trace],
+            layout=go.Layout(
+                title=dict(
+                    text=mind_map["title"],
+                    font=dict(size=16),
+                    x=0.5,
+                    y=0.95
+                ),
+                showlegend=False,
+                hovermode='closest',
+                margin=dict(b=20, l=5, r=5, t=40),
+                xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+                yaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+                plot_bgcolor='white'
+            )
+        )
+        
+        # Add interactivity
+        fig.update_layout(
+            dragmode='pan',
+            modebar_add=['zoom', 'pan', 'reset', 'zoomIn', 'zoomOut'],
+            modebar_remove=['lasso', 'select'],
+            modebar_activecolor='#FF4B4B'
+        )
+        
+        # Display in Streamlit
+        st.plotly_chart(fig, use_container_width=True)
+        
+        return mind_map
+        
+    except json.JSONDecodeError:
+        st.error("Failed to parse mind map JSON from Gemini AI")
+        return None
+    except Exception as e:
+        st.error(f"Error generating mind map: {str(e)}")
+        return None
