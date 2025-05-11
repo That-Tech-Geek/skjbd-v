@@ -110,14 +110,14 @@ def show_lottie_loading(message="Loading..."):
         msg_placeholder.empty()
 
 # --- Configuration from st.secrets ---
-raw_uri       = st.secrets["google"]["redirect_uri"]
-REDIRECT_URI  = raw_uri.rstrip("/") + "/"
-CLIENT_ID     = st.secrets["google"]["client_id"]
-CLIENT_SECRET = st.secrets["google"]["client_secret"]
+raw_uri       = st.secrets.get("google", {}).get("redirect_uri", "")
+REDIRECT_URI  = raw_uri.rstrip("/") + "/" if raw_uri else ""
+CLIENT_ID     = st.secrets.get("google", {}).get("client_id", "")
+CLIENT_SECRET = st.secrets.get("google", {}).get("client_secret", "")
 SCOPES        = ["openid", "email", "profile"]
-GEMINI_API_KEY = st.secrets["gemini"]["api_key"]
-CSE_API_KEY    = st.secrets["google_search"]["api_key"]
-CSE_ID         = st.secrets["google_search"]["cse_id"]
+GEMINI_API_KEY = st.secrets.get("gemini", {}).get("api_key", "")
+CSE_API_KEY    = st.secrets.get("google_search", {}).get("api_key", "")
+CSE_ID         = st.secrets.get("google_search", {}).get("cse_id", "")
 CACHE_TTL      = 3600
 
 # --- Session State ---
