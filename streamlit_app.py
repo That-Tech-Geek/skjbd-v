@@ -728,6 +728,16 @@ elif tab == "Paper Solver/Exam Guide":
                     st.markdown(f"**Q{i}:** {q}")
                     st.write(a)
                     st.info(fb)
+        # --- Auto Deadline Detection ---
+        deadlines = detect_deadlines(text)
+        if deadlines:
+            st.info("📅 Deadlines detected automatically from your exam paper. Click to add to your Google Calendar!")
+            st.subheader("📅 Detected Deadlines")
+            for d in deadlines:
+                st.write(f"{d['date']}: {d['description']}")
+                if st.button(f"Add to Google Calendar: {d['description']}", key=f"cal_exam_{d['date']}_{d['description']}"):
+                    add_to_google_calendar(d)
+                    st.toast("Added to Google Calendar!")
 
 elif tab == "🗓️ Daily Quiz":
     import datetime
@@ -800,7 +810,15 @@ elif tab == t("Document Q&A"):
             file_names.append(uploaded.name)
         # --- Auto Deadline Detection ---
         all_text = "\n".join(texts)
-
+        deadlines = detect_deadlines(all_text)
+        if deadlines:
+            st.info("📅 Deadlines detected automatically from your documents. Click to add to your Google Calendar!")
+            st.subheader("📅 Detected Deadlines")
+            for d in deadlines:
+                st.write(f"{d['date']}: {d['description']}")
+                if st.button(f"Add to Google Calendar: {d['description']}", key=f"cal_{d['date']}_{d['description']}"):
+                    add_to_google_calendar(d)
+                    st.toast("Added to Google Calendar!")
         # --- Visual/Equation/Code Understanding for each file ---
         for idx, (text, fname) in enumerate(zip(texts, file_names)):
             visuals = extract_visuals_and_code(text, uploaded_files[idx])
@@ -981,7 +999,7 @@ def call_gemini(prompt, temp=0.7, max_tokens=2048):
         data = response.json()
         return data["candidates"][0]["content"]["parts"][0]["text"]
 
-# --- Visual/Equation/Code Understanding Helper ---
+# --- Visual/Equation/Code Understanding Helper (MUST BE DEFINED BEFORE USAGE) ---
 def extract_visuals_and_code(text, file=None):
     visuals = []
     # Detect LaTeX/math equations (simple regex for $...$ or \[...\])
@@ -995,10 +1013,26 @@ def extract_visuals_and_code(text, file=None):
         visuals.append(("Code", code))
     # Detect possible diagrams/images in file (if image or PDF page)
     if file and hasattr(file, 'name') and file.name.lower().endswith((".jpg", ".jpeg", ".png")):
-        visuals.append(("Diagram", "[Image uploaded]") )
+        visuals.append(("Diagram", "[Image uploaded]"))
     # For PDFs, could add more advanced image extraction if needed
     return visuals
-    
+
+# --- Calendar Integration Helper (MUST BE DEFINED BEFORE USAGE) ---
+def detect_deadlines(text):
+    prompt = (
+        "Extract all assignment or exam deadlines (with date and description) from the following text. "
+        "Return a JSON list of objects with 'date' and 'description'.\n\n" + text[:5000]
+    )
+    import json
+    try:
+        deadlines_json = call_gemini(prompt)
+        deadlines = json.loads(deadlines_json)
+        if isinstance(deadlines, dict):
+            deadlines = list(deadlines.values())
+        return deadlines
+    except Exception:
+        return []
+
 def add_to_google_calendar(deadline):
     # Opens a Google Calendar event creation link in the browser
     import urllib.parse
