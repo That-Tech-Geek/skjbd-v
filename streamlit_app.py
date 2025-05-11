@@ -15,6 +15,9 @@ from contextlib import closing
 from streamlit_lottie import st_lottie
 import requests as reqs
 import contextlib
+import csv
+from fpdf import FPDF
+import webbrowser
 
 # --- Configuration from st.secrets ---
 raw_uri       = st.secrets["google"]["redirect_uri"]
@@ -77,6 +80,97 @@ def get_learning_style(email):
         return None
 
 init_db()
+
+# --- SQLite DB for Memorization Tracking ---
+def init_mem_db():
+    with closing(sqlite3.connect(DB_PATH)) as conn:
+        with conn:
+            conn.execute('''
+                CREATE TABLE IF NOT EXISTS memorization (
+                    email TEXT,
+                    card_id TEXT,
+                    question TEXT,
+                    answer TEXT,
+                    last_reviewed DATE,
+                    next_due DATE,
+                    correct_count INTEGER DEFAULT 0,
+                    incorrect_count INTEGER DEFAULT 0,
+                    PRIMARY KEY (email, card_id)
+                )
+            ''')
+
+def get_due_cards(email, today):
+    with closing(sqlite3.connect(DB_PATH)) as conn:
+        cur = conn.execute('''
+            SELECT card_id, question, answer, last_reviewed, next_due, correct_count, incorrect_count
+            FROM memorization
+            WHERE email=? AND (next_due IS NULL OR next_due<=?)
+            ORDER BY next_due ASC
+            LIMIT 10
+        ''', (email, today))
+        return cur.fetchall()
+
+def update_card_review(email, card_id, correct, today):
+    # Simple spaced repetition: if correct, next_due += 3 days, else next_due = tomorrow
+    import datetime
+    next_due = (datetime.datetime.strptime(today, "%Y-%m-%d") + (datetime.timedelta(days=3) if correct else datetime.timedelta(days=1))).strftime("%Y-%m-%d")
+    with closing(sqlite3.connect(DB_PATH)) as conn:
+        with conn:
+            if correct:
+                conn.execute('''
+                    UPDATE memorization SET last_reviewed=?, next_due=?, correct_count=correct_count+1 WHERE email=? AND card_id=?
+                ''', (today, next_due, email, card_id))
+            else:
+                conn.execute('''
+                    UPDATE memorization SET last_reviewed=?, next_due=?, incorrect_count=incorrect_count+1 WHERE email=? AND card_id=?
+                ''', (today, next_due, email, card_id))
+
+def add_memorization_card(email, card_id, question, answer):
+    with closing(sqlite3.connect(DB_PATH)) as conn:
+        with conn:
+            conn.execute('''
+                INSERT OR IGNORE INTO memorization (email, card_id, question, answer) VALUES (?, ?, ?, ?)
+            ''', (email, card_id, question, answer))
+
+init_mem_db()
+
+# --- SQLite DB for Content Structure & Progress Tracking ---
+def init_structure_db():
+    with closing(sqlite3.connect(DB_PATH)) as conn:
+        with conn:
+            conn.execute('''
+                CREATE TABLE IF NOT EXISTS content_structure (
+                    email TEXT,
+                    doc_id TEXT,
+                    section TEXT,
+                    progress REAL DEFAULT 0.0,
+                    PRIMARY KEY (email, doc_id, section)
+                )
+            ''')
+
+def save_content_structure(email, doc_id, sections):
+    with closing(sqlite3.connect(DB_PATH)) as conn:
+        with conn:
+            for section in sections:
+                conn.execute('''
+                    INSERT OR IGNORE INTO content_structure (email, doc_id, section) VALUES (?, ?, ?)
+                ''', (email, doc_id, section))
+
+def update_section_progress(email, doc_id, section, progress):
+    with closing(sqlite3.connect(DB_PATH)) as conn:
+        with conn:
+            conn.execute('''
+                UPDATE content_structure SET progress=? WHERE email=? AND doc_id=? AND section=?
+            ''', (progress, email, doc_id, section))
+
+def get_section_progress(email, doc_id):
+    with closing(sqlite3.connect(DB_PATH)) as conn:
+        cur = conn.execute('''
+            SELECT section, progress FROM content_structure WHERE email=? AND doc_id=?
+        ''', (email, doc_id))
+        return dict(cur.fetchall())
+
+init_structure_db()
 
 # --- OAuth Flow using st.query_params ---
 def ensure_logged_in():
@@ -227,6 +321,7 @@ if learning_style is None:
             save_learning_style(user.get("email", ""), scores)
             st.session_state.learning_style_answers = {}
         st.success("Learning style saved! Reloading...")
+        st.balloons()
         st.experimental_rerun()
     st.stop()
 
@@ -463,11 +558,40 @@ if "language" not in st.session_state:
 lang_choice = st.sidebar.selectbox("🌐 Language", list(languages.keys()), index=0)
 st.session_state["language"] = languages[lang_choice]
 
+# --- App Branding ---
+LOGO_URL = "https://github.com/rekfdjkzbdfvkgjerkdfnfcbvgewhs/Vekkam/blob/main/logo.png"  # <-- Replace with your actual raw GitHub URL
+st.markdown("""
+    <style>
+    .block-container {padding-top: 1.5rem;}
+    .sidebar-content {padding-top: 1rem;}
+    </style>
+    """, unsafe_allow_html=True)
+col1, col2 = st.columns([1, 8])
+with col1:
+    st.image(LOGO_URL, width=180)
+with col2:
+    st.markdown("<h1 style='margin-bottom:0;'>Vekkam 📚</h1>", unsafe_allow_html=True)
+    st.caption("Your AI-powered study companion")
+
+# --- Sidebar Onboarding/Help ---
+st.sidebar.markdown("---")
+with st.sidebar.expander("❓ How to use this app", expanded=False):
+    st.markdown("""
+    - **Choose your language** from the sidebar.
+    - **Take the Learning Style Test** (first login) for personalized recommendations.
+    - **Guide Book Chat**: Search and chat with textbooks.
+    - **Document Q&A**: Upload notes or books for instant learning aids.
+    - **Paper Solver/Exam Guide**: Upload an exam paper and get model answers.
+    - All features are personalized for you!
+    """)
+
 # --- Main UI ---
-tab = st.sidebar.selectbox(t("Feature"), [t("Guide Book Chat"), t("Document Q&A"), t("Learning Style Test"), t("Paper Solver/Exam Guide")])
+quiz_tabs = [t("Guide Book Chat"), t("Document Q&A"), t("Learning Style Test"), t("Paper Solver/Exam Guide"), "🗓️ Daily Quiz"]
+tab = st.sidebar.selectbox(t("Feature"), quiz_tabs)
 
 if tab == "Guide Book Chat":
-    st.header("Guide Book Chat")
+    st.header("📖 " + t("Guide Book Chat"))
+    st.info("Search for a textbook and ask about any concept. The AI will find and explain it for you!")
     title   = st.text_input("Title")
     author  = st.text_input("Author")
     edition = st.text_input("Edition")
@@ -529,18 +653,18 @@ elif tab == "Learning Style Test":
     st.button("Submit")
 
 elif tab == "Paper Solver/Exam Guide":
-    st.header(t("Paper Solver/Exam Guide"))
-    st.write(t("Upload your exam paper (PDF or image). The AI will extract questions and show you how to answer for full marks!"))
-    exam_file = st.file_uploader(t("Upload Exam Paper (PDF/Image)"), type=["pdf", "jpg", "jpeg", "png"])
+    st.header("📝 " + t("Paper Solver/Exam Guide"))
+    st.info("Upload your full exam paper (PDF or image). Select questions to solve, and get model answers with exam tips.")
+    exam_file = st.file_uploader(t("Upload Exam Paper (PDF/Image)"), type=["pdf", "jpg", "jpeg", "png"], help="Upload a scanned or digital exam paper.")
     if exam_file:
         # Extract text from file (multi-page supported)
         ext = exam_file.name.lower().split('.')[-1]
         if ext == "pdf":
-            with show_lottie_loading("Extracting questions from PDF..."):
+            with show_lottie_loading(t("Extracting questions from PDF...")):
                 pages = extract_pages_from_file(exam_file)
                 text = "\n".join(pages.values())
         else:
-            with show_lottie_loading("Extracting questions from image..."):
+            with show_lottie_loading(t("Extracting questions from image...")):
                 text = pytesseract.image_to_string(Image.open(exam_file))
         # Improved question splitting: Q1, Q.1, 1., 1), Q2, etc.
         question_regex = r"(?:\n|^)(?:Q\.?\s*\d+|Q\s*\d+|\d+\.|\d+\)|Q\.|Q\s)(?=\s)"
@@ -556,21 +680,25 @@ elif tab == "Paper Solver/Exam Guide":
             # fallback: split by lines with Q or numbers
             questions = re.split(r"\n\s*(?:Q\.?|\d+\.|\d+\))", text)
             questions = [q.strip() for q in questions if len(q.strip()) > 10]
-        st.subheader(t("Found {n} questions:", n=len(questions)))
+        st.subheader(f"Found {len(questions)} questions:")
         for i, q in enumerate(questions, 1):
-            st.markdown(f"**Q{i}:** {q}")
+            with st.expander(f"Q{i}"):
+                st.markdown(q)
         # Multiselect for which questions to solve
         selected = st.multiselect(
             t("Select questions to solve (default: all)"),
             options=[f"Q{i+1}" for i in range(len(questions))],
-            default=[f"Q{i+1}" for i in range(len(questions))]
+            default=[f"Q{i+1}" for i in range(len(questions))],
+            help="Choose which questions you want the AI to solve."
         )
         selected_indices = [int(s[1:]) - 1 for s in selected]
-        if st.button(t("Solve Selected Questions")) and selected_indices:
+        if st.button("🚀 " + t("Solve Selected Questions")) and selected_indices:
             answers = []
-            for idx in selected_indices:
-                q = questions[idx]
-                with show_lottie_loading(t("Solving Q{n}...", n=idx+1)):
+            progress = st.progress(0, text="Solving questions...")
+            for idx, qidx in enumerate(selected_indices):
+                q = questions[qidx]
+                with show_lottie_loading(t("Solving Q{n}...", n=qidx+1)):
+                    # Model answer and exam tips
                     prompt = (
                         f"You are an expert exam coach and math teacher. "
                         f"Given the following exam question, provide a model answer that would get full marks. "
@@ -580,68 +708,276 @@ elif tab == "Paper Solver/Exam Guide":
                         f"Question: {q}"
                     )
                     answer = call_gemini(prompt)
-                    answers.append((q, answer))
-            st.header(t("Model Answers & Exam Tips"))
-            for i, (q, a) in enumerate(answers, 1):
-                st.markdown(f"**Q{i}:** {q}")
-                st.write(a)
+                    # Advanced exam prep feedback
+                    feedback_prompt = (
+                        f"Analyze the following exam question. "
+                        f"1. Identify the question type (e.g., essay, MCQ, calculation, diagram, etc.). "
+                        f"2. Infer the likely marking scheme and what examiners look for. "
+                        f"3. Give feedback on how to structure an answer for maximum marks, common pitfalls to avoid, and suggest related concepts to review.\n\n"
+                        f"Question: {q}"
+                    )
+                    feedback = call_gemini(feedback_prompt)
+                    answers.append((q, answer, feedback))
+                progress.progress((idx+1)/len(selected_indices), text=f"Solved {idx+1}/{len(selected_indices)}")
+            progress.empty()
+            st.balloons()
+            st.header("🏆 " + t("Model Answers & Exam Tips"))
+            for i, (q, a, fb) in enumerate(answers, 1):
+                with st.expander(f"Q{i} - Model Answer & Tips"):
+                    st.markdown(f"**Q{i}:** {q}")
+                    st.write(a)
+                    st.info(fb)
+        # --- Auto Deadline Detection ---
+        deadlines = detect_deadlines(text)
+        if deadlines:
+            st.info("📅 Deadlines detected automatically from your exam paper. Click to add to your Google Calendar!")
+            st.subheader("📅 Detected Deadlines")
+            for d in deadlines:
+                st.write(f"{d['date']}: {d['description']}")
+                if st.button(f"Add to Google Calendar: {d['description']}", key=f"cal_exam_{d['date']}_{d['description']}"):
+                    add_to_google_calendar(d)
+                    st.toast("Added to Google Calendar!")
 
-else:
-    st.header("Document Q&A")
-    uploaded = st.file_uploader("Upload PDF/Image/TXT", type=["pdf","jpg","png","txt"])
-    if uploaded:
-        text = extract_text(uploaded)
-        st.subheader("Learning Aids")
-        # Personalization: recommend/preselect based on learning style
-        aid_options = [
-            "Summary","Questions","Flashcards","Mnemonics",
-            "Key Terms","Cheat Sheet","Highlights",
-            "Critical Points","Concept Chat","Mind Map"
-        ]
-        recommended = []
-        if learning_style:
-            if learning_style['Visual/Verbal'] >= 60:
-                recommended += ["Mind Map", "Highlights", "Summary"]
-            if learning_style['Visual/Verbal'] <= 40:
-                recommended += ["Summary", "Questions", "Flashcards", "Cheat Sheet"]
-            if learning_style['Active/Reflective'] >= 60:
-                recommended += ["Questions", "Flashcards"]
-            if learning_style['Active/Reflective'] <= 40:
-                recommended += ["Summary", "Critical Points"]
-            if learning_style['Sequential/Global'] >= 60:
-                recommended += ["Mind Map", "Summary"]
-            if learning_style['Sequential/Global'] <= 40:
-                recommended += ["Summary", "Cheat Sheet", "Key Terms"]
-            if learning_style['Sensing/Intuitive'] >= 60:
-                recommended += ["Mnemonics", "Mind Map"]
-            if learning_style['Sensing/Intuitive'] <= 40:
-                recommended += ["Highlights", "Key Terms"]
-        # Remove duplicates, keep order
-        recommended = [x for i, x in enumerate(recommended) if x not in recommended[:i]]
-        default_idx = aid_options.index(recommended[0]) if recommended else 0
-        st.markdown(
-            f"**Recommended for you:** {', '.join(recommended) if recommended else aid_options[0]}"
-        )
-        choice = st.selectbox("Pick a function", aid_options, index=default_idx)
-        if st.button("Run"):
-            if choice == "Summary":       st.write(generate_summary(text))
-            elif choice == "Questions":   st.write(generate_questions(text))
-            elif choice == "Flashcards":  st.write(generate_flashcards(text))
-            elif choice == "Mnemonics":   st.write(generate_mnemonics(text))
-            elif choice == "Key Terms":   st.write(generate_key_terms(text))
-            elif choice == "Cheat Sheet": st.write(generate_cheatsheet(text))
-            elif choice == "Highlights":  st.write(generate_highlights(text))
-            elif choice == "Critical Points": st.write(generate_critical_points(text))
-            elif choice == "Concept Chat":
-                cc = st.text_input("Concept to explain:")
-                if cc:
-                    pages = extract_pages_from_file(uploaded)
-                    st.write(ask_concept(pages, cc))
+elif tab == "🗓️ Daily Quiz":
+    import datetime
+    st.header("🗓️ Daily Quiz")
+    st.info("Review and reinforce your memory every day! These questions are picked just for you.")
+    today = datetime.datetime.now().strftime("%Y-%m-%d")
+    email = user.get("email", "")
+    due_cards = get_due_cards(email, today)
+    if not due_cards:
+        st.success("🎉 All done for today! Come back tomorrow for more review.")
+    else:
+        for card_id, question, answer, last_reviewed, next_due, correct_count, incorrect_count in due_cards:
+            with st.form(f"quiz_{card_id}"):
+                st.markdown(f"**Q:** {question}")
+                user_answer = st.text_area("Your answer", key=f"ans_{card_id}")
+                hint = st.form_submit_button("💡 Hint")
+                submitted = st.form_submit_button("Check Answer")
+                # Learning style adaptation
+                style = learning_style if learning_style else {"Sensing/Intuitive": 50, "Visual/Verbal": 50, "Active/Reflective": 50, "Sequential/Global": 50}
+                # Provide hint if requested
+                if hint:
+                    prompt = (
+                        f"You are a helpful tutor. Give a hint for this question, tailored for a student who is more "
+                        f"{'Sensing' if style['Sensing/Intuitive'] < 50 else 'Intuitive'}, "
+                        f"{'Visual' if style['Visual/Verbal'] > 50 else 'Verbal'}, "
+                        f"{'Active' if style['Active/Reflective'] > 50 else 'Reflective'}, "
+                        f"and {'Sequential' if style['Sequential/Global'] < 50 else 'Global'}. "
+                        f"Question: {question}"
+                    )
+                    st.info(call_gemini(prompt))
+                # Check answer and provide multi-modal explanation
+                if submitted:
+                    correct = user_answer.strip().lower() == (answer or '').strip().lower()
+                    if correct:
+                        st.success("✅ Correct! Scheduled for review in 3 days.")
+                        update_card_review(email, card_id, True, today)
+                    else:
+                        st.error(f"❌ Not quite. Model answer: {answer}")
+                        update_card_review(email, card_id, False, today)
+                        # Multi-modal explanation
+                        exp_prompt = (
+                            f"Explain the answer to this question in two ways: "
+                            f"1. For a Sensing learner (concrete, factual, step-by-step). "
+                            f"2. For an Intuitive learner (big-picture, conceptual, patterns). "
+                            f"Also, provide a follow-up question to check understanding.\n\nQuestion: {question}\nModel answer: {answer}"
+                        )
+                        explanation = call_gemini(exp_prompt)
+                        st.info(explanation)
+                        # Dialogue: allow user to answer follow-up
+                        followup = st.text_area("Your answer to the follow-up question (optional)", key=f"followup_{card_id}")
+                        if st.form_submit_button("Check Follow-up"):
+                            followup_prompt = (
+                                f"Evaluate this student's answer to the follow-up question. Give feedback and another hint if needed.\n"
+                                f"Question: {question}\nModel answer: {answer}\nFollow-up answer: {followup}"
+                            )
+                            st.info(call_gemini(followup_prompt))
+
+elif tab == t("Document Q&A"):
+    st.header("💡 " + t("Document Q&A"))
+    st.info("Upload one or more documents and get instant learning aids, personalized for your style. The AI can now synthesize across multiple files!")
+    uploaded_files = st.file_uploader("Upload PDF/Image/TXT (multiple allowed)", type=["pdf","jpg","png","txt"], help="Upload your notes, textbook, or image.", accept_multiple_files=True)
+    texts = []
+    file_names = []
+    all_flashcards = []
+    all_summaries = []
+    if uploaded_files:
+        for uploaded in uploaded_files:
+            text = extract_text(uploaded)
+            texts.append(text)
+            file_names.append(uploaded.name)
+        # --- Auto Deadline Detection ---
+        all_text = "\n".join(texts)
+        deadlines = detect_deadlines(all_text)
+        if deadlines:
+            st.info("📅 Deadlines detected automatically from your documents. Click to add to your Google Calendar!")
+            st.subheader("📅 Detected Deadlines")
+            for d in deadlines:
+                st.write(f"{d['date']}: {d['description']}")
+                if st.button(f"Add to Google Calendar: {d['description']}", key=f"cal_{d['date']}_{d['description']}"):
+                    add_to_google_calendar(d)
+                    st.toast("Added to Google Calendar!")
+        # --- Visual/Equation/Code Understanding for each file ---
+        for idx, (text, fname) in enumerate(zip(texts, file_names)):
+            visuals = extract_visuals_and_code(text, uploaded_files[idx])
+            if visuals:
+                st.subheader(f"🖼️ Detected Visuals, Equations, and Code in {fname}")
+                for vtype, vcontent in visuals:
+                    with st.expander(f"{vtype} in {fname}"):
+                        st.code(vcontent) if vtype == "Code" else st.markdown(vcontent)
+                        if st.button(f"Explain this {vtype} ({fname})", key=f"explain_{vtype}_{hash(vcontent)}_{fname}"):
+                            if vtype == "Equation":
+                                prompt = f"Explain this math equation step by step: {vcontent}"
+                            elif vtype == "Code":
+                                prompt = f"Explain what this code does, line by line: {vcontent}"
+                            elif vtype == "Diagram":
+                                prompt = f"Describe and explain the concepts illustrated by this diagram."
+                            else:
+                                prompt = f"Explain this: {vcontent}"
+                            st.info(call_gemini(prompt))
+        # --- Multi-Document Synthesis ---
+        if len(texts) > 1:
+            st.markdown("---")
+            st.subheader("🔗 Multi-Document Synthesis")
+            if st.button("🧠 Synthesize Across All Documents"):
+                synth_prompt = (
+                    "You are an expert study assistant. Given the following documents, identify overlapping concepts, synthesize information, highlight discrepancies, and generate a combined summary and a set of flashcards covering all materials. "
+                    "If there are conflicting points, note them. Return a summary and at least 10 flashcards.\n\n"
+                )
+                for fname, text in zip(file_names, texts):
+                    synth_prompt += f"Document: {fname}\n{text[:2000]}\n\n"  # Limit to 2000 chars per doc for speed
+                synthesis = call_gemini(synth_prompt)
+                st.success("Synthesis complete!")
+                st.markdown(synthesis)
+        # --- Single document fallback: previous logic ---
+        if len(texts) == 1:
+            text = texts[0]
+            # Example: generate flashcards and summary for export
+            flashcards = [("What is X?", "X is ...")]  # Placeholder, replace with actual generation logic
+            summary = "This is a summary."  # Placeholder, replace with actual generation logic
+            all_flashcards.extend(flashcards)
+            all_summaries.append(summary)
+        # --- Batch Export ---
+        if all_flashcards:
+            st.info("Export all generated flashcards as an Anki-compatible CSV file.")
+            if st.button("Export All Flashcards to Anki CSV"):
+                fname = export_flashcards_to_anki(all_flashcards)
+                st.success(f"Flashcards exported: {fname}")
+                st.toast("Flashcards exported!")
+        if all_summaries:
+            st.info("Export all generated summaries as a PDF file.")
+            if st.button("Export All Summaries to PDF"):
+                combined_summary = "\n\n".join(all_summaries)
+                fname = export_summary_to_pdf(combined_summary)
+                st.success(f"Summary exported: {fname}")
+                st.toast("Summary exported!")
+        if all_flashcards:
+            st.subheader("🃏 Flashcards (Click to Reveal)")
+            email = user.get("email", "")
+            import hashlib
+            import datetime
+            today = datetime.datetime.now().strftime("%Y-%m-%d")
+            for i, (question, answer) in enumerate(all_flashcards):
+                card_id = hashlib.md5((question + answer).encode()).hexdigest()
+                add_memorization_card(email, card_id, question, answer)
+                key = f"flashcard_{i}"
+                if st.button(f"Show Answer for Q{i+1}", key=key):
+                    st.markdown(f"**Q{i+1}:** {question}")
+                    st.success(f"**A:** {answer}")
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        if st.button(f"✅ Mark as Known (Q{i+1})", key=f"known_{i}"):
+                            update_card_review(email, card_id, True, today)
+                            st.toast("Marked as Known! Scheduled for review in 3 days.")
+                    with col2:
+                        if st.button(f"❌ Mark as Unknown (Q{i+1})", key=f"unknown_{i}"):
+                            update_card_review(email, card_id, False, today)
+                            st.toast("Marked as Unknown! Scheduled for review tomorrow.")
                 else:
-                    st.info("Enter a concept first.")
-            elif choice == "Mind Map":
-                jm = call_gemini(f"Create JSON mind map from text:\n{text}")
-                plot_mind_map(jm)
+                    st.markdown(f"**Q{i+1}:** {question}")
+
+# --- Product Hunt API Integration ---
+PRODUCT_HUNT_TOKEN = st.secrets.get("producthunt", {}).get("api_token", "")
+PRODUCT_HUNT_ID = st.secrets.get("producthunt", {}).get("product_id", "")  # e.g., "vekkam"
+
+import time
+@st.cache_data(ttl=300)
+def get_ph_stats():
+    if not PRODUCT_HUNT_TOKEN or not PRODUCT_HUNT_ID:
+        return {"votes": 0, "comments": []}
+    headers = {"Authorization": f"Bearer {PRODUCT_HUNT_TOKEN}"}
+    # Get upvotes
+    votes_url = f"https://api.producthunt.com/v2/api/graphql"
+    votes_query = {
+        "query": f"""
+        query {{
+          post(slug: \"{PRODUCT_HUNT_ID}\") {{
+            votesCount
+            comments(first: 5) {{
+              edges {{
+                node {{
+                  id
+                  body
+                  user {{ name profileImage }}
+                }}
+              }}
+            }}
+          }}
+        }}
+        """
+    }
+    try:
+        r = requests.post(votes_url, headers=headers, json=votes_query)
+        data = r.json()
+        post = data['data']['post']
+        votes = post['votesCount']
+        comments = [
+            {
+                "body": edge['node']['body'],
+                "user": edge['node']['user']['name'],
+                "avatar": edge['node']['user']['profileImage']
+            }
+            for edge in post['comments']['edges']
+        ]
+        return {"votes": votes, "comments": comments}
+    except Exception:
+        return {"votes": 0, "comments": []}
+
+# --- Footer: Product Hunt Upvote Button & Live Stats ---
+ph_stats = get_ph_stats()
+
+st.markdown("---")
+with st.container():
+    st.markdown(
+        f'''
+        <div style="text-align:center;">
+            <span style="font-size:1.2em; font-weight:bold;">🚀 Love Vekkam? Help us grow!</span><br>
+            <span style="font-size:1em;">Upvote and leave a comment on Product Hunt to support our mission to help students study smarter and faster!</span><br><br>
+            <a href="https://www.producthunt.com/products/vekkam" target="_blank" id="ph-upvote-link">
+                <img src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=456789&theme=light" alt="Upvote Vekkam on Product Hunt" style="width: 200px; margin-bottom: 8px;"/>
+            </a><br>
+            <span style="font-size:1.1em; font-weight:bold; color:#da552f;">🔥 {ph_stats['votes']} upvotes</span><br>
+            <a href="https://www.producthunt.com/products/vekkam" target="_blank" style="font-size:1.1em; font-weight:bold; color:#da552f; text-decoration:none;">👉 Upvote & Comment on Product Hunt!</a>
+        </div>
+        ''', unsafe_allow_html=True)
+    # Upvote nudge
+    if 'ph_upvoted' not in st.session_state:
+        st.session_state['ph_upvoted'] = False
+    if not st.session_state['ph_upvoted']:
+        if st.button("👍 I upvoted Vekkam on Product Hunt!"):
+            st.session_state['ph_upvoted'] = True
+            st.success("Thank you for supporting us on Product Hunt! 🎉")
+    else:
+        st.info("Thanks for your upvote! You're awesome! 🧡")
+    # Product Hunt login (placeholder)
+    st.markdown('<a href="https://www.producthunt.com/login" target="_blank"><button>🔑 Connect Product Hunt Account (coming soon)</button></a>', unsafe_allow_html=True)
+    # Recent comments
+    if ph_stats['comments']:
+        st.markdown("---")
+        st.markdown("### 💬 Recent Product Hunt Comments")
+        for c in ph_stats['comments']:
+            st.markdown(f'<div style="margin-bottom:1em;"><img src="{c["avatar"]}" width="32" style="vertical-align:middle;border-radius:50%;margin-right:8px;"/> <b>{c["user"]}</b><br><span style="font-size:0.95em;">{c["body"]}</span></div>', unsafe_allow_html=True)
 
 # --- Gemini Call ---
 def call_gemini(prompt, temp=0.7, max_tokens=2048):
@@ -661,3 +997,204 @@ def call_gemini(prompt, temp=0.7, max_tokens=2048):
         response.raise_for_status()
         data = response.json()
         return data["candidates"][0]["content"]["parts"][0]["text"]
+
+# --- Visual/Equation/Code Understanding Helper ---
+def extract_visuals_and_code(text, file=None):
+    visuals = []
+    # Detect LaTeX/math equations (simple regex for $...$ or \[...\])
+    import re
+    equations = re.findall(r'(\$[^$]+\$|\\\[[^\]]+\\\])', text)
+    for eq in equations:
+        visuals.append(("Equation", eq))
+    # Detect code blocks (triple backticks or indented)
+    code_blocks = re.findall(r'```[\s\S]*?```', text)
+    for code in code_blocks:
+        visuals.append(("Code", code))
+    # Detect possible diagrams/images in file (if image or PDF page)
+    if file and hasattr(file, 'name') and file.name.lower().endswith((".jpg", ".jpeg", ".png")):
+        visuals.append(("Diagram", "[Image uploaded]") )
+    # For PDFs, could add more advanced image extraction if needed
+    return visuals
+
+# --- Calendar Integration Helper ---
+def detect_deadlines(text):
+    prompt = (
+        "Extract all assignment or exam deadlines (with date and description) from the following text. "
+        "Return a JSON list of objects with 'date' and 'description'.\n\n" + text[:5000]
+    )
+    import json
+    try:
+        deadlines_json = call_gemini(prompt)
+        deadlines = json.loads(deadlines_json)
+        if isinstance(deadlines, dict):
+            deadlines = list(deadlines.values())
+        return deadlines
+    except Exception:
+        return []
+
+def add_to_google_calendar(deadline):
+    # Opens a Google Calendar event creation link in the browser
+    import urllib.parse
+    base = "https://calendar.google.com/calendar/render?action=TEMPLATE"
+    params = {
+        "text": deadline['description'],
+        "dates": f"{deadline['date'].replace('-', '')}/{deadline['date'].replace('-', '')}",
+    }
+    url = base + "&" + urllib.parse.urlencode(params)
+    webbrowser.open_new_tab(url)
+
+# --- Export Helpers ---
+def export_flashcards_to_anki(flashcards, filename="flashcards.csv"):
+    with open(filename, "w", newline='', encoding='utf-8') as f:
+        writer = csv.writer(f)
+        writer.writerow(["Front", "Back"])
+        for q, a in flashcards:
+            writer.writerow([q, a])
+    return filename
+
+def export_summary_to_pdf(summary, filename="summary.pdf"):
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Arial", size=12)
+    for line in summary.split('\n'):
+        pdf.cell(200, 10, txt=line, ln=1, align='L')
+    pdf.output(filename)
+    return filename
+
+# --- Duolingo-Style Onboarding ---
+if 'onboarding_complete' not in st.session_state:
+    st.session_state['onboarding_complete'] = False
+if 'onboarding_step' not in st.session_state:
+    st.session_state['onboarding_step'] = 0
+
+ONBOARDING_STEPS = [
+    'Welcome',
+    'Language',
+    'Goal',
+    'LearningStyle',
+    'Finish'
+]
+
+if not st.session_state['onboarding_complete']:
+    step = st.session_state['onboarding_step']
+    st.markdown("""
+        <style>
+        .onboard-center {text-align:center; margin-top:2em;}
+        </style>
+    """, unsafe_allow_html=True)
+    st.progress((step+1)/len(ONBOARDING_STEPS), text=f"Step {step+1} of {len(ONBOARDING_STEPS)}")
+    if ONBOARDING_STEPS[step] == 'Welcome':
+        st.markdown('<div class="onboard-center"><img src="https://github.com/rekfdjkzbdfvkgjerkdfnfcbvgewhs/Vekkam/blob/main/logo.png" width="120"/><h2>Welcome to Vekkam!</h2><p>Your AI-powered study companion.</p></div>', unsafe_allow_html=True)
+        if st.button("Let's get started!"):
+            st.session_state['onboarding_step'] += 1
+            st.experimental_rerun()
+    elif ONBOARDING_STEPS[step] == 'Language':
+        st.markdown('<div class="onboard-center"><h3>🌐 Choose your language</h3></div>', unsafe_allow_html=True)
+        lang_choice = st.selectbox("Language", list(languages.keys()), index=0)
+        st.session_state["language"] = languages[lang_choice]
+        if st.button("Next"):
+            st.session_state['onboarding_step'] += 1
+            st.experimental_rerun()
+    elif ONBOARDING_STEPS[step] == 'Goal':
+        st.markdown('<div class="onboard-center"><h3>🎯 What is your main study goal?</h3></div>', unsafe_allow_html=True)
+        goal = st.radio("Choose a goal:", ["Exam Prep", "Daily Review", "Master a Subject", "Ace Assignments"], key="onboard_goal")
+        st.session_state['study_goal'] = goal
+        if st.button("Next"):
+            st.session_state['onboarding_step'] += 1
+            st.experimental_rerun()
+    elif ONBOARDING_STEPS[step] == 'LearningStyle':
+        st.markdown('<div class="onboard-center"><h3>🧠 Discover your learning style</h3><p>This helps us personalize your experience!</p></div>', unsafe_allow_html=True)
+        # Use the same learning style test as before
+        likert = [
+            "Strongly Disagree", "Disagree", "Somewhat Disagree", "Neutral", "Somewhat Agree", "Agree", "Strongly Agree"
+        ]
+        questions = {
+            "Sensing/Intuitive": [
+                ("I am more interested in what is actual than what is possible.", "Sensing"),
+                ("I often focus on the big picture rather than the details.", "Intuitive"),
+                ("I trust my gut feelings over concrete evidence.", "Intuitive"),
+                ("I enjoy tasks that require attention to detail.", "Sensing"),
+                ("I prefer practical solutions over theoretical ideas.", "Sensing"),
+                ("I am drawn to abstract concepts and patterns.", "Intuitive"),
+                ("I notice details that others might miss.", "Sensing"),
+                ("I like to imagine possibilities and what could be.", "Intuitive"),
+                ("I rely on past experiences to guide me.", "Sensing"),
+                ("I am energized by exploring new ideas.", "Intuitive"),
+            ],
+            "Visual/Verbal": [
+                ("I remember best what I see (pictures, diagrams, charts).", "Visual"),
+                ("I find it easier to follow spoken instructions than written ones.", "Verbal"),
+                ("I prefer to learn through images and spatial understanding.", "Visual"),
+                ("I often take notes to help me remember.", "Verbal"),
+                ("I visualize information in my mind.", "Visual"),
+                ("I prefer reading to watching videos.", "Verbal"),
+                ("I use color and layout to organize my notes.", "Visual"),
+                ("I find it easier to express myself in writing.", "Verbal"),
+                ("I am drawn to infographics and visual summaries.", "Visual"),
+                ("I enjoy listening to lectures or podcasts.", "Verbal"),
+            ],
+            "Active/Reflective": [
+                ("I learn best by doing and trying things out.", "Active"),
+                ("I prefer to think things through before acting.", "Reflective"),
+                ("I enjoy group work and discussions.", "Active"),
+                ("I need time alone to process new information.", "Reflective"),
+                ("I like to experiment and take risks in learning.", "Active"),
+                ("I often review my notes quietly after class.", "Reflective"),
+                ("I am energized by interacting with others.", "Active"),
+                ("I prefer to observe before participating.", "Reflective"),
+                ("I learn by teaching others or explaining concepts aloud.", "Active"),
+                ("I keep a journal or log to reflect on my learning.", "Reflective"),
+            ],
+            "Sequential/Global": [
+                ("I learn best in a step-by-step, logical order.", "Sequential"),
+                ("I like to see the big picture before the details.", "Global"),
+                ("I prefer to follow clear, linear instructions.", "Sequential"),
+                ("I often make connections between ideas in a holistic way.", "Global"),
+                ("I am comfortable breaking tasks into smaller parts.", "Sequential"),
+                ("I sometimes jump to conclusions without all the steps.", "Global"),
+                ("I like outlines and structured notes.", "Sequential"),
+                ("I understand concepts better when I see how they fit together.", "Global"),
+                ("I prefer to finish one thing before starting another.", "Sequential"),
+                ("I enjoy brainstorming and exploring many ideas at once.", "Global"),
+            ],
+        }
+        if "learning_style_answers" not in st.session_state:
+            st.session_state.learning_style_answers = {}
+        for dichotomy, qs in questions.items():
+            st.subheader(dichotomy)
+            for i, (q, side) in enumerate(qs):
+                key = f"{dichotomy}_{i}"
+                st.session_state.learning_style_answers[key] = st.radio(
+                    q,
+                    likert,
+                    key=key
+                )
+        if st.button("Finish Onboarding"):
+            # Scoring: Strongly Disagree=0, ..., Neutral=50, ..., Strongly Agree=100 (for positive phrasing)
+            # For each question, if side matches dichotomy, score as is; if not, reverse
+            score_map = {0: 0, 1: 17, 2: 33, 3: 50, 4: 67, 5: 83, 6: 100}
+            scores = {}
+            for dichotomy, qs in questions.items():
+                total = 0
+                for i, (q, side) in enumerate(qs):
+                    key = f"{dichotomy}_{i}"
+                    val = st.session_state.learning_style_answers[key]
+                    idx = likert.index(val)
+                    # If the question is for the first side, score as is; if for the opposite, reverse
+                    if side == dichotomy.split("/")[0]:
+                        score = score_map[idx]
+                    else:
+                        score = score_map[6 - idx]
+                    total += score
+                scores[dichotomy] = int(total / len(qs))
+            save_learning_style(user.get("email", ""), scores)
+            st.session_state.learning_style_answers = {}
+            st.session_state['onboarding_step'] += 1
+            st.experimental_rerun()
+    elif ONBOARDING_STEPS[step] == 'Finish':
+        st.markdown('<div class="onboard-center"><h2>🎉 You are all set!</h2><p>Your experience is now personalized. Let\'s start learning!</p></div>', unsafe_allow_html=True)
+        st.balloons()
+        if st.button("Go to Dashboard"):
+            st.session_state['onboarding_complete'] = True
+            st.experimental_rerun()
+    st.stop()
