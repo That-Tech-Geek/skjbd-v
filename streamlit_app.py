@@ -33,7 +33,7 @@ def show_lottie_loading(message="Loading..."):
     lottie_json = load_lottieurl(lottie_url)
     lottie_placeholder = st.empty()
     msg_placeholder = st.empty()
-    lottie_placeholder_lottie = lottie_placeholder.lottie(lottie_json, height=200, key="global_lottie")
+    lottie_placeholder_lottie = st_lottie(lottie_json, height=200, key="global_lottie")
     msg_placeholder.info(message)
     try:
         yield
