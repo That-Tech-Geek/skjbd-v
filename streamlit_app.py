@@ -730,19 +730,19 @@ elif tab == "Paper Solver/Exam Guide":
                     st.info(fb)
 
         def detect_deadlines(text):
-    prompt = (
-        "Extract all assignment or exam deadlines (with date and description) from the following text. "
-        "Return a JSON list of objects with 'date' and 'description'.\n\n" + text[:5000]
-    )
-    import json
-    try:
-        deadlines_json = call_gemini(prompt)
-        deadlines = json.loads(deadlines_json)
-        if isinstance(deadlines, dict):
-            deadlines = list(deadlines.values())
-        return deadlines
-    except Exception:
-        return []
+            prompt = (
+                "Extract all assignment or exam deadlines (with date and description) from the following text. "
+                "Return a JSON list of objects with 'date' and 'description'.\n\n" + text[:5000]
+            )
+            import json
+            try:
+                deadlines_json = call_gemini(prompt)
+                deadlines = json.loads(deadlines_json)
+                if isinstance(deadlines, dict):
+                    deadlines = list(deadlines.values())
+                return deadlines
+            except Exception:
+                return []
         
         # --- Auto Deadline Detection ---
         deadlines = detect_deadlines(text)
