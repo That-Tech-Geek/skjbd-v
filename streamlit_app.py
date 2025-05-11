@@ -36,7 +36,7 @@ def call_gemini(prompt, temperature=0.7, max_tokens=2048):
         
     url = (
         f"https://generativelanguage.googleapis.com/v1beta/"
-        f"models/gemini-pro:generateContent?key={GEMINI_API_KEY}"
+        f"models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
     )
     payload = {
         "contents": [{"parts": [{"text": prompt}]}],
