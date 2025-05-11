@@ -129,23 +129,28 @@ def load_lottieurl(url):
 import contextlib
 @contextlib.contextmanager
 def show_lottie_loading(message="Loading..."):
-    with st.container():
+    # Use a single container for all loading animations
+    if 'loading_container' not in st.session_state:
+        st.session_state.loading_container = st.empty()
+    
+    # Clear any existing content in the container
+    st.session_state.loading_container.empty()
+    
+    # Generate a unique key for this loading instance
+    unique_key = f"lottie_{int(time.time() * 1000)}"
+    
+    # Show the loading animation and message
+    with st.session_state.loading_container.container():
         lottie_url = "https://assets10.lottiefiles.com/packages/lf20_kyu7xb1v.json"
         lottie_json = load_lottieurl(lottie_url)
-        lottie_placeholder = st.empty()
-        msg_placeholder = st.empty()
-        # Generate a unique key using timestamp
-        unique_key = f"lottie_{int(time.time() * 1000)}"
-        lottie_placeholder_lottie = st_lottie(lottie_json, height=200, key=unique_key)
-        msg_placeholder.info(message)
-        try:
-            yield
-        finally:
-            # Clear both the lottie animation and message immediately
-            lottie_placeholder.empty()
-            msg_placeholder.empty()
-            # Force a rerun to ensure the UI updates
-            
+        st_lottie(lottie_json, height=200, key=unique_key)
+        st.info(message)
+    
+    try:
+        yield
+    finally:
+        # Clear the loading animation and message
+        st.session_state.loading_container.empty()
 
 # --- Configuration from st.secrets ---
 raw_uri       = st.secrets.get("google", {}).get("redirect_uri", "")
@@ -680,6 +685,7 @@ if learning_style is None:
             st.session_state.learning_style_answers = {}
         st.success("Learning style saved! Reloading...")
         st.balloons()
+        st.experimental_rerun()
         
     st.stop()
 
@@ -1247,7 +1253,7 @@ elif tab == "Learning Style Test":
         # Add option to retake test if desired
         if st.button("🔄 Retake Learning Style Test"):
             st.session_state['learning_style_answers'] = {}
-            
+            st.experimental_rerun()
             
     else:
         st.write("Answer the following questions to determine your learning style. This will help us personalize your experience.")
@@ -1320,8 +1326,7 @@ elif tab == "Learning Style Test":
                 st.session_state.learning_style_answers = {}
             st.success("Learning style saved! Reloading...")
             st.balloons()
-            
-        st.stop()
+            st.experimental_rerun()
 
 elif tab == "Paper Solver/Exam Guide":
     st.header("📝 " + t("Paper Solver/Exam Guide"))
