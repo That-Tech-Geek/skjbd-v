@@ -302,6 +302,8 @@ def get_section_progress(email, doc_id):
             SELECT section, progress FROM content_structure WHERE email=? AND doc_id=?
         ''', (email, doc_id))
         return dict(cur.fetchall())
+        
+LOGO_URL = "https://github.com/rekfdjkzbdfvkgjerkdfnfcbvgewhs/Vekkam/blob/main/logo.png"  # <-- Replace with your actual raw GitHub URL
 
 init_structure_db()
 
@@ -786,7 +788,6 @@ def export_summary_to_pdf(summary, filename="summary.pdf"):
         pdf.cell(200, 10, txt=line, ln=1, align='L')
     pdf.output(filename)
     return filename
-LOGO_URL = "https://github.com/rekfdjkzbdfvkgjerkdfnfcbvgewhs/Vekkam/blob/main/logo.png"  # <-- Replace with your actual raw GitHub URL
 
 # Language selector in sidebar
 if "language" not in st.session_state:
