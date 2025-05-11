@@ -19,6 +19,28 @@ import csv
 from fpdf import FPDF
 import webbrowser
 
+# --- Lottie Loading Helper (MUST BE DEFINED BEFORE USAGE) ---
+def load_lottieurl(url):
+    r = reqs.get(url)
+    if r.status_code != 200:
+        return None
+    return r.json()
+
+import contextlib
+@contextlib.contextmanager
+def show_lottie_loading(message="Loading..."):
+    lottie_url = "https://assets10.lottiefiles.com/packages/lf20_kyu7xb1v.json"  # Book animation
+    lottie_json = load_lottieurl(lottie_url)
+    lottie_placeholder = st.empty()
+    msg_placeholder = st.empty()
+    lottie_placeholder_lottie = lottie_placeholder.lottie(lottie_json, height=200, key="global_lottie")
+    msg_placeholder.info(message)
+    try:
+        yield
+    finally:
+        lottie_placeholder.empty()
+        msg_placeholder.empty()
+
 # --- Configuration from st.secrets ---
 raw_uri       = st.secrets["google"]["redirect_uri"]
 REDIRECT_URI  = raw_uri.rstrip("/") + "/"
@@ -359,27 +381,6 @@ if learning_style:
 if st.sidebar.button("Logout"):
     st.session_state.clear()
     st.experimental_rerun()
-
-# --- Lottie Loading Helper ---
-def load_lottieurl(url):
-    r = reqs.get(url)
-    if r.status_code != 200:
-        return None
-    return r.json()
-
-@contextlib.contextmanager
-def show_lottie_loading(message="Loading..."):
-    lottie_url = "https://assets10.lottiefiles.com/packages/lf20_kyu7xb1v.json"  # Book animation
-    lottie_json = load_lottieurl(lottie_url)
-    lottie_placeholder = st.empty()
-    msg_placeholder = st.empty()
-    lottie_placeholder_lottie = lottie_placeholder.lottie(lottie_json, height=200, key="global_lottie")
-    msg_placeholder.info(message)
-    try:
-        yield
-    finally:
-        lottie_placeholder.empty()
-        msg_placeholder.empty()
 
 # --- PDF/Text Extraction ---
 def extract_pages_from_url(pdf_url):
