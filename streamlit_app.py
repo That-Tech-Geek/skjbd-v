@@ -800,15 +800,7 @@ elif tab == t("Document Q&A"):
             file_names.append(uploaded.name)
         # --- Auto Deadline Detection ---
         all_text = "\n".join(texts)
-        deadlines = detect_deadlines(all_text)
-        if deadlines:
-            st.info("📅 Deadlines detected automatically from your documents. Click to add to your Google Calendar!")
-            st.subheader("📅 Detected Deadlines")
-            for d in deadlines:
-                st.write(f"{d['date']}: {d['description']}")
-                if st.button(f"Add to Google Calendar: {d['description']}", key=f"cal_{d['date']}_{d['description']}"):
-                    add_to_google_calendar(d)
-                    st.toast("Added to Google Calendar!")
+
         # --- Visual/Equation/Code Understanding for each file ---
         for idx, (text, fname) in enumerate(zip(texts, file_names)):
             visuals = extract_visuals_and_code(text, uploaded_files[idx])
