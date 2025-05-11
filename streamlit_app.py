@@ -22,6 +22,7 @@ import fitz
 import docx
 from pptx import Presentation
 import streamlit.components.v1 as components
+import time
 
 def extract_text(file):
     name = file.name.lower()
@@ -94,11 +95,13 @@ def load_lottieurl(url):
 import contextlib
 @contextlib.contextmanager
 def show_lottie_loading(message="Loading..."):
-    lottie_url = "https://assets10.lottiefiles.com/packages/lf20_kyu7xb1v.json"  # Book animation
+    lottie_url = "https://assets10.lottiefiles.com/packages/lf20_kyu7xb1v.json"
     lottie_json = load_lottieurl(lottie_url)
     lottie_placeholder = st.empty()
     msg_placeholder = st.empty()
-    lottie_placeholder_lottie = st_lottie(lottie_json, height=200, key="global_lottie")
+    # Generate a unique key using timestamp
+    unique_key = f"lottie_{int(time.time() * 1000)}"
+    lottie_placeholder_lottie = st_lottie(lottie_json, height=200, key=unique_key)
     msg_placeholder.info(message)
     try:
         yield
