@@ -344,7 +344,7 @@ if learning_style is None:
             st.session_state.learning_style_answers = {}
         st.success("Learning style saved! Reloading...")
         st.balloons()
-        st.experimental_rerun()
+        
     st.stop()
 
 st.sidebar.image(user.get("picture", ""), width=48)
@@ -380,7 +380,7 @@ if learning_style:
 
 if st.sidebar.button("Logout"):
     st.session_state.clear()
-    st.experimental_rerun()
+    
 
 # --- PDF/Text Extraction ---
 def extract_pages_from_url(pdf_url):
@@ -1088,21 +1088,21 @@ if not st.session_state['onboarding_complete']:
         st.markdown('<div class="onboard-center"><img src="https://github.com/rekfdjkzbdfvkgjerkdfnfcbvgewhs/Vekkam/blob/main/logo.png" width="120"/><h2>Welcome to Vekkam!</h2><p>Your AI-powered study companion.</p></div>', unsafe_allow_html=True)
         if st.button("Let's get started!"):
             st.session_state['onboarding_step'] += 1
-            st.experimental_rerun()
+            
     elif ONBOARDING_STEPS[step] == 'Language':
         st.markdown('<div class="onboard-center"><h3>🌐 Choose your language</h3></div>', unsafe_allow_html=True)
         lang_choice = st.selectbox("Language", list(languages.keys()), index=0)
         st.session_state["language"] = languages[lang_choice]
         if st.button("Next"):
             st.session_state['onboarding_step'] += 1
-            st.experimental_rerun()
+            
     elif ONBOARDING_STEPS[step] == 'Goal':
         st.markdown('<div class="onboard-center"><h3>🎯 What is your main study goal?</h3></div>', unsafe_allow_html=True)
         goal = st.radio("Choose a goal:", ["Exam Prep", "Daily Review", "Master a Subject", "Ace Assignments"], key="onboard_goal")
         st.session_state['study_goal'] = goal
         if st.button("Next"):
             st.session_state['onboarding_step'] += 1
-            st.experimental_rerun()
+            
     elif ONBOARDING_STEPS[step] == 'LearningStyle':
         st.markdown('<div class="onboard-center"><h3>🧠 Discover your learning style</h3><p>This helps us personalize your experience!</p></div>', unsafe_allow_html=True)
         # Use the same learning style test as before
@@ -1191,11 +1191,11 @@ if not st.session_state['onboarding_complete']:
             save_learning_style(user.get("email", ""), scores)
             st.session_state.learning_style_answers = {}
             st.session_state['onboarding_step'] += 1
-            st.experimental_rerun()
+            
     elif ONBOARDING_STEPS[step] == 'Finish':
         st.markdown('<div class="onboard-center"><h2>🎉 You are all set!</h2><p>Your experience is now personalized. Let\'s start learning!</p></div>', unsafe_allow_html=True)
         st.balloons()
         if st.button("Go to Dashboard"):
             st.session_state['onboarding_complete'] = True
-            st.experimental_rerun()
+            
     st.stop()
