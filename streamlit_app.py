@@ -978,12 +978,15 @@ elif tab == t("Document Q&A"):
             # Extract text from file
             ext = uploaded.name.lower().split('.')[-1]
             if ext == "pdf":
-                reader = PdfReader(uploaded)
-                text = "\n".join([page.extract_text() for page in reader.pages])
+                with show_lottie_loading("Extracting PDF from file..."):
+                    reader = PdfReader(uploaded)
+                    text = "\n".join([page.extract_text() for page in reader.pages])
             elif ext in ("jpg", "jpeg", "png"):
-                text = pytesseract.image_to_string(Image.open(uploaded))
+                with show_lottie_loading("Extracting text from image..."):
+                    text = pytesseract.image_to_string(Image.open(uploaded))
             else:
-                text = StringIO(uploaded.getvalue().decode()).read()
+                with show_lottie_loading("Extracting text from file..."):
+                    text = StringIO(uploaded.getvalue().decode()).read()
             texts.append(text)
             file_names.append(uploaded.name)
         # --- Generate learning aids for each file ---
@@ -991,26 +994,34 @@ elif tab == t("Document Q&A"):
             st.subheader(f"Learning Aids for {fname}")
             
             # Generate and display all learning aids
-            render_section("📌 Summary", generate_summary(text))
-            render_section("📝 Quiz Questions", generate_questions(text))
+            with show_lottie_loading("Generating summary..."):
+                render_section("📌 Summary", generate_summary(text))
+            with show_lottie_loading("Generating quiz questions..."):
+                render_section("📝 Quiz Questions", generate_questions(text))
 
             with st.expander("📚 Flashcards"):
-                render_section("Flashcards", generate_flashcards(text))
+                with show_lottie_loading("Generating flashcards..."):
+                    render_section("Flashcards", generate_flashcards(text))
 
             with st.expander("🧠 Mnemonics"):
-                render_section("Mnemonics", generate_mnemonics(text))
+                with show_lottie_loading("Generating mnemonics..."):
+                    render_section("Mnemonics", generate_mnemonics(text))
 
             with st.expander("🔑 Key Terms"):
-                render_section("Key Terms", generate_key_terms(text))
+                with show_lottie_loading("Generating key terms..."):
+                    render_section("Key Terms", generate_key_terms(text))
 
             with st.expander("📋 Cheat Sheet"):
-                render_section("Cheat Sheet", generate_cheatsheet(text))
+                with show_lottie_loading("Generating cheat sheet..."):
+                    render_section("Cheat Sheet", generate_cheatsheet(text))
 
             with st.expander("⭐ Highlights"):
-                render_section("Highlights", generate_highlights(text))
+                with show_lottie_loading("Generating highlights..."):
+                    render_section("Highlights", generate_highlights(text))
 
             with st.expander("📌 Critical Points"):
-                render_section("Critical Points", generate_critical_points(text))
+                with show_lottie_loading("Generating critical points..."):
+                    render_section("Critical Points", generate_critical_points(text))
 
             # Store for batch export
             all_summaries.append(generate_summary(text))
