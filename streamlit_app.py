@@ -878,7 +878,7 @@ elif tab == "🗓️ Daily Quiz":
                             st.info(call_gemini(followup_prompt))
 
 elif tab == t("Document Q&A"):
-    st.header("💡 " + t("Document Q&A"))
+    st.header("\U0001F4A1 " + t("Document Q&A"))
     st.info("Upload one or more documents and get instant learning aids, personalized for your style. The AI can now synthesize across multiple files!")
     uploaded_files = st.file_uploader("Upload PDF/Image/TXT (multiple allowed)", type=["pdf","jpg","png","txt"], help="Upload your notes, textbook, or image.", accept_multiple_files=True)
     texts = []
@@ -887,60 +887,42 @@ elif tab == t("Document Q&A"):
     all_summaries = []
     if uploaded_files:
         for uploaded in uploaded_files:
-            text = extract_text(uploaded)
+            # Extract text from file
+            ext = uploaded.name.lower().split('.')[-1]
+            if ext == "pdf":
+                reader = PdfReader(uploaded)
+                text = "\n".join([page.extract_text() for page in reader.pages])
+            elif ext in ("jpg", "jpeg", "png"):
+                text = pytesseract.image_to_string(Image.open(uploaded))
+            else:
+                text = StringIO(uploaded.getvalue().decode()).read()
             texts.append(text)
             file_names.append(uploaded.name)
-        # --- Auto Deadline Detection ---
-        all_text = "\n".join(texts)
-        deadlines = detect_deadlines(all_text)
-        if deadlines:
-            st.info("📅 Deadlines detected automatically from your documents. Click to add to your Google Calendar!")
-            st.subheader("📅 Detected Deadlines")
-            for d in deadlines:
-                st.write(f"{d['date']}: {d['description']}")
-                if st.button(f"Add to Google Calendar: {d['description']}", key=f"cal_{d['date']}_{d['description']}"):
-                    add_to_google_calendar(d)
-                    st.toast("Added to Google Calendar!")
-        # --- Visual/Equation/Code Understanding for each file ---
+        # --- Generate learning aids for each file ---
         for idx, (text, fname) in enumerate(zip(texts, file_names)):
-            visuals = extract_visuals_and_code(text, uploaded_files[idx])
-            if visuals:
-                st.subheader(f"🖼️ Detected Visuals, Equations, and Code in {fname}")
-                for vtype, vcontent in visuals:
-                    with st.expander(f"{vtype} in {fname}"):
-                        st.code(vcontent) if vtype == "Code" else st.markdown(vcontent)
-                        if st.button(f"Explain this {vtype} ({fname})", key=f"explain_{vtype}_{hash(vcontent)}_{fname}"):
-                            if vtype == "Equation":
-                                prompt = f"Explain this math equation step by step: {vcontent}"
-                            elif vtype == "Code":
-                                prompt = f"Explain what this code does, line by line: {vcontent}"
-                            elif vtype == "Diagram":
-                                prompt = f"Describe and explain the concepts illustrated by this diagram."
-                            else:
-                                prompt = f"Explain this: {vcontent}"
-                            st.info(call_gemini(prompt))
-        # --- Multi-Document Synthesis ---
-        if len(texts) > 1:
-            st.markdown("---")
-            st.subheader("🔗 Multi-Document Synthesis")
-            if st.button("🧠 Synthesize Across All Documents"):
-                synth_prompt = (
-                    "You are an expert study assistant. Given the following documents, identify overlapping concepts, synthesize information, highlight discrepancies, and generate a combined summary and a set of flashcards covering all materials. "
-                    "If there are conflicting points, note them. Return a summary and at least 10 flashcards.\n\n"
-                )
-                for fname, text in zip(file_names, texts):
-                    synth_prompt += f"Document: {fname}\n{text[:2000]}\n\n"  # Limit to 2000 chars per doc for speed
-                synthesis = call_gemini(synth_prompt)
-                st.success("Synthesis complete!")
-                st.markdown(synthesis)
-        # --- Single document fallback: previous logic ---
-        if len(texts) == 1:
-            text = texts[0]
-            # Example: generate flashcards and summary for export
-            flashcards = [("What is X?", "X is ...")]  # Placeholder, replace with actual generation logic
-            summary = "This is a summary."  # Placeholder, replace with actual generation logic
-            all_flashcards.extend(flashcards)
+            st.subheader(f"Learning Aids for {fname}")
+            with st.spinner("Generating summary..."):
+                summary = call_gemini(f"Summarize for exam, list formulae:\n{text[:3000]}")
+            st.markdown(f"**Summary:**\n{summary}")
             all_summaries.append(summary)
+            with st.spinner("Generating flashcards..."):
+                flashcards_raw = call_gemini(f"Create flashcards (Q&A, JSON list of objects with 'question' and 'answer'):\n{text[:3000]}")
+            try:
+                flashcards_json = json.loads(flashcards_raw)
+                flashcards = [(fc['question'], fc['answer']) for fc in flashcards_json]
+            except Exception:
+                # fallback: try to split by Q/A
+                flashcards = []
+                for line in flashcards_raw.split('\n'):
+                    if ':' in line:
+                        q, a = line.split(':', 1)
+                        flashcards.append((q.strip(), a.strip()))
+            all_flashcards.extend(flashcards)
+            st.markdown("**Flashcards:**")
+            for i, (q, a) in enumerate(flashcards, 1):
+                with st.expander(f"Q{i}"):
+                    st.markdown(f"**Q:** {q}")
+                    st.markdown(f"**A:** {a}")
         # --- Batch Export ---
         if all_flashcards:
             st.info("Export all generated flashcards as an Anki-compatible CSV file.")
@@ -955,30 +937,6 @@ elif tab == t("Document Q&A"):
                 fname = export_summary_to_pdf(combined_summary)
                 st.success(f"Summary exported: {fname}")
                 st.toast("Summary exported!")
-        if all_flashcards:
-            st.subheader("🃏 Flashcards (Click to Reveal)")
-            email = user.get("email", "")
-            import hashlib
-            import datetime
-            today = datetime.datetime.now().strftime("%Y-%m-%d")
-            for i, (question, answer) in enumerate(all_flashcards):
-                card_id = hashlib.md5((question + answer).encode()).hexdigest()
-                add_memorization_card(email, card_id, question, answer)
-                key = f"flashcard_{i}"
-                if st.button(f"Show Answer for Q{i+1}", key=key):
-                    st.markdown(f"**Q{i+1}:** {question}")
-                    st.success(f"**A:** {answer}")
-                    col1, col2 = st.columns(2)
-                    with col1:
-                        if st.button(f"✅ Mark as Known (Q{i+1})", key=f"known_{i}"):
-                            update_card_review(email, card_id, True, today)
-                            st.toast("Marked as Known! Scheduled for review in 3 days.")
-                    with col2:
-                        if st.button(f"❌ Mark as Unknown (Q{i+1})", key=f"unknown_{i}"):
-                            update_card_review(email, card_id, False, today)
-                            st.toast("Marked as Unknown! Scheduled for review tomorrow.")
-                else:
-                    st.markdown(f"**Q{i+1}:** {question}")
 
 # --- Product Hunt API Integration ---
 PRODUCT_HUNT_TOKEN = st.secrets.get("producthunt", {}).get("api_token", "")
@@ -1061,33 +1019,6 @@ with st.container():
         st.markdown("### 💬 Recent Product Hunt Comments")
         for c in ph_stats['comments']:
             st.markdown(f'<div style="margin-bottom:1em;"><img src="{c["avatar"]}" width="32" style="vertical-align:middle;border-radius:50%;margin-right:8px;"/> <b>{c["user"]}</b><br><span style="font-size:0.95em;">{c["body"]}</span></div>', unsafe_allow_html=True)
-
-# --- Calendar Integration Helper (MUST BE DEFINED BEFORE USAGE) ---
-def detect_deadlines(text):
-    prompt = (
-        "Extract all assignment or exam deadlines (with date and description) from the following text. "
-        "Return a JSON list of objects with 'date' and 'description'.\n\n" + text[:5000]
-    )
-    import json
-    try:
-        deadlines_json = call_gemini(prompt)
-        deadlines = json.loads(deadlines_json)
-        if isinstance(deadlines, dict):
-            deadlines = list(deadlines.values())
-        return deadlines
-    except Exception:
-        return []
-
-def add_to_google_calendar(deadline):
-    # Opens a Google Calendar event creation link in the browser
-    import urllib.parse
-    base = "https://calendar.google.com/calendar/render?action=TEMPLATE"
-    params = {
-        "text": deadline['description'],
-        "dates": f"{deadline['date'].replace('-', '')}/{deadline['date'].replace('-', '')}",
-    }
-    url = base + "&" + urllib.parse.urlencode(params)
-    webbrowser.open_new_tab(url)
 
 # --- Duolingo-Style Onboarding ---
 if 'onboarding_complete' not in st.session_state:
