@@ -650,7 +650,7 @@ if learning_style is None:
             key = f"{dichotomy}_{i}"
             st.session_state.learning_style_answers[key] = st.radio(
                 q,
-                [f"Strongly {side}", f"Somewhat {side}", "Neutral", f"Somewhat Opposite", f"Strongly Opposite"],
+                ["Strongly Disagree", "Disagree", "Somewhat Disagree", "Neutral", "Somewhat Agree", "Agree", "Strongly Agree"],
                 key=key
             )
     if st.button("Submit"):
@@ -1037,7 +1037,7 @@ elif tab == "Learning Style Test":
             key = f"{dichotomy}_{i}"
             st.session_state.learning_style_answers[key] = st.radio(
                 q,
-                [f"Strongly {side}", f"Somewhat {side}", "Neutral", f"Somewhat Opposite", f"Strongly Opposite"],
+                ["Strongly Disagree", "Disagree", "Somewhat Disagree", "Neutral", "Somewhat Agree", "Agree", "Strongly Agree"],
                 key=key
             )
     
@@ -1460,7 +1460,7 @@ if not st.session_state['onboarding_complete']:
                 key = f"{dichotomy}_{i}"
                 st.session_state.learning_style_answers[key] = st.radio(
                     q,
-                    likert,
+                    ["Strongly Disagree", "Disagree", "Somewhat Disagree", "Neutral", "Somewhat Agree", "Agree", "Strongly Agree"],
                     key=key
                 )
         if st.button("Finish Onboarding"):
