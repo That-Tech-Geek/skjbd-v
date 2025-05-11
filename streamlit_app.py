@@ -729,32 +729,6 @@ elif tab == "Paper Solver/Exam Guide":
                     st.write(a)
                     st.info(fb)
 
-        def detect_deadlines(text):
-            prompt = (
-                "Extract all assignment or exam deadlines (with date and description) from the following text. "
-                "Return a JSON list of objects with 'date' and 'description'.\n\n" + text[:5000]
-            )
-            import json
-            try:
-                deadlines_json = call_gemini(prompt)
-                deadlines = json.loads(deadlines_json)
-                if isinstance(deadlines, dict):
-                    deadlines = list(deadlines.values())
-                return deadlines
-            except Exception:
-                return []
-        
-        # --- Auto Deadline Detection ---
-        deadlines = detect_deadlines(text)
-        if deadlines:
-            st.info("📅 Deadlines detected automatically from your exam paper. Click to add to your Google Calendar!")
-            st.subheader("📅 Detected Deadlines")
-            for d in deadlines:
-                st.write(f"{d['date']}: {d['description']}")
-                if st.button(f"Add to Google Calendar: {d['description']}", key=f"cal_exam_{d['date']}_{d['description']}"):
-                    add_to_google_calendar(d)
-                    st.toast("Added to Google Calendar!")
-
 elif tab == "🗓️ Daily Quiz":
     import datetime
     st.header("🗓️ Daily Quiz")
