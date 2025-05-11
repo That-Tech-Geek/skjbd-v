@@ -1504,4 +1504,3 @@ if not st.session_state['onboarding_complete']:
             st.session_state['onboarding_complete'] = True
             st.experimental_rerun()
     st.stop()
-</rewritten_file>
