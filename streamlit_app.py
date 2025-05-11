@@ -24,6 +24,40 @@ from pptx import Presentation
 import streamlit.components.v1 as components
 import time
 
+# --- Gemini Call ---
+def call_gemini(prompt, temp=0.7, max_tokens=2048):
+    lang = st.session_state.get("language", "en")
+    lang_name = [k for k, v in languages.items() if v == lang][0]
+    prompt = f"Please answer in {lang_name}.\n" + prompt
+    
+    if not GEMINI_API_KEY:
+        st.error("Gemini API key is not configured. Please check your secrets.toml file.")
+        return "API key not configured"
+        
+    url = (
+        f"https://generativelanguage.googleapis.com/v1beta/"
+        f"models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
+    )
+    payload = {
+        "contents": [{"parts": [{"text": prompt}]}],
+        "generationConfig": {"temperature": temp, "maxOutputTokens": max_tokens}
+    }
+    try:
+        with show_lottie_loading(t("Thinking with Gemini AI...")):
+            response = requests.post(url, json=payload)
+            response.raise_for_status()
+            data = response.json()
+            return data["candidates"][0]["content"]["parts"][0]["text"]
+    except requests.exceptions.HTTPError as e:
+        if e.response.status_code == 403:
+            st.error("API key is invalid or has insufficient permissions. Please check your Gemini API key.")
+        else:
+            st.error(f"API Error: {str(e)}")
+        return "Error occurred while calling Gemini API"
+    except Exception as e:
+        st.error(f"An error occurred: {str(e)}")
+        return "Error occurred while processing your request"
+
 def extract_text(file):
     name = file.name.lower()
     if name.endswith(".pdf"):
@@ -688,40 +722,6 @@ def export_summary_to_pdf(summary, filename="summary.pdf"):
         pdf.cell(200, 10, txt=line, ln=1, align='L')
     pdf.output(filename)
     return filename
-
-# --- Gemini Call ---
-def call_gemini(prompt, temp=0.7, max_tokens=2048):
-    lang = st.session_state.get("language", "en")
-    lang_name = [k for k, v in languages.items() if v == lang][0]
-    prompt = f"Please answer in {lang_name}.\n" + prompt
-    
-    if not GEMINI_API_KEY:
-        st.error("Gemini API key is not configured. Please check your secrets.toml file.")
-        return "API key not configured"
-        
-    url = (
-        f"https://generativelanguage.googleapis.com/v1beta/"
-        f"models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
-    )
-    payload = {
-        "contents": [{"parts": [{"text": prompt}]}],
-        "generationConfig": {"temperature": temp, "maxOutputTokens": max_tokens}
-    }
-    try:
-        with show_lottie_loading(t("Thinking with Gemini AI...")):
-            response = requests.post(url, json=payload)
-            response.raise_for_status()
-            data = response.json()
-            return data["candidates"][0]["content"]["parts"][0]["text"]
-    except requests.exceptions.HTTPError as e:
-        if e.response.status_code == 403:
-            st.error("API key is invalid or has insufficient permissions. Please check your Gemini API key.")
-        else:
-            st.error(f"API Error: {str(e)}")
-        return "Error occurred while calling Gemini API"
-    except Exception as e:
-        st.error(f"An error occurred: {str(e)}")
-        return "Error occurred while processing your request"
 
 # Language selector in sidebar
 if "language" not in st.session_state:
