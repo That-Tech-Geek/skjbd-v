@@ -144,7 +144,7 @@ def show_lottie_loading(message="Loading..."):
         lottie_placeholder.empty()
         msg_placeholder.empty()
         # Force a rerun to ensure the UI updates
-        st.experimental_rerun()
+        
 
 # --- Configuration from st.secrets ---
 raw_uri       = st.secrets.get("google", {}).get("redirect_uri", "")
