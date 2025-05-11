@@ -1755,7 +1755,7 @@ if not st.session_state['onboarding_complete']:
 
 elif tab == "⚡ 6-Hour Battle Plan":
     st.header("⚡ 6-Hour Battle Plan")
-    st.info("Upload your syllabus, guide books, and study materials. We'll create a focused 6-hour study plan to help you ace your exam!")
+    st.info("Upload your syllabus, guide books, and study materials. We'll create a focused 6-hour study plan using Vekkam's features to help you ace your exam!")
 
     # File upload section
     st.subheader("📚 Upload Your Materials")
@@ -1794,22 +1794,41 @@ elif tab == "⚡ 6-Hour Battle Plan":
 
             combined_text = "\n---\n".join(all_text)
 
+            # First, analyze the content and create a topic breakdown
+            content_analysis_prompt = (
+                f"Analyze the following study materials and create a structured breakdown of topics. "
+                f"For each topic, identify:\n"
+                f"1. Key concepts and formulas\n"
+                f"2. Difficulty level (Easy/Medium/Hard)\n"
+                f"3. Estimated time needed for mastery\n"
+                f"4. Dependencies on other topics\n\n"
+                f"Materials: {combined_text}"
+            )
+            content_analysis = call_gemini(content_analysis_prompt)
+
             # Generate the battle plan
             battle_plan_prompt = (
-                f"Create a detailed 6-hour study plan for an exam based on the following materials. "
+                f"Create a detailed 6-hour study plan using Vekkam's features. "
                 f"Consider:\n"
                 f"1. Exam date: {exam_date}\n"
                 f"2. Exam duration: {exam_duration} hours\n"
                 f"3. Challenging topics: {weak_topics}\n"
                 f"4. Strong topics: {strong_topics}\n\n"
+                f"Content Analysis: {content_analysis}\n\n"
                 f"The plan should include:\n"
-                f"- Topic prioritization based on importance and difficulty\n"
-                f"- Time allocation for each topic\n"
-                f"- Key concepts to focus on\n"
-                f"- Quick review strategies\n"
-                f"- Practice questions to attempt\n"
-                f"- Break times and energy management tips\n\n"
-                f"Study Materials:\n{combined_text}"
+                f"1. Hour-by-hour breakdown:\n"
+                f"   - Topic to cover\n"
+                f"   - Vekkam feature to use (Guide Book Chat, Document Q&A, etc.)\n"
+                f"   - Specific tasks and goals\n"
+                f"   - Break times\n"
+                f"2. For each topic:\n"
+                f"   - Quick concept review using Guide Book Chat\n"
+                f"   - Practice questions using Paper Solver\n"
+                f"   - Flashcards for key points\n"
+                f"   - Summary generation\n"
+                f"3. Progress tracking and checkpoints\n"
+                f"4. Energy management tips\n\n"
+                f"Study Materials: {combined_text}"
             )
 
             battle_plan = call_gemini(battle_plan_prompt)
@@ -1818,34 +1837,35 @@ elif tab == "⚡ 6-Hour Battle Plan":
             st.markdown("## 📋 Your 6-Hour Battle Plan")
             st.markdown(battle_plan)
 
-            # Add a section for quick tips
+            # Generate topic-specific resources
             st.markdown("---")
-            st.markdown("## 💡 Quick Tips")
-            tips_prompt = (
-                f"Based on the study materials and the created battle plan, provide:\n"
-                f"1. 5 key formulas/concepts to memorize\n"
-                f"2. 3 common mistakes to avoid\n"
-                f"3. 3 last-minute revision tips\n\n"
-                f"Materials: {combined_text}\n"
+            st.markdown("## 📚 Topic-Specific Resources")
+            resources_prompt = (
+                f"Based on the content analysis and battle plan, create a list of resources for each topic:\n"
+                f"1. Key formulas to memorize\n"
+                f"2. Practice questions to attempt\n"
+                f"3. Flashcards to create\n"
+                f"4. Summary points\n\n"
+                f"Content Analysis: {content_analysis}\n"
                 f"Battle Plan: {battle_plan}"
             )
-            tips = call_gemini(tips_prompt)
-            st.markdown(tips)
+            resources = call_gemini(resources_prompt)
+            st.markdown(resources)
 
-            # Add a section for practice questions
+            # Generate a quick reference guide
             st.markdown("---")
-            st.markdown("## 📝 Essential Practice Questions")
-            practice_prompt = (
-                f"Create 5 essential practice questions that cover the most important topics from the materials. "
-                f"For each question, provide:\n"
-                f"1. The question\n"
-                f"2. A brief solution\n"
-                f"3. Key points to remember\n\n"
-                f"Materials: {combined_text}\n"
+            st.markdown("## 📝 Quick Reference Guide")
+            reference_prompt = (
+                f"Create a quick reference guide that includes:\n"
+                f"1. All key formulas and concepts\n"
+                f"2. Common mistakes to avoid\n"
+                f"3. Last-minute tips for each topic\n"
+                f"4. Time management strategies\n\n"
+                f"Content Analysis: {content_analysis}\n"
                 f"Battle Plan: {battle_plan}"
             )
-            practice_questions = call_gemini(practice_prompt)
-            st.markdown(practice_questions)
+            reference_guide = call_gemini(reference_prompt)
+            st.markdown(reference_guide)
 
             # Add a section for mental preparation
             st.markdown("---")
@@ -1873,13 +1893,13 @@ elif tab == "⚡ 6-Hour Battle Plan":
                     
                     {battle_plan}
                     
-                    QUICK TIPS
-                    ==========
-                    {tips}
+                    TOPIC-SPECIFIC RESOURCES
+                    =======================
+                    {resources}
                     
-                    PRACTICE QUESTIONS
-                    ==================
-                    {practice_questions}
+                    QUICK REFERENCE GUIDE
+                    ====================
+                    {reference_guide}
                     
                     MENTAL PREPARATION
                     =================
@@ -1896,8 +1916,8 @@ elif tab == "⚡ 6-Hour Battle Plan":
                     Battle Plan:
                     {battle_plan}
                     
-                    Quick Tips:
-                    {tips}
+                    Quick Reference:
+                    {reference_guide}
                     """
                     add_to_google_calendar({
                         "date": exam_date.strftime("%Y-%m-%d"),
