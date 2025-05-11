@@ -1457,38 +1457,6 @@ def get_ph_stats():
 # --- Footer: Product Hunt Upvote Button & Live Stats ---
 ph_stats = get_ph_stats()
 
-st.markdown("---")
-with st.container():
-    st.markdown(
-        f'''
-        <div style="text-align:center;">
-            <span style="font-size:1.2em; font-weight:bold;">🚀 Love Vekkam? Help us grow!</span><br>
-            <span style="font-size:1em;">Upvote and leave a comment on Product Hunt to support our mission to help students study smarter and faster!</span><br><br>
-            <a href="https://www.producthunt.com/products/vekkam" target="_blank" id="ph-upvote-link">
-                <img src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=456789&theme=light" alt="Upvote Vekkam on Product Hunt" style="width: 200px; margin-bottom: 8px;"/>
-            </a><br>
-            <span style="font-size:1.1em; font-weight:bold; color:#da552f;">🔥 {ph_stats['votes']} upvotes</span><br>
-            <a href="https://www.producthunt.com/products/vekkam" target="_blank" style="font-size:1.1em; font-weight:bold; color:#da552f; text-decoration:none;">👉 Upvote & Comment on Product Hunt!</a>
-        </div>
-        ''', unsafe_allow_html=True)
-    # Upvote nudge
-    if 'ph_upvoted' not in st.session_state:
-        st.session_state['ph_upvoted'] = False
-    if not st.session_state['ph_upvoted']:
-        if st.button("👍 I upvoted Vekkam on Product Hunt!"):
-            st.session_state['ph_upvoted'] = True
-            st.success("Thank you for supporting us on Product Hunt! 🎉")
-    else:
-        st.info("Thanks for your upvote! You're awesome! 🧡")
-    # Product Hunt login (placeholder)
-    st.markdown('<a href="https://www.producthunt.com/login" target="_blank"><button>🔑 Connect Product Hunt Account (coming soon)</button></a>', unsafe_allow_html=True)
-    # Recent comments
-    if ph_stats['comments']:
-        st.markdown("---")
-        st.markdown("### 💬 Recent Product Hunt Comments")
-        for c in ph_stats['comments']:
-            st.markdown(f'<div style="margin-bottom:1em;"><img src="{c["avatar"]}" width="32" style="vertical-align:middle;border-radius:50%;margin-right:8px;"/> <b>{c["user"]}</b><br><span style="font-size:0.95em;">{c["body"]}</span></div>', unsafe_allow_html=True)
-
 # --- Duolingo-Style Onboarding ---
 if 'onboarding_complete' not in st.session_state:
     st.session_state['onboarding_complete'] = False
@@ -1791,7 +1759,7 @@ elif tab == "⚡ 6-Hour Battle Plan":
                     })
                     st.success("Added to your calendar!")
 
-# Add this to the sidebar section (after the language selector):
+# Keep only this section in the sidebar:
 st.sidebar.markdown("---")
 st.sidebar.markdown("### 🚀 Support Vekkam")
 st.sidebar.markdown(
