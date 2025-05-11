@@ -19,6 +19,35 @@ import csv
 from fpdf import FPDF
 import webbrowser
 
+# --- Visual/Equation/Code Understanding Helper (MUST BE DEFINED BEFORE USAGE) ---
+def add_to_google_calendar(deadline):
+    # Opens a Google Calendar event creation link in the browser
+    import urllib.parse
+    base = "https://calendar.google.com/calendar/render?action=TEMPLATE"
+    params = {
+        "text": deadline['description'],
+        "dates": f"{deadline['date'].replace('-', '')}/{deadline['date'].replace('-', '')}",
+    }
+    url = base + "&" + urllib.parse.urlencode(params)
+    webbrowser.open_new_tab(url)
+
+def extract_visuals_and_code(text, file=None):
+    visuals = []
+    # Detect LaTeX/math equations (simple regex for $...$ or \[...\])
+    import re
+    equations = re.findall(r'(\$[^$]+\$|\\\[[^\]]+\\\])', text)
+    for eq in equations:
+        visuals.append(("Equation", eq))
+    # Detect code blocks (triple backticks or indented)
+    code_blocks = re.findall(r'```[\s\S]*?```', text)
+    for code in code_blocks:
+        visuals.append(("Code", code))
+    # Detect possible diagrams/images in file (if image or PDF page)
+    if file and hasattr(file, 'name') and file.name.lower().endswith((".jpg", ".jpeg", ".png")):
+        visuals.append(("Diagram", "[Image uploaded]"))
+    # For PDFs, could add more advanced image extraction if needed
+    return visuals
+
 # --- Calendar Integration Helper (MUST BE DEFINED BEFORE USAGE) ---
 def detect_deadlines(text):
     prompt = (
@@ -116,6 +145,15 @@ def get_learning_style(email):
                 'Sequential/Global': row[3],
             }
         return None
+
+# --- Export Helpers ---
+def export_flashcards_to_anki(flashcards, filename="flashcards.csv"):
+    with open(filename, "w", newline='', encoding='utf-8') as f:
+        writer = csv.writer(f)
+        writer.writerow(["Front", "Back"])
+        for q, a in flashcards:
+            writer.writerow([q, a])
+    return filename
 
 init_db()
 
@@ -569,6 +607,34 @@ def t(key, **kwargs):
     txt = ui_translations.get(lang, ui_translations["en"]).get(key, key)
     return txt.format(**kwargs)
 
+def export_summary_to_pdf(summary, filename="summary.pdf"):
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Arial", size=12)
+    for line in summary.split('\n'):
+        pdf.cell(200, 10, txt=line, ln=1, align='L')
+    pdf.output(filename)
+    return filename
+
+# --- Gemini Call ---
+def call_gemini(prompt, temp=0.7, max_tokens=2048):
+    lang = st.session_state.get("language", "en")
+    lang_name = [k for k, v in languages.items() if v == lang][0]
+    prompt = f"Please answer in {lang_name}.\n" + prompt
+    url = (
+        f"https://generativelanguage.googleapis.com/v1beta/"
+        f"models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
+    )
+    payload = {
+        "contents": [{"parts": [{"text": prompt}]}],
+        "generationConfig": {"temperature": temp, "maxOutputTokens": max_tokens}
+    }
+    with show_lottie_loading(t("Thinking with Gemini AI...")):
+        response = requests.post(url, json=payload)
+        response.raise_for_status()
+        data = response.json()
+        return data["candidates"][0]["content"]["parts"][0]["text"]
+
 # Language selector in sidebar
 if "language" not in st.session_state:
     st.session_state["language"] = "en"
@@ -996,43 +1062,6 @@ with st.container():
         for c in ph_stats['comments']:
             st.markdown(f'<div style="margin-bottom:1em;"><img src="{c["avatar"]}" width="32" style="vertical-align:middle;border-radius:50%;margin-right:8px;"/> <b>{c["user"]}</b><br><span style="font-size:0.95em;">{c["body"]}</span></div>', unsafe_allow_html=True)
 
-# --- Gemini Call ---
-def call_gemini(prompt, temp=0.7, max_tokens=2048):
-    lang = st.session_state.get("language", "en")
-    lang_name = [k for k, v in languages.items() if v == lang][0]
-    prompt = f"Please answer in {lang_name}.\n" + prompt
-    url = (
-        f"https://generativelanguage.googleapis.com/v1beta/"
-        f"models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
-    )
-    payload = {
-        "contents": [{"parts": [{"text": prompt}]}],
-        "generationConfig": {"temperature": temp, "maxOutputTokens": max_tokens}
-    }
-    with show_lottie_loading(t("Thinking with Gemini AI...")):
-        response = requests.post(url, json=payload)
-        response.raise_for_status()
-        data = response.json()
-        return data["candidates"][0]["content"]["parts"][0]["text"]
-
-# --- Visual/Equation/Code Understanding Helper (MUST BE DEFINED BEFORE USAGE) ---
-def extract_visuals_and_code(text, file=None):
-    visuals = []
-    # Detect LaTeX/math equations (simple regex for $...$ or \[...\])
-    import re
-    equations = re.findall(r'(\$[^$]+\$|\\\[[^\]]+\\\])', text)
-    for eq in equations:
-        visuals.append(("Equation", eq))
-    # Detect code blocks (triple backticks or indented)
-    code_blocks = re.findall(r'```[\s\S]*?```', text)
-    for code in code_blocks:
-        visuals.append(("Code", code))
-    # Detect possible diagrams/images in file (if image or PDF page)
-    if file and hasattr(file, 'name') and file.name.lower().endswith((".jpg", ".jpeg", ".png")):
-        visuals.append(("Diagram", "[Image uploaded]"))
-    # For PDFs, could add more advanced image extraction if needed
-    return visuals
-
 # --- Calendar Integration Helper (MUST BE DEFINED BEFORE USAGE) ---
 def detect_deadlines(text):
     prompt = (
@@ -1059,24 +1088,6 @@ def add_to_google_calendar(deadline):
     }
     url = base + "&" + urllib.parse.urlencode(params)
     webbrowser.open_new_tab(url)
-
-# --- Export Helpers ---
-def export_flashcards_to_anki(flashcards, filename="flashcards.csv"):
-    with open(filename, "w", newline='', encoding='utf-8') as f:
-        writer = csv.writer(f)
-        writer.writerow(["Front", "Back"])
-        for q, a in flashcards:
-            writer.writerow([q, a])
-    return filename
-
-def export_summary_to_pdf(summary, filename="summary.pdf"):
-    pdf = FPDF()
-    pdf.add_page()
-    pdf.set_font("Arial", size=12)
-    for line in summary.split('\n'):
-        pdf.cell(200, 10, txt=line, ln=1, align='L')
-    pdf.output(filename)
-    return filename
 
 # --- Duolingo-Style Onboarding ---
 if 'onboarding_complete' not in st.session_state:
