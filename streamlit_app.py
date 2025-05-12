@@ -26,6 +26,41 @@ import time
 import networkx as nx
 import matplotlib.pyplot as plt
 
+# Initialize session state variables
+if 'questions' not in st.session_state:
+    st.session_state.questions = {
+        "Sensing/Intuitive": [
+            ("I am more interested in what is actual than what is possible.", "Sensing"),
+            ("I often focus on the big picture rather than the details.", "Intuitive"),
+            ("I trust my gut feelings over concrete evidence.", "Intuitive"),
+            ("I enjoy tasks that require attention to detail.", "Sensing"),
+            ("I prefer practical solutions over theoretical ideas.", "Sensing"),
+            ("I am drawn to abstract concepts and patterns.", "Intuitive"),
+            ("I notice details that others might miss.", "Sensing"),
+            ("I like to imagine possibilities and what could be.", "Intuitive"),
+            ("I rely on past experiences to guide me.", "Sensing"),
+            ("I am energized by exploring new ideas.", "Intuitive"),
+        ],
+        "Visual/Verbal": [
+            ("I remember best what I see (pictures, diagrams, charts).", "Visual"),
+            ("I remember best what I hear or read.", "Verbal"),
+            ("I prefer to learn through images and spatial understanding.", "Visual"),
+            ("I prefer to learn through words and explanations.", "Verbal"),
+        ],
+        "Active/Reflective": [
+            ("I learn best by doing and trying things out.", "Active"),
+            ("I learn best by thinking and reflecting.", "Reflective"),
+            ("I prefer group work and discussions.", "Active"),
+            ("I prefer to work alone and think things through.", "Reflective"),
+        ],
+        "Sequential/Global": [
+            ("I learn best in a step-by-step, logical order.", "Sequential"),
+            ("I like to see the big picture before the details.", "Global"),
+            ("I prefer to follow clear, linear instructions.", "Sequential"),
+            ("I often make connections between ideas in a holistic way.", "Global"),
+        ],
+    }
+
 # --- Gemini Call ---
 def call_gemini(prompt, temperature=0.7, max_tokens=2048):
     lang = st.session_state.get("language", "en")
@@ -640,49 +675,54 @@ questions = {
 }
 
 if learning_style is None:
-    st.title(f"Welcome, {user.get('name', '')}!")
-    st.header("Learning Style Test")
-    st.write("Answer the following questions to determine your learning style. This will help us personalize your experience.")
-    likert = [
-        "Strongly Disagree", "Disagree", "Somewhat Disagree", "Neutral", "Somewhat Agree", "Agree", "Strongly Agree"
-    ]
-    if "learning_style_answers" not in st.session_state:
-        st.session_state.learning_style_answers = {}
-    for dichotomy, qs in questions.items():
-        st.subheader(dichotomy)
-        for i, (q, side) in enumerate(qs):
-            key = f"{dichotomy}_{i}"
-            st.session_state.learning_style_answers[key] = st.radio(
-                q,
-                ["Strongly Disagree", "Disagree", "Somewhat Disagree", "Neutral", "Somewhat Agree", "Agree", "Strongly Agree"],
+    st.write("### Learning Style Assessment")
+    st.write("Please answer the following questions to determine your learning style.")
+    
+    # Initialize answers in session state if not already present
+    if 'answers' not in st.session_state:
+        st.session_state.answers = {}
+    
+    # Display questions for each category
+    for category, category_questions in st.session_state.questions.items():
+        st.write(f"#### {category}")
+        for i, (question, _) in enumerate(category_questions):
+            key = f"{category}_{i}"
+            if key not in st.session_state.answers:
+                st.session_state.answers[key] = None
+            st.session_state.answers[key] = st.radio(
+                question,
+                options=["Strongly Disagree", "Disagree", "Neutral", "Agree", "Strongly Agree"],
                 key=key
             )
-    if st.button("Submit", key="learning_style_submit_initial"):
-        # Scoring: Strongly Disagree=0, ..., Neutral=50, ..., Strongly Agree=100 (for positive phrasing)
-        # For each question, if side matches dichotomy, score as is; if not, reverse
-        score_map = {0: 0, 1: 17, 2: 33, 3: 50, 4: 67, 5: 83, 6: 100}
-        scores = {}
-        for dichotomy, qs in questions.items():
-            total = 0
-            for i, (q, side) in enumerate(qs):
-                key = f"{dichotomy}_{i}"
-                val = st.session_state.learning_style_answers[key]
-                idx = likert.index(val)
-                # If the question is for the first side, score as is; if for the opposite, reverse
-                if side == dichotomy.split("/")[0]:
-                    score = score_map[idx]
-                else:
-                    score = score_map[6 - idx]
-                total += score
-            scores[dichotomy] = int(total / len(qs))
-        with show_lottie_loading("Saving your learning style and personalizing your experience..."):
-            save_learning_style(user.get("email", ""), scores)
-            st.session_state.learning_style_answers = {}
-        st.success("Learning style saved! Reloading...")
-        st.balloons()
-        st.experimental_rerun()
+    
+    if st.button("Submit Assessment"):
+        # Calculate learning style based on answers
+        scores = {
+            "Sensing": 0, "Intuitive": 0,
+            "Visual": 0, "Verbal": 0,
+            "Active": 0, "Reflective": 0,
+            "Sequential": 0, "Global": 0
+        }
         
-    st.stop()
+        for category, category_questions in st.session_state.questions.items():
+            for i, (_, style) in enumerate(category_questions):
+                key = f"{category}_{i}"
+                answer = st.session_state.answers[key]
+                if answer in ["Strongly Agree", "Agree"]:
+                    scores[style] += 2
+                elif answer == "Neutral":
+                    scores[style] += 1
+        
+        # Determine dominant learning style
+        learning_style = {
+            "Sensing/Intuitive": "Sensing" if scores["Sensing"] > scores["Intuitive"] else "Intuitive",
+            "Visual/Verbal": "Visual" if scores["Visual"] > scores["Verbal"] else "Verbal",
+            "Active/Reflective": "Active" if scores["Active"] > scores["Reflective"] else "Reflective",
+            "Sequential/Global": "Sequential" if scores["Sequential"] > scores["Global"] else "Global"
+        }
+        
+        st.session_state.learning_style = learning_style
+        st.experimental_rerun()
 
 st.sidebar.image(user.get("picture", ""), width=48)
 st.sidebar.write(user.get("email", ""))
