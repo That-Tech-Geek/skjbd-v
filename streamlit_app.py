@@ -61,6 +61,14 @@ if 'questions' not in st.session_state:
         ],
     }
 
+# Initialize other session state variables
+if 'needs_refresh' not in st.session_state:
+    st.session_state.needs_refresh = False
+if 'learning_style' not in st.session_state:
+    st.session_state.learning_style = None
+if 'answers' not in st.session_state:
+    st.session_state.answers = {}
+
 # --- Gemini Call ---
 def call_gemini(prompt, temperature=0.7, max_tokens=2048):
     lang = st.session_state.get("language", "en")
@@ -678,10 +686,6 @@ if learning_style is None:
     st.write("### Learning Style Assessment")
     st.write("Please answer the following questions to determine your learning style.")
     
-    # Initialize answers in session state if not already present
-    if 'answers' not in st.session_state:
-        st.session_state.answers = {}
-    
     # Display questions for each category
     for category, category_questions in st.session_state.questions.items():
         st.write(f"#### {category}")
@@ -722,7 +726,13 @@ if learning_style is None:
         }
         
         st.session_state.learning_style = learning_style
-        st.experimental_rerun()
+        st.session_state.needs_refresh = True
+        st.session_state.answers = {}  # Clear answers after submission
+
+# Check if we need to refresh the page
+if st.session_state.needs_refresh:
+    st.session_state.needs_refresh = False
+    st.rerun()
 
 st.sidebar.image(user.get("picture", ""), width=48)
 st.sidebar.write(user.get("email", ""))
