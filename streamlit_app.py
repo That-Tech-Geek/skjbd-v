@@ -722,7 +722,7 @@ if learning_style is None:
         }
         
         st.session_state.learning_style = learning_style
-        st.experimental_rerun()
+        
 
 st.sidebar.image(user.get("picture", ""), width=48)
 st.sidebar.write(user.get("email", ""))
