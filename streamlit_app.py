@@ -391,66 +391,190 @@ def ensure_logged_in():
         # Landing page layout
         st.markdown("""
             <style>
-            .main {
-                padding: 2rem;
-            }
-            .feature-box {
-                background-color: #f0f2f6;
-                border-radius: 10px;
-                padding: 20px;
-                margin: 10px 0;
-            }
-            .cta-button {
-                background-color: #FF4B4B;
-                color: white !important;
-                padding: 15px 30px;
-                border-radius: 5px;
-                text-decoration: none !important;
-                font-weight: bold;
-                display: inline-flex;
-                align-items: center;
-                gap: 10px;
-                transition: background-color 0.3s ease;
-                font-size: 1.2rem;
-            }
-            .cta-button:hover {
-                background-color: #FF3333;
-                text-decoration: none !important;
-            }
-            .google-icon {
-                width: 24px;
-                height: 24px;
-                margin-right: 5px;
-            }
-            .hero-section {
-                text-align: center;
-                padding: 2rem 0;
+            /* Global Styles */
+            .stApp {
                 background: linear-gradient(135deg, #f5f7fa 0%, #e4e8eb 100%);
-                border-radius: 15px;
-                margin-bottom: 2rem;
             }
-            .feature-icon {
-                font-size: 2.5rem;
-                margin-bottom: 1rem;
+            
+            /* Typography */
+            h1, h2, h3, h4, h5, h6 {
+                font-family: 'Inter', sans-serif;
+                color: #1a1a1a;
             }
-            .testimonial-box {
-                background-color: white;
-                border-radius: 10px;
-                padding: 20px;
-                margin: 10px 0;
-                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            
+            /* Cards and Containers */
+            .feature-box {
+                background: white;
+                border-radius: 16px;
+                padding: 24px;
+                margin: 16px 0;
+                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+                transition: transform 0.2s ease, box-shadow 0.2s ease;
             }
+            
+            .feature-box:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+            }
+            
+            /* Buttons */
+            .stButton > button {
+                background: linear-gradient(135deg, #FF4B4B 0%, #FF6B6B 100%);
+                color: white;
+                border: none;
+                border-radius: 8px;
+                padding: 12px 24px;
+                font-weight: 600;
+                transition: all 0.2s ease;
+            }
+            
+            .stButton > button:hover {
+                transform: translateY(-1px);
+                box-shadow: 0 4px 8px rgba(255, 75, 75, 0.2);
+            }
+            
+            /* Progress Bars */
+            .stProgress > div > div {
+                background: linear-gradient(90deg, #FF4B4B 0%, #FF6B6B 100%);
+            }
+            
+            /* Sidebar */
+            .css-1d391kg {
+                background: white;
+                border-right: 1px solid #e6e6e6;
+            }
+            
+            /* Hero Section */
+            .hero-section {
+                background: white;
+                border-radius: 24px;
+                padding: 48px;
+                margin: 24px 0;
+                box-shadow: 0 8px 16px rgba(0, 0, 0, 0.05);
+            }
+            
+            /* Stats Box */
             .stats-box {
+                background: white;
+                border-radius: 16px;
+                padding: 24px;
                 text-align: center;
-                padding: 20px;
-                background-color: #f8f9fa;
-                border-radius: 10px;
-                margin: 10px 0;
+                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
             }
+            
             .stats-number {
-                font-size: 2rem;
-                font-weight: bold;
-                color: #FF4B4B;
+                font-size: 2.5rem;
+                font-weight: 700;
+                background: linear-gradient(135deg, #FF4B4B 0%, #FF6B6B 100%);
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+            }
+            
+            /* Testimonials */
+            .testimonial-box {
+                background: white;
+                border-radius: 16px;
+                padding: 24px;
+                margin: 16px 0;
+                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+                border-left: 4px solid #FF4B4B;
+            }
+            
+            /* Form Elements */
+            .stTextInput > div > div > input {
+                border-radius: 8px;
+                border: 1px solid #e6e6e6;
+                padding: 12px;
+            }
+            
+            .stSelectbox > div > div {
+                border-radius: 8px;
+                border: 1px solid #e6e6e6;
+            }
+            
+            /* Expander */
+            .streamlit-expanderHeader {
+                background: white;
+                border-radius: 8px;
+                padding: 12px;
+                font-weight: 600;
+            }
+            
+            /* Info Messages */
+            .stInfo {
+                background: #f0f7ff;
+                border-radius: 8px;
+                border-left: 4px solid #2196f3;
+            }
+            
+            /* Success Messages */
+            .stSuccess {
+                background: #f0fff4;
+                border-radius: 8px;
+                border-left: 4px solid #48bb78;
+            }
+            
+            /* Warning Messages */
+            .stWarning {
+                background: #fffaf0;
+                border-radius: 8px;
+                border-left: 4px solid #ed8936;
+            }
+            
+            /* Error Messages */
+            .stError {
+                background: #fff5f5;
+                border-radius: 8px;
+                border-left: 4px solid #f56565;
+            }
+            
+            /* File Uploader */
+            .stFileUploader > div {
+                border-radius: 8px;
+                border: 2px dashed #e6e6e6;
+                padding: 24px;
+                text-align: center;
+            }
+            
+            /* Radio Buttons */
+            .stRadio > div {
+                padding: 12px;
+                border-radius: 8px;
+                background: white;
+            }
+            
+            /* Checkbox */
+            .stCheckbox > div {
+                padding: 12px;
+                border-radius: 8px;
+                background: white;
+            }
+            
+            /* Multi-select */
+            .stMultiSelect > div > div {
+                border-radius: 8px;
+                border: 1px solid #e6e6e6;
+            }
+            
+            /* Tabs */
+            .stTabs [data-baseweb="tab-list"] {
+                gap: 24px;
+            }
+            
+            .stTabs [data-baseweb="tab"] {
+                padding: 12px 24px;
+                border-radius: 8px;
+                background: white;
+                transition: all 0.2s ease;
+            }
+            
+            .stTabs [data-baseweb="tab"]:hover {
+                background: #f8f9fa;
+            }
+            
+            .stTabs [aria-selected="true"] {
+                background: #FF4B4B !important;
+                color: white !important;
             }
             </style>
         """, unsafe_allow_html=True)
@@ -1011,28 +1135,198 @@ st.session_state["language"] = languages[lang_choice]
 # --- App Branding ---
 st.markdown("""
     <style>
-    .block-container {padding-top: 1.5rem;}
-    .sidebar-content {padding-top: 1rem;}
+    .app-header {
+        display: flex;
+        align-items: center;
+        gap: 24px;
+        margin-bottom: 32px;
+        padding: 24px;
+        background: white;
+        border-radius: 16px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    }
+    .app-title {
+        margin: 0;
+        font-size: 2.5rem;
+        font-weight: 700;
+        background: linear-gradient(135deg, #FF4B4B 0%, #FF6B6B 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+    .app-subtitle {
+        margin: 0;
+        color: #666;
+        font-size: 1.1rem;
+    }
     </style>
-    """, unsafe_allow_html=True)
-col1, col2 = st.columns([1, 8])
-with col1:
-    st.image(LOGO_URL, width=180)
-with col2:
-    st.markdown("<h1 style='margin-bottom:0;'>Vekkam 📚</h1>", unsafe_allow_html=True)
-    st.caption("Your AI-powered study companion")
+""", unsafe_allow_html=True)
 
-# --- Sidebar Onboarding/Help ---
-st.sidebar.markdown("---")
+st.markdown('<div class="app-header">', unsafe_allow_html=True)
+col1, col2 = st.columns([1, 4])
+with col1:
+    st.image(LOGO_URL, width=120)
+with col2:
+    st.markdown('<h1 class="app-title">Vekkam 📚</h1>', unsafe_allow_html=True)
+    st.markdown('<p class="app-subtitle">Your AI-powered study companion</p>', unsafe_allow_html=True)
+st.markdown('</div>', unsafe_allow_html=True)
+
+# --- Sidebar Improvements ---
+st.sidebar.markdown("""
+    <style>
+    .sidebar-header {
+        padding: 16px;
+        margin-bottom: 24px;
+        border-bottom: 1px solid #e6e6e6;
+    }
+    .user-profile {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px;
+        background: white;
+        border-radius: 12px;
+        margin-bottom: 16px;
+    }
+    .user-avatar {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        object-fit: cover;
+    }
+    .user-info {
+        flex: 1;
+    }
+    .user-name {
+        font-weight: 600;
+        margin: 0;
+    }
+    .user-email {
+        color: #666;
+        font-size: 0.9rem;
+        margin: 0;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
+# User profile in sidebar
+st.sidebar.markdown('<div class="sidebar-header">', unsafe_allow_html=True)
+st.sidebar.markdown('<div class="user-profile">', unsafe_allow_html=True)
+st.sidebar.image(user.get("picture", ""), width=48, use_column_width=False)
+st.sidebar.markdown(f'''
+    <div class="user-info">
+        <p class="user-name">{user.get("name", "")}</p>
+        <p class="user-email">{user.get("email", "")}</p>
+    </div>
+''', unsafe_allow_html=True)
+st.sidebar.markdown('</div>', unsafe_allow_html=True)
+st.sidebar.markdown('</div>', unsafe_allow_html=True)
+
+# Language selector with improved styling
+st.sidebar.markdown("""
+    <style>
+    .language-selector {
+        padding: 12px;
+        background: white;
+        border-radius: 12px;
+        margin-bottom: 16px;
+    }
+    </style>
+""", unsafe_allow_html=True)
+st.sidebar.markdown('<div class="language-selector">', unsafe_allow_html=True)
+lang_choice = st.sidebar.selectbox("🌐 Language", list(languages.keys()), index=0)
+st.sidebar.markdown('</div>', unsafe_allow_html=True)
+st.session_state["language"] = languages[lang_choice]
+
+# Feature selector with improved styling
+st.sidebar.markdown("""
+    <style>
+    .feature-selector {
+        padding: 12px;
+        background: white;
+        border-radius: 12px;
+    }
+    </style>
+""", unsafe_allow_html=True)
+st.sidebar.markdown('<div class="feature-selector">', unsafe_allow_html=True)
+quiz_tabs = [t("Guide Book Chat"), t("Document Q&A"), t("Learning Style Test"), t("Paper Solver/Exam Guide"), "🗓️ Daily Quiz", "⚡ 6-Hour Battle Plan"]
+tab = st.sidebar.selectbox(t("Feature"), quiz_tabs)
+st.sidebar.markdown('</div>', unsafe_allow_html=True)
+
+# Help section with improved styling
+st.sidebar.markdown("""
+    <style>
+    .help-section {
+        margin-top: 24px;
+        padding: 12px;
+        background: white;
+        border-radius: 12px;
+    }
+    </style>
+""", unsafe_allow_html=True)
+st.sidebar.markdown('<div class="help-section">', unsafe_allow_html=True)
 with st.sidebar.expander("❓ How to use this app", expanded=False):
     st.markdown("""
-    - **Choose your language** from the sidebar.
-    - **Take the Learning Style Test** (first login) for personalized recommendations.
-    - **Guide Book Chat**: Search and chat with textbooks.
-    - **Document Q&A**: Upload notes or books for instant learning aids.
-    - **Paper Solver/Exam Guide**: Upload an exam paper and get model answers.
+    - **Choose your language** from the sidebar
+    - **Take the Learning Style Test** for personalized recommendations
+    - **Guide Book Chat**: Search and chat with textbooks
+    - **Document Q&A**: Upload notes or books for instant learning aids
+    - **Paper Solver/Exam Guide**: Upload an exam paper and get model answers
     - All features are personalized for you!
     """)
+st.sidebar.markdown('</div>', unsafe_allow_html=True)
+
+# Product Hunt section with improved styling
+st.sidebar.markdown("""
+    <style>
+    .product-hunt-section {
+        margin-top: 24px;
+        padding: 16px;
+        background: white;
+        border-radius: 12px;
+        text-align: center;
+    }
+    .ph-stats {
+        font-size: 1.2rem;
+        font-weight: 600;
+        color: #da552f;
+        margin: 8px 0;
+    }
+    .ph-button {
+        display: inline-block;
+        padding: 8px 16px;
+        background: #da552f;
+        color: white;
+        border-radius: 6px;
+        text-decoration: none;
+        font-weight: 600;
+        transition: all 0.2s ease;
+    }
+    .ph-button:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(218, 85, 47, 0.2);
+    }
+    </style>
+""", unsafe_allow_html=True)
+
+st.sidebar.markdown('<div class="product-hunt-section">', unsafe_allow_html=True)
+st.sidebar.markdown("### 🚀 Support Vekkam")
+st.sidebar.markdown(
+    f'''
+    <a href="https://www.producthunt.com/posts/vekkam" target="_blank" id="ph-upvote-link">
+        <img src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id={PRODUCT_HUNT_ID}&theme=light" 
+             alt="Upvote Vekkam on Product Hunt" 
+             style="width: 150px; margin-bottom: 8px;"/>
+    </a>
+    <div class="ph-stats">🔥 {ph_stats['votes']} upvotes</div>
+    <a href="https://www.producthunt.com/posts/vekkam" 
+       target="_blank" 
+       class="ph-button">
+       👉 Upvote & Comment!
+    </a>
+    ''', 
+    unsafe_allow_html=True
+)
+st.sidebar.markdown('</div>', unsafe_allow_html=True)
 
 # --- Main UI ---
 quiz_tabs = [t("Guide Book Chat"), t("Document Q&A"), t("Learning Style Test"), t("Paper Solver/Exam Guide"), "🗓️ Daily Quiz", "⚡ 6-Hour Battle Plan"]
