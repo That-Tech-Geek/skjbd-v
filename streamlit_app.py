@@ -1903,58 +1903,6 @@ elif tab == t("Document Q&A"):
                 st.success(f"Summary exported: {fname}")
                 st.toast("Summary exported!")
 
-# --- Product Hunt Integration ---
-PRODUCT_HUNT_TOKEN = st.secrets.get("producthunt", {}).get("api_token", "")
-PRODUCT_HUNT_ID = st.secrets.get("producthunt", {}).get("product_id", "")  # Your Product Hunt post ID
-
-# Add Product Hunt upvote section to sidebar
-st.sidebar.markdown("### 🚀 Support Vekkam")
-st.sidebar.markdown(
-    f'''
-    <div style="text-align:center;">
-        <a href="https://www.producthunt.com/products/vekkam?utm_source=badge-follow&utm_medium=badge&utm_souce=badge-vekkam" target="_blank">
-            <img src="https://api.producthunt.com/widgets/embed-image/v1/follow.svg?product_id=1056023&theme=light" 
-                 alt="Vekkam - Study for exams faster than ever | Product Hunt" 
-                 style="width: 250px; height: 54px;" 
-                 width="250" 
-                 height="54" />
-        </a>
-    </div>
-    ''', 
-    unsafe_allow_html=True
-)
-
-# Add upvote tracking
-if 'ph_upvoted' not in st.session_state:
-    st.session_state['ph_upvoted'] = False
-
-# Add upvote confirmation button
-if not st.session_state['ph_upvoted']:
-    if st.sidebar.button("👍 I upvoted Vekkam!"):
-        st.session_state['ph_upvoted'] = True
-        st.sidebar.success("Thank you for supporting us! 🎉")
-        # Refresh stats
-        ph_stats = get_ph_stats()
-else:
-    st.sidebar.info("Thanks for your upvote! 🧡")
-
-# Display recent comments if available
-if ph_stats['comments']:
-    st.sidebar.markdown("### 💬 Recent Comments")
-    for comment in ph_stats['comments']:
-        st.sidebar.markdown(
-            f'''
-            <div style="margin-bottom:0.5em; font-size:0.9em;">
-                <img src="{comment['avatar']}" 
-                     width="24" 
-                     style="vertical-align:middle;border-radius:50%;margin-right:4px;"/> 
-                <b>{comment['user']}</b><br>
-                <span style="font-size:0.85em;">{comment['body']}</span>
-            </div>
-            ''',
-            unsafe_allow_html=True
-        )
-
 elif tab == "⚡ 6-Hour Battle Plan":
     st.header("⚡ 6-Hour Battle Plan")
     st.info("Upload your syllabus, guide books, and study materials. We'll create a focused 6-hour study plan using Vekkam's features to help you ace your exam!")
