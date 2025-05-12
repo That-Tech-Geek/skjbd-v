@@ -172,44 +172,54 @@ for key in ("token", "user"):
 DB_PATH = "learning_style.db"
 
 def init_db():
-    with closing(sqlite3.connect(DB_PATH)) as conn:
-        with conn:
-            conn.execute('''
-                CREATE TABLE IF NOT EXISTS learning_style (
-                    email TEXT PRIMARY KEY,
-                    sensing_intuitive INTEGER,
-                    visual_verbal INTEGER,
-                    active_reflective INTEGER,
-                    sequential_global INTEGER
-                )
-            ''')
-
-
+    try:
+        with closing(sqlite3.connect(DB_PATH)) as conn:
+            with conn:
+                conn.execute('''
+                    CREATE TABLE IF NOT EXISTS learning_style (
+                        email TEXT PRIMARY KEY,
+                        sensing_intuitive INTEGER,
+                        visual_verbal INTEGER,
+                        active_reflective INTEGER,
+                        sequential_global INTEGER
+                    )
+                ''')
+    except Exception as e:
+        st.error(f"Failed to initialize database: {str(e)}")
+        st.stop()
 
 def save_learning_style(email, scores):
-    with closing(sqlite3.connect(DB_PATH)) as conn:
-        with conn:
-            conn.execute('''
-                INSERT INTO learning_style (email, sensing_intuitive, visual_verbal, active_reflective, sequential_global)
-                VALUES (?, ?, ?, ?, ?)
-                ON CONFLICT(email) DO UPDATE SET
-                    sensing_intuitive=excluded.sensing_intuitive,
-                    visual_verbal=excluded.visual_verbal,
-                    active_reflective=excluded.active_reflective,
-                    sequential_global=excluded.sequential_global
-            ''', (email, scores['Sensing/Intuitive'], scores['Visual/Verbal'], scores['Active/Reflective'], scores['Sequential/Global']))
+    try:
+        with closing(sqlite3.connect(DB_PATH)) as conn:
+            with conn:
+                conn.execute('''
+                    INSERT INTO learning_style (email, sensing_intuitive, visual_verbal, active_reflective, sequential_global)
+                    VALUES (?, ?, ?, ?, ?)
+                    ON CONFLICT(email) DO UPDATE SET
+                        sensing_intuitive=excluded.sensing_intuitive,
+                        visual_verbal=excluded.visual_verbal,
+                        active_reflective=excluded.active_reflective,
+                        sequential_global=excluded.sequential_global
+                ''', (email, scores['Sensing/Intuitive'], scores['Visual/Verbal'], scores['Active/Reflective'], scores['Sequential/Global']))
+    except Exception as e:
+        st.error(f"Failed to save learning style: {str(e)}")
+        st.stop()
 
 def get_learning_style(email):
-    with closing(sqlite3.connect(DB_PATH)) as conn:
-        cur = conn.execute('SELECT sensing_intuitive, visual_verbal, active_reflective, sequential_global FROM learning_style WHERE email=?', (email,))
-        row = cur.fetchone()
-        if row:
-            return {
-                'Sensing/Intuitive': row[0],
-                'Visual/Verbal': row[1],
-                'Active/Reflective': row[2],
-                'Sequential/Global': row[3],
-            }
+    try:
+        with closing(sqlite3.connect(DB_PATH)) as conn:
+            cur = conn.execute('SELECT sensing_intuitive, visual_verbal, active_reflective, sequential_global FROM learning_style WHERE email=?', (email,))
+            row = cur.fetchone()
+            if row:
+                return {
+                    'Sensing/Intuitive': row[0],
+                    'Visual/Verbal': row[1],
+                    'Active/Reflective': row[2],
+                    'Sequential/Global': row[3],
+                }
+            return None
+    except Exception as e:
+        st.error(f"Failed to get learning style: {str(e)}")
         return None
 
 # --- Export Helpers ---
@@ -221,6 +231,7 @@ def export_flashcards_to_anki(flashcards, filename="flashcards.csv"):
             writer.writerow([q, a])
     return filename
 
+# Initialize database at startup
 init_db()
 
 # --- SQLite DB for Memorization Tracking ---
