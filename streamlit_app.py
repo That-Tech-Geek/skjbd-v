@@ -630,26 +630,26 @@ if learning_style is None:
             ("I notice details that others might miss.", "Sensing"),
             ("I like to imagine possibilities and what could be.", "Intuitive"),
             ("I rely on past experiences to guide me.", "Sensing"),
-            ("I am energized by exploring new ideas.", "Intuitive"),
+            ("I am energized by exploring new ideas.", "Intuitive")
         ],
         "Visual/Verbal": [
             ("I remember best what I see (pictures, diagrams, charts).", "Visual"),
             ("I remember best what I hear or read.", "Verbal"),
             ("I prefer to learn through images and spatial understanding.", "Visual"),
-            ("I prefer to learn through words and explanations.", "Verbal"),
+            ("I prefer to learn through words and explanations.", "Verbal")
         ],
         "Active/Reflective": [
             ("I learn best by doing and trying things out.", "Active"),
             ("I learn best by thinking and reflecting.", "Reflective"),
             ("I prefer group work and discussions.", "Active"),
-            ("I prefer to work alone and think things through.", "Reflective"),
+            ("I prefer to work alone and think things through.", "Reflective")
         ],
         "Sequential/Global": [
             ("I learn best in a step-by-step, logical order.", "Sequential"),
             ("I like to see the big picture before the details.", "Global"),
             ("I prefer to follow clear, linear instructions.", "Sequential"),
-            ("I often make connections between ideas in a holistic way.", "Global"),
-        ],
+            ("I often make connections between ideas in a holistic way.", "Global")
+        ]
     }
     if "learning_style_answers" not in st.session_state:
         st.session_state.learning_style_answers = {}
@@ -1271,26 +1271,26 @@ elif tab == "Learning Style Test":
                 ("I notice details that others might miss.", "Sensing"),
                 ("I like to imagine possibilities and what could be.", "Intuitive"),
                 ("I rely on past experiences to guide me.", "Sensing"),
-                ("I am energized by exploring new ideas.", "Intuitive"),
+                ("I am energized by exploring new ideas.", "Intuitive")
             ],
             "Visual/Verbal": [
                 ("I remember best what I see (pictures, diagrams, charts).", "Visual"),
                 ("I remember best what I hear or read.", "Verbal"),
                 ("I prefer to learn through images and spatial understanding.", "Visual"),
-                ("I prefer to learn through words and explanations.", "Verbal"),
+                ("I prefer to learn through words and explanations.", "Verbal")
             ],
             "Active/Reflective": [
                 ("I learn best by doing and trying things out.", "Active"),
                 ("I learn best by thinking and reflecting.", "Reflective"),
                 ("I prefer group work and discussions.", "Active"),
-                ("I prefer to work alone and think things through.", "Reflective"),
+                ("I prefer to work alone and think things through.", "Reflective")
             ],
             "Sequential/Global": [
                 ("I learn best in a step-by-step, logical order.", "Sequential"),
                 ("I like to see the big picture before the details.", "Global"),
                 ("I prefer to follow clear, linear instructions.", "Sequential"),
-                ("I often make connections between ideas in a holistic way.", "Global"),
-            ],
+                ("I often make connections between ideas in a holistic way.", "Global")
+            ]
         }
         if "learning_style_answers" not in st.session_state:
             st.session_state.learning_style_answers = {}
@@ -1666,44 +1666,26 @@ if not st.session_state['onboarding_complete']:
                 ("I notice details that others might miss.", "Sensing"),
                 ("I like to imagine possibilities and what could be.", "Intuitive"),
                 ("I rely on past experiences to guide me.", "Sensing"),
-                ("I am energized by exploring new ideas.", "Intuitive"),
+                ("I am energized by exploring new ideas.", "Intuitive")
             ],
             "Visual/Verbal": [
                 ("I remember best what I see (pictures, diagrams, charts).", "Visual"),
-                ("I find it easier to follow spoken instructions than written ones.", "Verbal"),
+                ("I remember best what I hear or read.", "Verbal"),
                 ("I prefer to learn through images and spatial understanding.", "Visual"),
-                ("I often take notes to help me remember.", "Verbal"),
-                ("I visualize information in my mind.", "Visual"),
-                ("I prefer reading to watching videos.", "Verbal"),
-                ("I use color and layout to organize my notes.", "Visual"),
-                ("I find it easier to express myself in writing.", "Verbal"),
-                ("I am drawn to infographics and visual summaries.", "Visual"),
-                ("I enjoy listening to lectures or podcasts.", "Verbal"),
+                ("I prefer to learn through words and explanations.", "Verbal")
             ],
             "Active/Reflective": [
                 ("I learn best by doing and trying things out.", "Active"),
-                ("I prefer to think things through before acting.", "Reflective"),
-                ("I enjoy group work and discussions.", "Active"),
-                ("I need time alone to process new information.", "Reflective"),
-                ("I like to experiment and take risks in learning.", "Active"),
-                ("I often review my notes quietly after class.", "Reflective"),
-                ("I am energized by interacting with others.", "Active"),
-                ("I prefer to observe before participating.", "Reflective"),
-                ("I learn by teaching others or explaining concepts aloud.", "Active"),
-                ("I keep a journal or log to reflect on my learning.", "Reflective"),
+                ("I learn best by thinking and reflecting.", "Reflective"),
+                ("I prefer group work and discussions.", "Active"),
+                ("I prefer to work alone and think things through.", "Reflective")
             ],
             "Sequential/Global": [
                 ("I learn best in a step-by-step, logical order.", "Sequential"),
                 ("I like to see the big picture before the details.", "Global"),
                 ("I prefer to follow clear, linear instructions.", "Sequential"),
-                ("I often make connections between ideas in a holistic way.", "Global"),
-                ("I am comfortable breaking tasks into smaller parts.", "Sequential"),
-                ("I sometimes jump to conclusions without all the steps.", "Global"),
-                ("I like outlines and structured notes.", "Sequential"),
-                ("I understand concepts better when I see how they fit together.", "Global"),
-                ("I prefer to finish one thing before starting another.", "Sequential"),
-                ("I enjoy brainstorming and exploring many ideas at once.", "Global"),
-            ],
+                ("I often make connections between ideas in a holistic way.", "Global")
+            ]
         }
         if "learning_style_answers" not in st.session_state:
             st.session_state.learning_style_answers = {}
