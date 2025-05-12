@@ -1549,29 +1549,31 @@ elif tab == t("Document Q&A"):
                 st.success(f"Summary exported: {fname}")
                 st.toast("Summary exported!")
 
-# --- Product Hunt API Integration ---
+# --- Product Hunt Integration ---
 PRODUCT_HUNT_TOKEN = st.secrets.get("producthunt", {}).get("api_token", "")
-PRODUCT_HUNT_ID = st.secrets.get("producthunt", {}).get("product_id", "")  # e.g., "vekkam"
+PRODUCT_HUNT_ID = st.secrets.get("producthunt", {}).get("product_id", "")  # Your Product Hunt post ID
 
-import time
-@st.cache_data(ttl=300)
+@st.cache_data(ttl=300)  # Cache for 5 minutes
 def get_ph_stats():
+    """Get Product Hunt stats using their GraphQL API"""
     if not PRODUCT_HUNT_TOKEN or not PRODUCT_HUNT_ID:
         return {"votes": 0, "comments": []}
+    
     headers = {"Authorization": f"Bearer {PRODUCT_HUNT_TOKEN}"}
-    # Get upvotes
-    votes_url = f"https://api.producthunt.com/v2/api/graphql"
-    votes_query = {
+    query = {
         "query": f"""
         query {{
-          post(slug: \"{PRODUCT_HUNT_ID}\") {{
+          post(id: {PRODUCT_HUNT_ID}) {{
             votesCount
             comments(first: 5) {{
               edges {{
                 node {{
                   id
                   body
-                  user {{ name profileImage }}
+                  user {{ 
+                    name 
+                    profileImage 
+                  }}
                 }}
               }}
             }}
@@ -1579,175 +1581,86 @@ def get_ph_stats():
         }}
         """
     }
+    
     try:
-        r = requests.post(votes_url, headers=headers, json=votes_query)
-        data = r.json()
+        response = requests.post(
+            "https://api.producthunt.com/v2/api/graphql",
+            headers=headers,
+            json=query
+        )
+        data = response.json()
         post = data['data']['post']
-        votes = post['votesCount']
-        comments = [
-            {
-                "body": edge['node']['body'],
-                "user": edge['node']['user']['name'],
-                "avatar": edge['node']['user']['profileImage']
-            }
-            for edge in post['comments']['edges']
-        ]
-        return {"votes": votes, "comments": comments}
-    except Exception:
+        
+        return {
+            "votes": post['votesCount'],
+            "comments": [
+                {
+                    "body": edge['node']['body'],
+                    "user": edge['node']['user']['name'],
+                    "avatar": edge['node']['user']['profileImage']
+                }
+                for edge in post['comments']['edges']
+            ]
+        }
+    except Exception as e:
+        st.error(f"Error fetching Product Hunt stats: {str(e)}")
         return {"votes": 0, "comments": []}
 
-# --- Footer: Product Hunt Upvote Button & Live Stats ---
+# Get Product Hunt stats
 ph_stats = get_ph_stats()
 
-# --- Duolingo-Style Onboarding ---
-if 'onboarding_complete' not in st.session_state:
-    st.session_state['onboarding_complete'] = False
-if 'onboarding_step' not in st.session_state:
-    st.session_state['onboarding_step'] = 0
+# Add Product Hunt upvote section to sidebar
+st.sidebar.markdown("---")
+st.sidebar.markdown("### 🚀 Support Vekkam")
+st.sidebar.markdown(
+    f'''
+    <div style="text-align:center;">
+        <a href="https://www.producthunt.com/posts/vekkam" target="_blank" id="ph-upvote-link">
+            <img src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id={PRODUCT_HUNT_ID}&theme=light" 
+                 alt="Upvote Vekkam on Product Hunt" 
+                 style="width: 150px; margin-bottom: 8px;"/>
+        </a><br>
+        <span style="font-size:1em; font-weight:bold; color:#da552f;">🔥 {ph_stats['votes']} upvotes</span><br>
+        <a href="https://www.producthunt.com/posts/vekkam" 
+           target="_blank" 
+           style="font-size:0.9em; font-weight:bold; color:#da552f; text-decoration:none;">
+           👉 Upvote & Comment!
+        </a>
+    </div>
+    ''', 
+    unsafe_allow_html=True
+)
 
-ONBOARDING_STEPS = [
-    'Welcome',
-    'Language',
-    'Goal',
-    'LearningStyle',
-    'Finish'
-]
+# Add upvote tracking
+if 'ph_upvoted' not in st.session_state:
+    st.session_state['ph_upvoted'] = False
 
-if not st.session_state['onboarding_complete']:
-    step = st.session_state['onboarding_step']
-    st.markdown("""
-        <style>
-        .onboard-center {text-align:center; margin-top:2em;}
-        </style>
-    """, unsafe_allow_html=True)
-    st.progress((step+1)/len(ONBOARDING_STEPS), text=f"Step {step+1} of {len(ONBOARDING_STEPS)}")
-    if ONBOARDING_STEPS[step] == 'Welcome':
-        st.markdown('<div class="onboard-center"><img src="https://github.com/rekfdjkzbdfvkgjerkdfnfcbvgewhs/Vekkam/blob/main/logo.png" width="120"/><h2>Welcome to Vekkam!</h2><p>Your AI-powered study companion.</p></div>', unsafe_allow_html=True)
-        if st.button("Let's get started!"):
-            st.session_state['onboarding_step'] += 1
-            
-    elif ONBOARDING_STEPS[step] == 'Language':
-        st.markdown('<div class="onboard-center"><h3>🌐 Choose your language</h3></div>', unsafe_allow_html=True)
-        lang_choice = st.selectbox("Language", list(languages.keys()), index=0)
-        st.session_state["language"] = languages[lang_choice]
-        if st.button("Next"):
-            st.session_state['onboarding_step'] += 1
-            
-    elif ONBOARDING_STEPS[step] == 'Goal':
-        st.markdown('<div class="onboard-center"><h3>🎯 What is your main study goal?</h3></div>', unsafe_allow_html=True)
-        goal = st.radio("Choose a goal:", ["Exam Prep", "Daily Review", "Master a Subject", "Ace Assignments"], key="onboard_goal")
-        st.session_state['study_goal'] = goal
-        if st.button("Next"):
-            st.session_state['onboarding_step'] += 1
-            
-    elif ONBOARDING_STEPS[step] == 'LearningStyle':
-        st.markdown('<div class="onboard-center"><h3>🧠 Discover your learning style</h3><p>This helps us personalize your experience!</p></div>', unsafe_allow_html=True)
-        # Use the same learning style test as before
-        likert = [
-            "Strongly Disagree", "Disagree", "Somewhat Disagree", "Neutral", "Somewhat Agree", "Agree", "Strongly Agree"
-        ]
-        questions = {
-            "Sensing/Intuitive": [
-                ("I am more interested in what is actual than what is possible.", "Sensing"),
-                ("I often focus on the big picture rather than the details.", "Intuitive"),
-                ("I trust my gut feelings over concrete evidence.", "Intuitive"),
-                ("I enjoy tasks that require attention to detail.", "Sensing"),
-                ("I prefer practical solutions over theoretical ideas.", "Sensing"),
-                ("I am drawn to abstract concepts and patterns.", "Intuitive"),
-                ("I notice details that others might miss.", "Sensing"),
-                ("I like to imagine possibilities and what could be.", "Intuitive"),
-                ("I rely on past experiences to guide me.", "Sensing"),
-                ("I am energized by exploring new ideas.", "Intuitive"),
-            ],
-            "Visual/Verbal": [
-                ("I remember best what I see (pictures, diagrams, charts).", "Visual"),
-                ("I find it easier to follow spoken instructions than written ones.", "Verbal"),
-                ("I prefer to learn through images and spatial understanding.", "Visual"),
-                ("I often take notes to help me remember.", "Verbal"),
-                ("I visualize information in my mind.", "Visual"),
-                ("I prefer reading to watching videos.", "Verbal"),
-                ("I use color and layout to organize my notes.", "Visual"),
-                ("I find it easier to express myself in writing.", "Verbal"),
-                ("I am drawn to infographics and visual summaries.", "Visual"),
-                ("I enjoy listening to lectures or podcasts.", "Verbal"),
-            ],
-            "Active/Reflective": [
-                ("I learn best by doing and trying things out.", "Active"),
-                ("I prefer to think things through before acting.", "Reflective"),
-                ("I enjoy group work and discussions.", "Active"),
-                ("I need time alone to process new information.", "Reflective"),
-                ("I like to experiment and take risks in learning.", "Active"),
-                ("I often review my notes quietly after class.", "Reflective"),
-                ("I am energized by interacting with others.", "Active"),
-                ("I prefer to observe before participating.", "Reflective"),
-                ("I learn by teaching others or explaining concepts aloud.", "Active"),
-                ("I keep a journal or log to reflect on my learning.", "Reflective"),
-            ],
-            "Sequential/Global": [
-                ("I learn best in a step-by-step, logical order.", "Sequential"),
-                ("I like to see the big picture before the details.", "Global"),
-                ("I prefer to follow clear, linear instructions.", "Sequential"),
-                ("I often make connections between ideas in a holistic way.", "Global"),
-                ("I am comfortable breaking tasks into smaller parts.", "Sequential"),
-                ("I sometimes jump to conclusions without all the steps.", "Global"),
-                ("I like outlines and structured notes.", "Sequential"),
-                ("I understand concepts better when I see how they fit together.", "Global"),
-                ("I prefer to finish one thing before starting another.", "Sequential"),
-                ("I enjoy brainstorming and exploring many ideas at once.", "Global"),
-            ],
-        }
-        if "learning_style_answers" not in st.session_state:
-            st.session_state.learning_style_answers = {}
-        for dichotomy, qs in questions.items():
-            st.subheader(dichotomy)
-            for i, (q, side) in enumerate(qs):
-                key = f"{dichotomy}_{i}"
-                st.session_state.learning_style_answers[key] = st.radio(
-                    q,
-                    ["Strongly Disagree", "Disagree", "Somewhat Disagree", "Neutral", "Somewhat Agree", "Agree", "Strongly Agree"],
-                    key=key
-                )
-        if st.button("Finish Onboarding"):
-            # Scoring: Strongly Disagree=0, ..., Neutral=50, ..., Strongly Agree=100 (for positive phrasing)
-            scores = {}
-            for dichotomy, qs in questions.items():
-                total = 0
-                for i, (q, side) in enumerate(qs):
-                    key = f"{dichotomy}_{i}"
-                    val = st.session_state.learning_style_answers[key]
-                    # Direct mapping of responses to scores
-                    if val == "Strongly Disagree":
-                        score = 0
-                    elif val == "Disagree":
-                        score = 17
-                    elif val == "Somewhat Disagree":
-                        score = 33
-                    elif val == "Neutral":
-                        score = 50
-                    elif val == "Somewhat Agree":
-                        score = 67
-                    elif val == "Agree":
-                        score = 83
-                    else:  # Strongly Agree
-                        score = 100
-                    
-                    # If the question is for the opposite side, reverse the score
-                    if side != dichotomy.split("/")[0]:
-                        score = 100 - score
-                    
-                    total += score
-                scores[dichotomy] = int(total / len(qs))
-            save_learning_style(user.get("email", ""), scores)
-            st.session_state.learning_style_answers = {}
-            st.session_state['onboarding_step'] += 1
-            
-    elif ONBOARDING_STEPS[step] == 'Finish':
-        st.markdown('<div class="onboard-center"><h2>🎉 You are all set!</h2><p>Your experience is now personalized. Let\'s start learning!</p></div>', unsafe_allow_html=True)
-        st.balloons()
-        if st.button("Go to Dashboard"):
-            st.session_state['onboarding_complete'] = True
-            
-    st.stop()
+# Add upvote confirmation button
+if not st.session_state['ph_upvoted']:
+    if st.sidebar.button("👍 I upvoted Vekkam!"):
+        st.session_state['ph_upvoted'] = True
+        st.sidebar.success("Thank you for supporting us! 🎉")
+        # Refresh stats
+        ph_stats = get_ph_stats()
+else:
+    st.sidebar.info("Thanks for your upvote! 🧡")
+
+# Display recent comments if available
+if ph_stats['comments']:
+    st.sidebar.markdown("### 💬 Recent Comments")
+    for comment in ph_stats['comments']:
+        st.sidebar.markdown(
+            f'''
+            <div style="margin-bottom:0.5em; font-size:0.9em;">
+                <img src="{comment['avatar']}" 
+                     width="24" 
+                     style="vertical-align:middle;border-radius:50%;margin-right:4px;"/> 
+                <b>{comment['user']}</b><br>
+                <span style="font-size:0.85em;">{comment['body']}</span>
+            </div>
+            ''',
+            unsafe_allow_html=True
+        )
 
 elif tab == "⚡ 6-Hour Battle Plan":
     st.header("⚡ 6-Hour Battle Plan")
@@ -1928,7 +1841,7 @@ st.sidebar.markdown(
     f'''
     <div style="text-align:center;">
         <a href="https://www.producthunt.com/products/vekkam" target="_blank" id="ph-upvote-link">
-            <img src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=456789&theme=light" alt="Upvote Vekkam on Product Hunt" style="width: 150px; margin-bottom: 8px;"/>
+            <img src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id={PRODUCT_HUNT_ID}&theme=light" alt="Upvote Vekkam on Product Hunt" style="width: 150px; margin-bottom: 8px;"/>
         </a><br>
         <span style="font-size:1em; font-weight:bold; color:#da552f;">🔥 {ph_stats['votes']} upvotes</span><br>
         <a href="https://www.producthunt.com/products/vekkam" target="_blank" style="font-size:0.9em; font-weight:bold; color:#da552f; text-decoration:none;">👉 Upvote & Comment!</a>
