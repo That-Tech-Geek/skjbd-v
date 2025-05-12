@@ -1233,7 +1233,7 @@ st.sidebar.markdown("""
     </style>
 """, unsafe_allow_html=True)
 st.sidebar.markdown('<div class="language-selector">', unsafe_allow_html=True)
-lang_choice = st.sidebar.selectbox("🌐 Language", list(languages.keys()), index=0)
+lang_choice = st.sidebar.selectbox("🌐 Language", list(languages.keys()), index=0, key="sidebar_language_selector")
 st.sidebar.markdown('</div>', unsafe_allow_html=True)
 st.session_state["language"] = languages[lang_choice]
 
@@ -1249,7 +1249,7 @@ st.sidebar.markdown("""
 """, unsafe_allow_html=True)
 st.sidebar.markdown('<div class="feature-selector">', unsafe_allow_html=True)
 quiz_tabs = [t("Guide Book Chat"), t("Document Q&A"), t("Learning Style Test"), t("Paper Solver/Exam Guide"), "🗓️ Daily Quiz", "⚡ 6-Hour Battle Plan"]
-tab = st.sidebar.selectbox(t("Feature"), quiz_tabs)
+tab = st.sidebar.selectbox(t("Feature"), quiz_tabs, key="sidebar_feature_selector")
 st.sidebar.markdown('</div>', unsafe_allow_html=True)
 
 # Help section with improved styling
