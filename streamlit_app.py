@@ -1596,13 +1596,13 @@ def get_ph_stats():
         return {
             "votes": post['votesCount'],
             "comments": [
-                {
-                    "body": edge['node']['body'],
-                    "user": edge['node']['user']['name'],
-                    "avatar": edge['node']['user']['profileImage']
-                }
-                for edge in post['comments']['edges']
-            ]
+            {
+                "body": edge['node']['body'],
+                "user": edge['node']['user']['name'],
+                "avatar": edge['node']['user']['profileImage']
+            }
+            for edge in post['comments']['edges']
+        ]
         }
     except Exception as e:
         st.error(f"Error fetching Product Hunt stats: {str(e)}")
@@ -2025,3 +2025,58 @@ def generate_mind_map(text):
 if st.session_state.needs_refresh:
     st.session_state.needs_refresh = False
     st.rerun()
+
+# Onboarding buttons
+if st.button("Let's get started!", key="onboarding_start"):
+    st.session_state['onboarding_step'] += 1
+
+if st.button("Next", key="onboarding_next_1"):
+    st.session_state['onboarding_step'] += 1
+
+if st.button("Next", key="onboarding_next_2"):
+    st.session_state['onboarding_step'] += 1
+
+if st.button("Finish Onboarding", key="onboarding_finish"):
+    # Scoring logic remains the same
+    scores = {}
+    for dichotomy, qs in questions.items():
+        total = 0
+        for i, (q, side) in enumerate(qs):
+            key = f"{dichotomy}_{i}"
+            val = st.session_state.learning_style_answers[key]
+            # Scoring logic remains the same
+            if val == "Strongly Disagree":
+                score = 0
+            elif val == "Disagree":
+                score = 17
+            elif val == "Somewhat Disagree":
+                score = 33
+            elif val == "Neutral":
+                score = 50
+            elif val == "Somewhat Agree":
+                score = 67
+            elif val == "Agree":
+                score = 83
+            else:  # Strongly Agree
+                score = 100
+            
+            if side != dichotomy.split("/")[0]:
+                score = 100 - score
+            
+            total += score
+        scores[dichotomy] = int(total / len(qs))
+    
+    save_learning_style(user.get("email", ""), scores)
+    st.session_state.learning_style_answers = {}
+    st.session_state['onboarding_step'] += 1
+
+if st.button("Go to Dashboard", key="onboarding_dashboard"):
+    st.session_state['onboarding_complete'] = True
+
+# Product Hunt upvote button
+if not st.session_state['ph_upvoted']:
+    if st.sidebar.button("👍 I upvoted Vekkam!", key="ph_upvote_confirm"):
+        st.session_state['ph_upvoted'] = True
+        st.sidebar.success("Thank you for supporting us! 🎉")
+        # Refresh stats
+        ph_stats = get_ph_stats()
