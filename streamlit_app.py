@@ -140,8 +140,9 @@ def show_lottie_loading(message="Loading..."):
     finally:
         # Remove the entire container and its contents
         container.empty()
-        # Force a rerun to ensure the UI updates
-        
+        # Instead of rerun, we'll use session state to track changes
+        if 'needs_refresh' not in st.session_state:
+            st.session_state.needs_refresh = False
 
 # --- Configuration from st.secrets ---
 raw_uri       = st.secrets.get("google", {}).get("redirect_uri", "")
@@ -155,7 +156,7 @@ CSE_ID         = st.secrets.get("google_search", {}).get("cse_id", "")
 CACHE_TTL      = 3600
 
 # --- Session State ---
-for key in ("token", "user"):
+for key in ("token", "user", "needs_refresh", "learning_style_answers"):
     if key not in st.session_state:
         st.session_state[key] = None
 
@@ -653,7 +654,7 @@ if learning_style is None:
                 ["Strongly Disagree", "Disagree", "Somewhat Disagree", "Neutral", "Somewhat Agree", "Agree", "Strongly Agree"],
                 key=key
             )
-    if st.button("Submit"):
+    if st.button("Submit", key="learning_style_submit"):
         # Scoring: Strongly Disagree=0, ..., Neutral=50, ..., Strongly Agree=100 (for positive phrasing)
         # For each question, if side matches dichotomy, score as is; if not, reverse
         score_map = {0: 0, 1: 17, 2: 33, 3: 50, 4: 67, 5: 83, 6: 100}
@@ -676,7 +677,7 @@ if learning_style is None:
             st.session_state.learning_style_answers = {}
         st.success("Learning style saved! Reloading...")
         st.balloons()
-        
+        st.experimental_rerun()
         
     st.stop()
 
@@ -1039,7 +1040,7 @@ if tab == "Guide Book Chat":
             help="Upload a clear image of your question or problem")
 
     # Process the question (either from text or image)
-    if st.button("Get Answer"):
+    if st.button("Get Answer", key="get_answer_button"):
         with show_lottie_loading("Analyzing your question..."):
             if uploaded_image:
                 # Extract text from image
@@ -1242,9 +1243,10 @@ elif tab == "Learning Style Test":
                 st.markdown(rec)
         
         # Add option to retake test if desired
-        if st.button("🔄 Retake Learning Style Test"):
+        if st.button("🔄 Retake Learning Style Test", key="retake_test_button"):
             st.session_state['learning_style_answers'] = {}
-            
+            st.session_state.needs_refresh = True
+            st.success("Test reset! Please answer the questions again.")
             
     else:
         st.write("Answer the following questions to determine your learning style. This will help us personalize your experience.")
@@ -1294,7 +1296,7 @@ elif tab == "Learning Style Test":
                     ["Strongly Disagree", "Disagree", "Somewhat Disagree", "Neutral", "Somewhat Agree", "Agree", "Strongly Agree"],
                     key=key
                 )
-        if st.button("Submit"):
+        if st.button("Submit", key="learning_style_submit_2"):
             # Scoring: Strongly Disagree=0, ..., Neutral=50, ..., Strongly Agree=100 (for positive phrasing)
             # For each question, if side matches dichotomy, score as is; if not, reverse
             score_map = {0: 0, 1: 17, 2: 33, 3: 50, 4: 67, 5: 83, 6: 100}
@@ -1315,9 +1317,9 @@ elif tab == "Learning Style Test":
             with show_lottie_loading("Saving your learning style and personalizing your experience..."):
                 save_learning_style(user.get("email", ""), scores)
                 st.session_state.learning_style_answers = {}
-            st.success("Learning style saved! Reloading...")
+                st.session_state.needs_refresh = True
+            st.success("Learning style saved! Your experience will be personalized.")
             st.balloons()
-            
 
 elif tab == "Paper Solver/Exam Guide":
     st.header("📝 " + t("Paper Solver/Exam Guide"))
@@ -1359,7 +1361,7 @@ elif tab == "Paper Solver/Exam Guide":
             help="Choose which questions you want the AI to solve."
         )
         selected_indices = [int(s[1:]) - 1 for s in selected]
-        if st.button("🚀 " + t("Solve Selected Questions")) and selected_indices:
+        if st.button("🚀 " + t("Solve Selected Questions"), key="solve_questions_button") and selected_indices:
             answers = []
             progress = st.progress(0, text="Solving questions...")
             for idx, qidx in enumerate(selected_indices):
@@ -1537,13 +1539,13 @@ elif tab == t("Document Q&A"):
         # --- Batch Export ---
         if all_flashcards:
             st.info("Export all generated flashcards as an Anki-compatible CSV file.")
-            if st.button("Export All Flashcards to Anki CSV"):
+            if st.button("Export All Flashcards to Anki CSV", key="export_flashcards_button"):
                 fname = export_flashcards_to_anki(all_flashcards)
                 st.success(f"Flashcards exported: {fname}")
                 st.toast("Flashcards exported!")
         if all_summaries:
             st.info("Export all generated summaries as a PDF file.")
-            if st.button("Export All Summaries to PDF"):
+            if st.button("Export All Summaries to PDF", key="export_summaries_button"):
                 combined_summary = "\n\n".join(all_summaries)
                 fname = export_summary_to_pdf(combined_summary)
                 st.success(f"Summary exported: {fname}")
@@ -1682,7 +1684,7 @@ elif tab == "⚡ 6-Hour Battle Plan":
     weak_topics = st.text_area("Topics you find challenging (optional)", help="List topics you find difficult, separated by commas")
     strong_topics = st.text_area("Topics you're confident in (optional)", help="List topics you're good at, separated by commas")
 
-    if st.button("Generate Battle Plan"):
+    if st.button("Generate Battle Plan", key="generate_battle_plan_button"):
         if not uploaded_files:
             st.warning("Please upload at least one study material.")
             st.stop()
@@ -1795,7 +1797,7 @@ elif tab == "⚡ 6-Hour Battle Plan":
             st.markdown("## 📤 Export Options")
             col1, col2 = st.columns(2)
             with col1:
-                if st.button("📱 Export to PDF"):
+                if st.button("📱 Export to PDF", key="export_battle_plan_pdf"):
                     pdf_content = f"""
                     BATTLE PLAN
                     ==========
@@ -1818,7 +1820,7 @@ elif tab == "⚡ 6-Hour Battle Plan":
                     st.success(f"Battle plan exported to {filename}")
             
             with col2:
-                if st.button("📅 Add to Calendar"):
+                if st.button("📅 Add to Calendar", key="add_battle_plan_calendar"):
                     # Create calendar event for study session
                     event_title = "6-Hour Study Battle Plan"
                     event_desc = f"""
@@ -2018,3 +2020,8 @@ def generate_mind_map(text):
     except Exception as e:
         st.error(f"Error generating mind map: {str(e)}")
         return None
+
+# Add a state check at the beginning of the app
+if st.session_state.needs_refresh:
+    st.session_state.needs_refresh = False
+    st.rerun()
