@@ -1855,7 +1855,7 @@ st.sidebar.markdown(
 if 'ph_upvoted' not in st.session_state:
     st.session_state['ph_upvoted'] = False
 if not st.session_state['ph_upvoted']:
-    if st.sidebar.button("👍 I upvoted Vekkam!"):
+    if st.sidebar.button("👍 I upvoted Vekkam!", key="ph_upvote_confirm"):
         st.session_state['ph_upvoted'] = True
         st.sidebar.success("Thank you for supporting us! 🎉")
 else:
