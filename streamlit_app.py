@@ -507,10 +507,10 @@ def ensure_logged_in():
 
         for feature in features:
             st.markdown('<div class="feature-box">', unsafe_allow_html=True)
-            st.markdown(f"### {feature['icon']} {feature['title']}")
-            st.markdown(f"**{feature['description']}**")
+            st.markdown(f"### {feature.get('icon', '')} {feature.get('title', '')}")
+            st.markdown(f"**{feature.get('description', '')}**")
             st.markdown("")
-            for detail in feature['details']:
+            for detail in feature.get('details', []):
                 st.markdown(f"- {detail}")
             st.markdown('</div>', unsafe_allow_html=True)
 
