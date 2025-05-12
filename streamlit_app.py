@@ -722,7 +722,7 @@ if learning_style is None:
         }
         
         st.session_state.learning_style = learning_style
-        
+        st.experimental_rerun()
 
 st.sidebar.image(user.get("picture", ""), width=48)
 st.sidebar.write(user.get("email", ""))
@@ -730,6 +730,9 @@ st.sidebar.write(user.get("email", ""))
 # --- Personalized for you box ---
 def learning_style_description(scores):
     desc = []
+    # Convert scores to integers if they're strings
+    scores = {k: int(v) if isinstance(v, str) else v for k, v in scores.items()}
+    
     if scores['Sensing/Intuitive'] >= 60:
         desc.append("Prefers concepts, patterns, and big-picture thinking.")
     elif scores['Sensing/Intuitive'] <= 40:
