@@ -1836,40 +1836,6 @@ elif tab == "⚡ 6-Hour Battle Plan":
                     })
                     st.success("Added to your calendar!")
 
-# Keep only this section in the sidebar:
-st.sidebar.markdown("---")
-st.sidebar.markdown("### 🚀 Support Vekkam")
-st.sidebar.markdown(
-    f'''
-    <div style="text-align:center;">
-        <a href="https://www.producthunt.com/products/vekkam" target="_blank" id="ph-upvote-link">
-            <img src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id={PRODUCT_HUNT_ID}&theme=light" alt="Upvote Vekkam on Product Hunt" style="width: 150px; margin-bottom: 8px;"/>
-        </a><br>
-        <span style="font-size:1em; font-weight:bold; color:#da552f;">🔥 {ph_stats['votes']} upvotes</span><br>
-        <a href="https://www.producthunt.com/products/vekkam" target="_blank" style="font-size:0.9em; font-weight:bold; color:#da552f; text-decoration:none;">👉 Upvote & Comment!</a>
-    </div>
-    ''', unsafe_allow_html=True
-)
-
-# Add upvote nudge to sidebar
-if 'ph_upvoted' not in st.session_state:
-    st.session_state['ph_upvoted'] = False
-if not st.session_state['ph_upvoted']:
-    if st.sidebar.button("👍 I upvoted Vekkam!", key="ph_upvote_confirm"):
-        st.session_state['ph_upvoted'] = True
-        st.sidebar.success("Thank you for supporting us! 🎉")
-else:
-    st.sidebar.info("Thanks for your upvote! 🧡")
-
-# Add recent comments to sidebar if available
-if ph_stats['comments']:
-    st.sidebar.markdown("### 💬 Recent Comments")
-    for c in ph_stats['comments']:
-        st.sidebar.markdown(
-            f'<div style="margin-bottom:0.5em; font-size:0.9em;"><img src="{c["avatar"]}" width="24" style="vertical-align:middle;border-radius:50%;margin-right:4px;"/> <b>{c["user"]}</b><br><span style="font-size:0.85em;">{c["body"]}</span></div>',
-            unsafe_allow_html=True
-        )
-
 def generate_mind_map(text):
     """
     Generate a mind map from text using Gemini AI and render it using igraph and plotly.
