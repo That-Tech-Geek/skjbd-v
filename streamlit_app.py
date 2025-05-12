@@ -1341,44 +1341,22 @@ st.sidebar.markdown("""
         border-radius: 12px;
         text-align: center;
     }
-    .ph-stats {
-        font-size: 1.2rem;
-        font-weight: 600;
-        color: #da552f;
-        margin: 8px 0;
-    }
-    .ph-button {
-        display: inline-block;
-        padding: 8px 16px;
-        background: #da552f;
-        color: white;
-        border-radius: 6px;
-        text-decoration: none;
-        font-weight: 600;
-        transition: all 0.2s ease;
-    }
-    .ph-button:hover {
-        transform: translateY(-1px);
-        box-shadow: 0 4px 8px rgba(218, 85, 47, 0.2);
-    }
     </style>
 """, unsafe_allow_html=True)
 
 st.sidebar.markdown('<div class="product-hunt-section">', unsafe_allow_html=True)
 st.sidebar.markdown("### 🚀 Support Vekkam")
 st.sidebar.markdown(
-    f'''
-    <a href="https://www.producthunt.com/posts/vekkam" target="_blank" id="ph-upvote-link">
-        <img src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id={PRODUCT_HUNT_ID}&theme=light" 
-             alt="Upvote Vekkam on Product Hunt" 
-             style="width: 150px; margin-bottom: 8px;"/>
-    </a>
-    <div class="ph-stats">🔥 {ph_stats['votes']} upvotes</div>
-    <a href="https://www.producthunt.com/posts/vekkam" 
-       target="_blank" 
-       class="ph-button">
-       👉 Upvote & Comment!
-    </a>
+    '''
+    <div style="text-align:center;">
+        <a href="https://www.producthunt.com/products/vekkam?utm_source=badge-follow&utm_medium=badge&utm_souce=badge-vekkam" target="_blank">
+            <img src="https://api.producthunt.com/widgets/embed-image/v1/follow.svg?product_id=1056023&theme=light" 
+                 alt="Vekkam - Study for exams faster than ever | Product Hunt" 
+                 style="width: 250px; height: 54px;" 
+                 width="250" 
+                 height="54" />
+        </a>
+    </div>
     ''', 
     unsafe_allow_html=True
 )
@@ -1928,10 +1906,6 @@ elif tab == t("Document Q&A"):
 # --- Product Hunt Integration ---
 PRODUCT_HUNT_TOKEN = st.secrets.get("producthunt", {}).get("api_token", "")
 PRODUCT_HUNT_ID = st.secrets.get("producthunt", {}).get("product_id", "")  # Your Product Hunt post ID
-
-@st.cache_data(ttl=300)  # Cache for 5 minutes
-
-
 
 # Add Product Hunt upvote section to sidebar
 st.sidebar.markdown("### 🚀 Support Vekkam")
