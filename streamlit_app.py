@@ -2038,11 +2038,3 @@ if st.button("Finish Onboarding", key="onboarding_finish_initial"):
 
 if st.button("Go to Dashboard", key="onboarding_dashboard_initial"):
     st.session_state['onboarding_complete'] = True
-
-# Product Hunt upvote button
-if not st.session_state['ph_upvoted']:
-    if st.sidebar.button("👍 I upvoted Vekkam!", key="ph_upvote_confirm"):
-        st.session_state['ph_upvoted'] = True
-        st.sidebar.success("Thank you for supporting us! 🎉")
-        # Refresh stats
-        ph_stats = get_ph_stats()
