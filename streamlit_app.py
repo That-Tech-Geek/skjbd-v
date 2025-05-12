@@ -303,7 +303,7 @@ def get_section_progress(email, doc_id):
         ''', (email, doc_id))
         return dict(cur.fetchall())
         
-LOGO_URL = "https://github.com/rekfdjkzbdfvkgjerkdfnfcbvgewhs/Vekkam/blob/main/logo.png"  # <-- Replace with your actual raw GitHub URL
+LOGO_URL = "https://raw.githubusercontent.com/rekfdjkzbdfvkgjerkdfnfcbvgewhs/Vekkam/main/logo.png"  # Raw GitHub content URL
 
 init_structure_db()
 
