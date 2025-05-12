@@ -1112,6 +1112,59 @@ ui_translations = {
     # Add more languages as needed
 }
 
+def get_ph_stats():
+    """Get Product Hunt stats using their GraphQL API"""
+    if not PRODUCT_HUNT_TOKEN or not PRODUCT_HUNT_ID:
+        return {"votes": 0, "comments": []}
+    
+    headers = {"Authorization": f"Bearer {PRODUCT_HUNT_TOKEN}"}
+    query = {
+        "query": f"""
+        query {{
+          post(id: {PRODUCT_HUNT_ID}) {{
+            votesCount
+            comments(first: 5) {{
+              edges {{
+                node {{
+                  id
+                  body
+                  user {{ 
+                    name 
+                    profileImage 
+                  }}
+                }}
+              }}
+            }}
+          }}
+        }}
+        """
+    }
+    
+    try:
+        response = requests.post(
+            "https://api.producthunt.com/v2/api/graphql",
+            headers=headers,
+            json=query
+        )
+        data = response.json()
+        post = data['data']['post']
+        
+        return {
+            "votes": post['votesCount'],
+            "comments": [
+            {
+                "body": edge['node']['body'],
+                "user": edge['node']['user']['name'],
+                "avatar": edge['node']['user']['profileImage']
+            }
+            for edge in post['comments']['edges']
+        ]
+        }
+    except Exception as e:
+        st.error(f"Error fetching Product Hunt stats: {str(e)}")
+        return {"votes": 0, "comments": []}
+
+
 def t(key, **kwargs):
     lang = st.session_state.get("language", "en")
     txt = ui_translations.get(lang, ui_translations["en"]).get(key, key)
@@ -1160,6 +1213,9 @@ st.markdown("""
     }
     </style>
 """, unsafe_allow_html=True)
+
+# Get Product Hunt stats
+ph_stats = get_ph_stats()
 
 st.markdown('<div class="app-header">', unsafe_allow_html=True)
 col1, col2 = st.columns([1, 4])
@@ -1874,77 +1930,20 @@ PRODUCT_HUNT_TOKEN = st.secrets.get("producthunt", {}).get("api_token", "")
 PRODUCT_HUNT_ID = st.secrets.get("producthunt", {}).get("product_id", "")  # Your Product Hunt post ID
 
 @st.cache_data(ttl=300)  # Cache for 5 minutes
-def get_ph_stats():
-    """Get Product Hunt stats using their GraphQL API"""
-    if not PRODUCT_HUNT_TOKEN or not PRODUCT_HUNT_ID:
-        return {"votes": 0, "comments": []}
-    
-    headers = {"Authorization": f"Bearer {PRODUCT_HUNT_TOKEN}"}
-    query = {
-        "query": f"""
-        query {{
-          post(id: {PRODUCT_HUNT_ID}) {{
-            votesCount
-            comments(first: 5) {{
-              edges {{
-                node {{
-                  id
-                  body
-                  user {{ 
-                    name 
-                    profileImage 
-                  }}
-                }}
-              }}
-            }}
-          }}
-        }}
-        """
-    }
-    
-    try:
-        response = requests.post(
-            "https://api.producthunt.com/v2/api/graphql",
-            headers=headers,
-            json=query
-        )
-        data = response.json()
-        post = data['data']['post']
-        
-        return {
-            "votes": post['votesCount'],
-            "comments": [
-            {
-                "body": edge['node']['body'],
-                "user": edge['node']['user']['name'],
-                "avatar": edge['node']['user']['profileImage']
-            }
-            for edge in post['comments']['edges']
-        ]
-        }
-    except Exception as e:
-        st.error(f"Error fetching Product Hunt stats: {str(e)}")
-        return {"votes": 0, "comments": []}
 
-# Get Product Hunt stats
-ph_stats = get_ph_stats()
+
 
 # Add Product Hunt upvote section to sidebar
-st.sidebar.markdown("---")
 st.sidebar.markdown("### 🚀 Support Vekkam")
 st.sidebar.markdown(
     f'''
     <div style="text-align:center;">
-        <a href="https://www.producthunt.com/posts/vekkam" target="_blank" id="ph-upvote-link">
-            <img src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id={PRODUCT_HUNT_ID}&theme=light" 
-                 alt="Upvote Vekkam on Product Hunt" 
-                 style="width: 150px; margin-bottom: 8px;"/>
-        </a><br>
-        <span style="font-size:1em; font-weight:bold; color:#da552f;">🔥 {ph_stats['votes']} upvotes</span><br>
-        <a href="https://www.producthunt.com/posts/vekkam" 
-           target="_blank" 
-           style="font-size:0.9em; font-weight:bold; color:#da552f; text-decoration:none;">
-           👉 Upvote & Comment!
+        <a href="https://www.producthunt.com/products/vekkam?utm_source=badge-follow&utm_medium=badge&utm_souce=badge-vekkam" target="_blank">
+            <img src="https://api.producthunt.com/widgets/embed-image/v1/follow.svg?product_id=1056023&theme=light" 
+                 alt="Vekkam - Study for exams faster than ever | Product Hunt" 
+                 style="width: 250px; height: 54px;" 
+                 width="250" 
+                 height="54" />
         </a>
     </div>
     ''', 
@@ -2110,49 +2109,49 @@ elif tab == "⚡ 6-Hour Battle Plan":
             mental_prep = call_gemini(mental_prompt)
             st.markdown(mental_prep)
 
-            # Add export options
-            st.markdown("---")
-            st.markdown("## 📤 Export Options")
-            col1, col2 = st.columns(2)
-            with col1:
-                if st.button("📱 Export to PDF", key="export_battle_plan_pdf_initial"):
-                    pdf_content = f"""
-                    BATTLE PLAN
-                    ==========
-                    
-                    {battle_plan}
-                    
-                    TOPIC-SPECIFIC RESOURCES
-                    =======================
-                    {resources}
-                    
-                    QUICK REFERENCE GUIDE
-                    ====================
-                    {reference_guide}
-                    
-                    MENTAL PREPARATION
-                    =================
-                    {mental_prep}
-                    """
-                    filename = export_summary_to_pdf(pdf_content, "battle_plan.pdf")
-                    st.success(f"Battle plan exported to {filename}")
-            
-            with col2:
-                if st.button("📅 Add to Calendar", key="add_battle_plan_calendar_initial"):
-                    # Create calendar event for study session
-                    event_title = "6-Hour Study Battle Plan"
-                    event_desc = f"""
-                    Battle Plan:
-                    {battle_plan}
-                    
-                    Quick Reference:
-                    {reference_guide}
-                    """
-                    add_to_google_calendar({
-                        "date": exam_date.strftime("%Y-%m-%d"),
-                        "description": event_title
-                    })
-                    st.success("Added to your calendar!")
+# Add export options
+st.markdown("---")
+st.markdown("## 📤 Export Options")
+col1, col2 = st.columns(2)
+with col1:
+    if st.button("📱 Export to PDF", key="export_battle_plan_pdf_initial"):
+        pdf_content = f"""
+        BATTLE PLAN
+        ==========
+        
+        {battle_plan}
+        
+        TOPIC-SPECIFIC RESOURCES
+        =======================
+        {resources}
+        
+        QUICK REFERENCE GUIDE
+        ====================
+        {reference_guide}
+        
+        MENTAL PREPARATION
+        =================
+        {mental_prep}
+        """
+        filename = export_summary_to_pdf(pdf_content, "battle_plan.pdf")
+        st.success(f"Battle plan exported to {filename}")
+    
+with col2:
+    if st.button("📅 Add to Calendar", key="add_battle_plan_calendar_initial"):
+        # Create calendar event for study session
+        event_title = "6-Hour Study Battle Plan"
+        event_desc = f"""
+        Battle Plan:
+        {battle_plan}
+        
+        Quick Reference:
+        {reference_guide}
+        """
+        add_to_google_calendar({
+            "date": exam_date.strftime("%Y-%m-%d"),
+            "description": event_title
+        })
+        st.success("Added to your calendar!")
 
 def generate_mind_map(text):
     """
