@@ -604,6 +604,41 @@ user = st.session_state.user
 
 # Check for learning style in DB
 learning_style = get_learning_style(user.get("email", ""))
+
+# Define questions dictionary
+questions = {
+    "Sensing/Intuitive": [
+        ("I am more interested in what is actual than what is possible.", "Sensing"),
+        ("I often focus on the big picture rather than the details.", "Intuitive"),
+        ("I trust my gut feelings over concrete evidence.", "Intuitive"),
+        ("I enjoy tasks that require attention to detail.", "Sensing"),
+        ("I prefer practical solutions over theoretical ideas.", "Sensing"),
+        ("I am drawn to abstract concepts and patterns.", "Intuitive"),
+        ("I notice details that others might miss.", "Sensing"),
+        ("I like to imagine possibilities and what could be.", "Intuitive"),
+        ("I rely on past experiences to guide me.", "Sensing"),
+        ("I am energized by exploring new ideas.", "Intuitive"),
+    ],
+    "Visual/Verbal": [
+        ("I remember best what I see (pictures, diagrams, charts).", "Visual"),
+        ("I remember best what I hear or read.", "Verbal"),
+        ("I prefer to learn through images and spatial understanding.", "Visual"),
+        ("I prefer to learn through words and explanations.", "Verbal"),
+    ],
+    "Active/Reflective": [
+        ("I learn best by doing and trying things out.", "Active"),
+        ("I learn best by thinking and reflecting.", "Reflective"),
+        ("I prefer group work and discussions.", "Active"),
+        ("I prefer to work alone and think things through.", "Reflective"),
+    ],
+    "Sequential/Global": [
+        ("I learn best in a step-by-step, logical order.", "Sequential"),
+        ("I like to see the big picture before the details.", "Global"),
+        ("I prefer to follow clear, linear instructions.", "Sequential"),
+        ("I often make connections between ideas in a holistic way.", "Global"),
+    ],
+}
+
 if learning_style is None:
     st.title(f"Welcome, {user.get('name', '')}!")
     st.header("Learning Style Test")
@@ -611,38 +646,6 @@ if learning_style is None:
     likert = [
         "Strongly Disagree", "Disagree", "Somewhat Disagree", "Neutral", "Somewhat Agree", "Agree", "Strongly Agree"
     ]
-    questions = {
-        "Sensing/Intuitive": [
-            ("I am more interested in what is actual than what is possible.", "Sensing"),
-            ("I often focus on the big picture rather than the details.", "Intuitive"),
-            ("I trust my gut feelings over concrete evidence.", "Intuitive"),
-            ("I enjoy tasks that require attention to detail.", "Sensing"),
-            ("I prefer practical solutions over theoretical ideas.", "Sensing"),
-            ("I am drawn to abstract concepts and patterns.", "Intuitive"),
-            ("I notice details that others might miss.", "Sensing"),
-            ("I like to imagine possibilities and what could be.", "Intuitive"),
-            ("I rely on past experiences to guide me.", "Sensing"),
-            ("I am energized by exploring new ideas.", "Intuitive"),
-        ],
-        "Visual/Verbal": [
-            ("I remember best what I see (pictures, diagrams, charts).", "Visual"),
-            ("I remember best what I hear or read.", "Verbal"),
-            ("I prefer to learn through images and spatial understanding.", "Visual"),
-            ("I prefer to learn through words and explanations.", "Verbal"),
-        ],
-        "Active/Reflective": [
-            ("I learn best by doing and trying things out.", "Active"),
-            ("I learn best by thinking and reflecting.", "Reflective"),
-            ("I prefer group work and discussions.", "Active"),
-            ("I prefer to work alone and think things through.", "Reflective"),
-        ],
-        "Sequential/Global": [
-            ("I learn best in a step-by-step, logical order.", "Sequential"),
-            ("I like to see the big picture before the details.", "Global"),
-            ("I prefer to follow clear, linear instructions.", "Sequential"),
-            ("I often make connections between ideas in a holistic way.", "Global"),
-        ],
-    }
     if "learning_style_answers" not in st.session_state:
         st.session_state.learning_style_answers = {}
     for dichotomy, qs in questions.items():
@@ -1253,38 +1256,6 @@ elif tab == "Learning Style Test":
         likert = [
             "Strongly Disagree", "Disagree", "Somewhat Disagree", "Neutral", "Somewhat Agree", "Agree", "Strongly Agree"
         ]
-        questions = {
-            "Sensing/Intuitive": [
-                ("I am more interested in what is actual than what is possible.", "Sensing"),
-                ("I often focus on the big picture rather than the details.", "Intuitive"),
-                ("I trust my gut feelings over concrete evidence.", "Intuitive"),
-                ("I enjoy tasks that require attention to detail.", "Sensing"),
-                ("I prefer practical solutions over theoretical ideas.", "Sensing"),
-                ("I am drawn to abstract concepts and patterns.", "Intuitive"),
-                ("I notice details that others might miss.", "Sensing"),
-                ("I like to imagine possibilities and what could be.", "Intuitive"),
-                ("I rely on past experiences to guide me.", "Sensing"),
-                ("I am energized by exploring new ideas.", "Intuitive"),
-            ],
-            "Visual/Verbal": [
-                ("I remember best what I see (pictures, diagrams, charts).", "Visual"),
-                ("I remember best what I hear or read.", "Verbal"),
-                ("I prefer to learn through images and spatial understanding.", "Visual"),
-                ("I prefer to learn through words and explanations.", "Verbal"),
-            ],
-            "Active/Reflective": [
-                ("I learn best by doing and trying things out.", "Active"),
-                ("I learn best by thinking and reflecting.", "Reflective"),
-                ("I prefer group work and discussions.", "Active"),
-                ("I prefer to work alone and think things through.", "Reflective"),
-            ],
-            "Sequential/Global": [
-                ("I learn best in a step-by-step, logical order.", "Sequential"),
-                ("I like to see the big picture before the details.", "Global"),
-                ("I prefer to follow clear, linear instructions.", "Sequential"),
-                ("I often make connections between ideas in a holistic way.", "Global"),
-            ],
-        }
         if "learning_style_answers" not in st.session_state:
             st.session_state.learning_style_answers = {}
         for dichotomy, qs in questions.items():
