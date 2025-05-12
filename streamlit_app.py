@@ -654,7 +654,7 @@ if learning_style is None:
                 ["Strongly Disagree", "Disagree", "Somewhat Disagree", "Neutral", "Somewhat Agree", "Agree", "Strongly Agree"],
                 key=key
             )
-    if st.button("Submit", key="learning_style_submit"):
+    if st.button("Submit", key="learning_style_submit_initial"):
         # Scoring: Strongly Disagree=0, ..., Neutral=50, ..., Strongly Agree=100 (for positive phrasing)
         # For each question, if side matches dichotomy, score as is; if not, reverse
         score_map = {0: 0, 1: 17, 2: 33, 3: 50, 4: 67, 5: 83, 6: 100}
@@ -1040,7 +1040,7 @@ if tab == "Guide Book Chat":
             help="Upload a clear image of your question or problem")
 
     # Process the question (either from text or image)
-    if st.button("Get Answer", key="get_answer_button"):
+    if st.button("Get Answer", key="get_answer_button_initial"):
         with show_lottie_loading("Analyzing your question..."):
             if uploaded_image:
                 # Extract text from image
@@ -1243,7 +1243,7 @@ elif tab == "Learning Style Test":
                 st.markdown(rec)
         
         # Add option to retake test if desired
-        if st.button("🔄 Retake Learning Style Test", key="retake_test_button"):
+        if st.button("🔄 Retake Learning Style Test", key="retake_test_button_initial"):
             st.session_state['learning_style_answers'] = {}
             st.session_state.needs_refresh = True
             st.success("Test reset! Please answer the questions again.")
@@ -1296,7 +1296,7 @@ elif tab == "Learning Style Test":
                     ["Strongly Disagree", "Disagree", "Somewhat Disagree", "Neutral", "Somewhat Agree", "Agree", "Strongly Agree"],
                     key=key
                 )
-        if st.button("Submit", key="learning_style_submit_2"):
+        if st.button("Submit", key="learning_style_submit_2_initial"):
             # Scoring: Strongly Disagree=0, ..., Neutral=50, ..., Strongly Agree=100 (for positive phrasing)
             # For each question, if side matches dichotomy, score as is; if not, reverse
             score_map = {0: 0, 1: 17, 2: 33, 3: 50, 4: 67, 5: 83, 6: 100}
@@ -1361,7 +1361,7 @@ elif tab == "Paper Solver/Exam Guide":
             help="Choose which questions you want the AI to solve."
         )
         selected_indices = [int(s[1:]) - 1 for s in selected]
-        if st.button("🚀 " + t("Solve Selected Questions"), key="solve_questions_button") and selected_indices:
+        if st.button("🚀 " + t("Solve Selected Questions"), key="solve_questions_button_initial") and selected_indices:
             answers = []
             progress = st.progress(0, text="Solving questions...")
             for idx, qidx in enumerate(selected_indices):
@@ -1403,7 +1403,7 @@ elif tab == "Paper Solver/Exam Guide":
             st.subheader("📅 Detected Deadlines")
             for d in deadlines:
                 st.write(f"{d['date']}: {d['description']}")
-                if st.button(f"Add to Google Calendar: {d['description']}", key=f"cal_exam_{d['date']}_{d['description']}"):
+                if st.button(f"Add to Google Calendar: {d['description']}", key=f"cal_exam_{d['date']}_{d['description']}_initial"):
                     add_to_google_calendar(d)
                     st.toast("Added to Google Calendar!")
 
@@ -1539,13 +1539,13 @@ elif tab == t("Document Q&A"):
         # --- Batch Export ---
         if all_flashcards:
             st.info("Export all generated flashcards as an Anki-compatible CSV file.")
-            if st.button("Export All Flashcards to Anki CSV", key="export_flashcards_button"):
+            if st.button("Export All Flashcards to Anki CSV", key="export_flashcards_button_initial"):
                 fname = export_flashcards_to_anki(all_flashcards)
                 st.success(f"Flashcards exported: {fname}")
                 st.toast("Flashcards exported!")
         if all_summaries:
             st.info("Export all generated summaries as a PDF file.")
-            if st.button("Export All Summaries to PDF", key="export_summaries_button"):
+            if st.button("Export All Summaries to PDF", key="export_summaries_button_initial"):
                 combined_summary = "\n\n".join(all_summaries)
                 fname = export_summary_to_pdf(combined_summary)
                 st.success(f"Summary exported: {fname}")
@@ -1596,13 +1596,13 @@ def get_ph_stats():
         return {
             "votes": post['votesCount'],
             "comments": [
-                {
-                    "body": edge['node']['body'],
-                    "user": edge['node']['user']['name'],
-                    "avatar": edge['node']['user']['profileImage']
-                }
-                for edge in post['comments']['edges']
-            ]
+            {
+                "body": edge['node']['body'],
+                "user": edge['node']['user']['name'],
+                "avatar": edge['node']['user']['profileImage']
+            }
+            for edge in post['comments']['edges']
+        ]
         }
     except Exception as e:
         st.error(f"Error fetching Product Hunt stats: {str(e)}")
@@ -1684,7 +1684,7 @@ elif tab == "⚡ 6-Hour Battle Plan":
     weak_topics = st.text_area("Topics you find challenging (optional)", help="List topics you find difficult, separated by commas")
     strong_topics = st.text_area("Topics you're confident in (optional)", help="List topics you're good at, separated by commas")
 
-    if st.button("Generate Battle Plan", key="generate_battle_plan_button"):
+    if st.button("Generate Battle Plan", key="generate_battle_plan_button_initial"):
         if not uploaded_files:
             st.warning("Please upload at least one study material.")
             st.stop()
@@ -1797,7 +1797,7 @@ elif tab == "⚡ 6-Hour Battle Plan":
             st.markdown("## 📤 Export Options")
             col1, col2 = st.columns(2)
             with col1:
-                if st.button("📱 Export to PDF", key="export_battle_plan_pdf"):
+                if st.button("📱 Export to PDF", key="export_battle_plan_pdf_initial"):
                     pdf_content = f"""
                     BATTLE PLAN
                     ==========
@@ -1820,7 +1820,7 @@ elif tab == "⚡ 6-Hour Battle Plan":
                     st.success(f"Battle plan exported to {filename}")
             
             with col2:
-                if st.button("📅 Add to Calendar", key="add_battle_plan_calendar"):
+                if st.button("📅 Add to Calendar", key="add_battle_plan_calendar_initial"):
                     # Create calendar event for study session
                     event_title = "6-Hour Study Battle Plan"
                     event_desc = f"""
@@ -2025,3 +2025,58 @@ def generate_mind_map(text):
 if st.session_state.needs_refresh:
     st.session_state.needs_refresh = False
     st.rerun()
+
+# Onboarding buttons
+if st.button("Let's get started!", key="onboarding_start_initial"):
+    st.session_state['onboarding_step'] += 1
+
+if st.button("Next", key="onboarding_next_1_initial"):
+    st.session_state['onboarding_step'] += 1
+
+if st.button("Next", key="onboarding_next_2_initial"):
+    st.session_state['onboarding_step'] += 1
+
+if st.button("Finish Onboarding", key="onboarding_finish_initial"):
+    # Scoring logic remains the same
+    scores = {}
+    for dichotomy, qs in questions.items():
+        total = 0
+        for i, (q, side) in enumerate(qs):
+            key = f"{dichotomy}_{i}"
+            val = st.session_state.learning_style_answers[key]
+            # Scoring logic remains the same
+            if val == "Strongly Disagree":
+                score = 0
+            elif val == "Disagree":
+                score = 17
+            elif val == "Somewhat Disagree":
+                score = 33
+            elif val == "Neutral":
+                score = 50
+            elif val == "Somewhat Agree":
+                score = 67
+            elif val == "Agree":
+                score = 83
+            else:  # Strongly Agree
+                score = 100
+            
+            if side != dichotomy.split("/")[0]:
+                score = 100 - score
+            
+            total += score
+        scores[dichotomy] = int(total / len(qs))
+    
+    save_learning_style(user.get("email", ""), scores)
+    st.session_state.learning_style_answers = {}
+    st.session_state['onboarding_step'] += 1
+
+if st.button("Go to Dashboard", key="onboarding_dashboard_initial"):
+    st.session_state['onboarding_complete'] = True
+
+# Product Hunt upvote button
+if not st.session_state['ph_upvoted']:
+    if st.sidebar.button("👍 I upvoted Vekkam!", key="ph_upvote_confirm"):
+        st.session_state['ph_upvoted'] = True
+        st.sidebar.success("Thank you for supporting us! 🎉")
+        # Refresh stats
+        ph_stats = get_ph_stats()
