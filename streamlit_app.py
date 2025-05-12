@@ -156,9 +156,13 @@ CSE_ID         = st.secrets.get("google_search", {}).get("cse_id", "")
 CACHE_TTL      = 3600
 
 # --- Session State ---
-for key in ("token", "user", "needs_refresh", "learning_style_answers"):
+for key in ("token", "user", "needs_refresh"):
     if key not in st.session_state:
         st.session_state[key] = None
+
+# Initialize learning_style_answers as an empty dictionary
+if "learning_style_answers" not in st.session_state:
+    st.session_state.learning_style_answers = {}
 
 # --- SQLite DB for Learning Style ---
 DB_PATH = "learning_style.db"
