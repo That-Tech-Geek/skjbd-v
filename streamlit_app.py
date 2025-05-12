@@ -23,51 +23,6 @@ import docx
 from pptx import Presentation
 import streamlit.components.v1 as components
 import time
-import networkx as nx
-import matplotlib.pyplot as plt
-
-# Initialize session state variables
-if 'questions' not in st.session_state:
-    st.session_state.questions = {
-        "Sensing/Intuitive": [
-            ("I am more interested in what is actual than what is possible.", "Sensing"),
-            ("I often focus on the big picture rather than the details.", "Intuitive"),
-            ("I trust my gut feelings over concrete evidence.", "Intuitive"),
-            ("I enjoy tasks that require attention to detail.", "Sensing"),
-            ("I prefer practical solutions over theoretical ideas.", "Sensing"),
-            ("I am drawn to abstract concepts and patterns.", "Intuitive"),
-            ("I notice details that others might miss.", "Sensing"),
-            ("I like to imagine possibilities and what could be.", "Intuitive"),
-            ("I rely on past experiences to guide me.", "Sensing"),
-            ("I am energized by exploring new ideas.", "Intuitive"),
-        ],
-        "Visual/Verbal": [
-            ("I remember best what I see (pictures, diagrams, charts).", "Visual"),
-            ("I remember best what I hear or read.", "Verbal"),
-            ("I prefer to learn through images and spatial understanding.", "Visual"),
-            ("I prefer to learn through words and explanations.", "Verbal"),
-        ],
-        "Active/Reflective": [
-            ("I learn best by doing and trying things out.", "Active"),
-            ("I learn best by thinking and reflecting.", "Reflective"),
-            ("I prefer group work and discussions.", "Active"),
-            ("I prefer to work alone and think things through.", "Reflective"),
-        ],
-        "Sequential/Global": [
-            ("I learn best in a step-by-step, logical order.", "Sequential"),
-            ("I like to see the big picture before the details.", "Global"),
-            ("I prefer to follow clear, linear instructions.", "Sequential"),
-            ("I often make connections between ideas in a holistic way.", "Global"),
-        ],
-    }
-
-# Initialize other session state variables
-if 'needs_refresh' not in st.session_state:
-    st.session_state.needs_refresh = False
-if 'learning_style' not in st.session_state:
-    st.session_state.learning_style = None
-if 'answers' not in st.session_state:
-    st.session_state.answers = {}
 
 # --- Gemini Call ---
 def call_gemini(prompt, temperature=0.7, max_tokens=2048):
@@ -171,21 +126,31 @@ def load_lottieurl(url):
         return None
     return r.json()
 
+import contextlib
 @contextlib.contextmanager
 def show_lottie_loading(message="Loading..."):
-    # Create a container for the loading animation
-    container = st.empty()
+    # Use a single container for all loading animations
+    if 'loading_container' not in st.session_state:
+        st.session_state.loading_container = st.empty()
+    
+    # Clear any existing content in the container
+    st.session_state.loading_container.empty()
+    
+    # Generate a unique key for this loading instance
+    unique_key = f"lottie_{int(time.time() * 1000)}"
+    
+    # Show the loading animation and message
+    with st.session_state.loading_container.container():
+        lottie_url = "https://assets10.lottiefiles.com/packages/lf20_kyu7xb1v.json"
+        lottie_json = load_lottieurl(lottie_url)
+        st_lottie(lottie_json, height=200, key=unique_key)
+        st.info(message)
+    
     try:
-        # Show the loading animation
-        with container:
-            st.spinner(message)
         yield
     finally:
-        # Remove the entire container and its contents
-        container.empty()
-        # Instead of rerun, we'll use session state to track changes
-        if 'needs_refresh' not in st.session_state:
-            st.session_state.needs_refresh = False
+        # Clear the loading animation and message
+        st.session_state.loading_container.empty()
 
 # --- Configuration from st.secrets ---
 raw_uri       = st.secrets.get("google", {}).get("redirect_uri", "")
@@ -199,7 +164,7 @@ CSE_ID         = st.secrets.get("google_search", {}).get("cse_id", "")
 CACHE_TTL      = 3600
 
 # --- Session State ---
-for key in ("token", "user", "needs_refresh", "learning_style_answers"):
+for key in ("token", "user"):
     if key not in st.session_state:
         st.session_state[key] = None
 
@@ -347,7 +312,7 @@ def get_section_progress(email, doc_id):
         ''', (email, doc_id))
         return dict(cur.fetchall())
         
-LOGO_URL = "https://raw.githubusercontent.com/rekfdjkzbdfvkgjerkdfnfcbvgewhs/Vekkam/main/logo.png"  # Raw GitHub content URL
+LOGO_URL = "https://github.com/rekfdjkzbdfvkgjerkdfnfcbvgewhs/Vekkam/blob/main/logo.png"  # <-- Replace with your actual raw GitHub URL
 
 init_structure_db()
 
@@ -647,92 +612,82 @@ user = st.session_state.user
 
 # Check for learning style in DB
 learning_style = get_learning_style(user.get("email", ""))
-
-# Define questions dictionary
-questions = {
-    "Sensing/Intuitive": [
-        ("I am more interested in what is actual than what is possible.", "Sensing"),
-        ("I often focus on the big picture rather than the details.", "Intuitive"),
-        ("I trust my gut feelings over concrete evidence.", "Intuitive"),
-        ("I enjoy tasks that require attention to detail.", "Sensing"),
-        ("I prefer practical solutions over theoretical ideas.", "Sensing"),
-        ("I am drawn to abstract concepts and patterns.", "Intuitive"),
-        ("I notice details that others might miss.", "Sensing"),
-        ("I like to imagine possibilities and what could be.", "Intuitive"),
-        ("I rely on past experiences to guide me.", "Sensing"),
-        ("I am energized by exploring new ideas.", "Intuitive"),
-    ],
-    "Visual/Verbal": [
-        ("I remember best what I see (pictures, diagrams, charts).", "Visual"),
-        ("I remember best what I hear or read.", "Verbal"),
-        ("I prefer to learn through images and spatial understanding.", "Visual"),
-        ("I prefer to learn through words and explanations.", "Verbal"),
-    ],
-    "Active/Reflective": [
-        ("I learn best by doing and trying things out.", "Active"),
-        ("I learn best by thinking and reflecting.", "Reflective"),
-        ("I prefer group work and discussions.", "Active"),
-        ("I prefer to work alone and think things through.", "Reflective"),
-    ],
-    "Sequential/Global": [
-        ("I learn best in a step-by-step, logical order.", "Sequential"),
-        ("I like to see the big picture before the details.", "Global"),
-        ("I prefer to follow clear, linear instructions.", "Sequential"),
-        ("I often make connections between ideas in a holistic way.", "Global"),
-    ],
-}
-
 if learning_style is None:
-    st.write("### Learning Style Assessment")
-    st.write("Please answer the following questions to determine your learning style.")
-    
-    # Display questions for each category
-    for category, category_questions in st.session_state.questions.items():
-        st.write(f"#### {category}")
-        for i, (question, _) in enumerate(category_questions):
-            key = f"{category}_{i}"
-            if key not in st.session_state.answers:
-                st.session_state.answers[key] = None
-            st.session_state.answers[key] = st.radio(
-                question,
-                options=["Strongly Disagree", "Disagree", "Neutral", "Agree", "Strongly Agree"],
+    st.title(f"Welcome, {user.get('name', '')}!")
+    st.header("Learning Style Test")
+    st.write("Answer the following questions to determine your learning style. This will help us personalize your experience.")
+    likert = [
+        "Strongly Disagree", "Disagree", "Somewhat Disagree", "Neutral", "Somewhat Agree", "Agree", "Strongly Agree"
+    ]
+    questions = {
+        "Sensing/Intuitive": [
+            ("I am more interested in what is actual than what is possible.", "Sensing"),
+            ("I often focus on the big picture rather than the details.", "Intuitive"),
+            ("I trust my gut feelings over concrete evidence.", "Intuitive"),
+            ("I enjoy tasks that require attention to detail.", "Sensing"),
+            ("I prefer practical solutions over theoretical ideas.", "Sensing"),
+            ("I am drawn to abstract concepts and patterns.", "Intuitive"),
+            ("I notice details that others might miss.", "Sensing"),
+            ("I like to imagine possibilities and what could be.", "Intuitive"),
+            ("I rely on past experiences to guide me.", "Sensing"),
+            ("I am energized by exploring new ideas.", "Intuitive"),
+        ],
+        "Visual/Verbal": [
+            ("I remember best what I see (pictures, diagrams, charts).", "Visual"),
+            ("I remember best what I hear or read.", "Verbal"),
+            ("I prefer to learn through images and spatial understanding.", "Visual"),
+            ("I prefer to learn through words and explanations.", "Verbal"),
+        ],
+        "Active/Reflective": [
+            ("I learn best by doing and trying things out.", "Active"),
+            ("I learn best by thinking and reflecting.", "Reflective"),
+            ("I prefer group work and discussions.", "Active"),
+            ("I prefer to work alone and think things through.", "Reflective"),
+        ],
+        "Sequential/Global": [
+            ("I learn best in a step-by-step, logical order.", "Sequential"),
+            ("I like to see the big picture before the details.", "Global"),
+            ("I prefer to follow clear, linear instructions.", "Sequential"),
+            ("I often make connections between ideas in a holistic way.", "Global"),
+        ],
+    }
+    if "learning_style_answers" not in st.session_state:
+        st.session_state.learning_style_answers = {}
+    for dichotomy, qs in questions.items():
+        st.subheader(dichotomy)
+        for i, (q, side) in enumerate(qs):
+            key = f"{dichotomy}_{i}"
+            st.session_state.learning_style_answers[key] = st.radio(
+                q,
+                ["Strongly Disagree", "Disagree", "Somewhat Disagree", "Neutral", "Somewhat Agree", "Agree", "Strongly Agree"],
                 key=key
             )
-    
-    if st.button("Submit Assessment"):
-        # Calculate learning style based on answers
-        scores = {
-            "Sensing": 0, "Intuitive": 0,
-            "Visual": 0, "Verbal": 0,
-            "Active": 0, "Reflective": 0,
-            "Sequential": 0, "Global": 0
-        }
+    if st.button("Submit"):
+        # Scoring: Strongly Disagree=0, ..., Neutral=50, ..., Strongly Agree=100 (for positive phrasing)
+        # For each question, if side matches dichotomy, score as is; if not, reverse
+        score_map = {0: 0, 1: 17, 2: 33, 3: 50, 4: 67, 5: 83, 6: 100}
+        scores = {}
+        for dichotomy, qs in questions.items():
+            total = 0
+            for i, (q, side) in enumerate(qs):
+                key = f"{dichotomy}_{i}"
+                val = st.session_state.learning_style_answers[key]
+                idx = likert.index(val)
+                # If the question is for the first side, score as is; if for the opposite, reverse
+                if side == dichotomy.split("/")[0]:
+                    score = score_map[idx]
+                else:
+                    score = score_map[6 - idx]
+                total += score
+            scores[dichotomy] = int(total / len(qs))
+        with show_lottie_loading("Saving your learning style and personalizing your experience..."):
+            save_learning_style(user.get("email", ""), scores)
+            st.session_state.learning_style_answers = {}
+        st.success("Learning style saved! Reloading...")
+        st.balloons()
+        st.experimental_rerun()
         
-        for category, category_questions in st.session_state.questions.items():
-            for i, (_, style) in enumerate(category_questions):
-                key = f"{category}_{i}"
-                answer = st.session_state.answers[key]
-                if answer in ["Strongly Agree", "Agree"]:
-                    scores[style] += 2
-                elif answer == "Neutral":
-                    scores[style] += 1
-        
-        # Determine dominant learning style
-        learning_style = {
-            "Sensing/Intuitive": "Sensing" if scores["Sensing"] > scores["Intuitive"] else "Intuitive",
-            "Visual/Verbal": "Visual" if scores["Visual"] > scores["Verbal"] else "Verbal",
-            "Active/Reflective": "Active" if scores["Active"] > scores["Reflective"] else "Reflective",
-            "Sequential/Global": "Sequential" if scores["Sequential"] > scores["Global"] else "Global"
-        }
-        
-        st.session_state.learning_style = learning_style
-        st.session_state.needs_refresh = True
-        st.session_state.answers = {}  # Clear answers after submission
-
-# Check if we need to refresh the page
-if st.session_state.needs_refresh:
-    st.session_state.needs_refresh = False
-    st.rerun()
+    st.stop()
 
 st.sidebar.image(user.get("picture", ""), width=48)
 st.sidebar.write(user.get("email", ""))
@@ -740,9 +695,6 @@ st.sidebar.write(user.get("email", ""))
 # --- Personalized for you box ---
 def learning_style_description(scores):
     desc = []
-    # Convert scores to integers if they're strings
-    scores = {k: int(v) if isinstance(v, str) else v for k, v in scores.items()}
-    
     if scores['Sensing/Intuitive'] >= 60:
         desc.append("Prefers concepts, patterns, and big-picture thinking.")
     elif scores['Sensing/Intuitive'] <= 40:
@@ -1096,7 +1048,7 @@ if tab == "Guide Book Chat":
             help="Upload a clear image of your question or problem")
 
     # Process the question (either from text or image)
-    if st.button("Get Answer", key="get_answer_button_initial"):
+    if st.button("Get Answer"):
         with show_lottie_loading("Analyzing your question..."):
             if uploaded_image:
                 # Extract text from image
@@ -1299,16 +1251,47 @@ elif tab == "Learning Style Test":
                 st.markdown(rec)
         
         # Add option to retake test if desired
-        if st.button("🔄 Retake Learning Style Test", key="retake_test_button_initial"):
+        if st.button("🔄 Retake Learning Style Test"):
             st.session_state['learning_style_answers'] = {}
-            st.session_state.needs_refresh = True
-            st.success("Test reset! Please answer the questions again.")
+            st.experimental_rerun()
             
     else:
         st.write("Answer the following questions to determine your learning style. This will help us personalize your experience.")
         likert = [
             "Strongly Disagree", "Disagree", "Somewhat Disagree", "Neutral", "Somewhat Agree", "Agree", "Strongly Agree"
         ]
+        questions = {
+            "Sensing/Intuitive": [
+                ("I am more interested in what is actual than what is possible.", "Sensing"),
+                ("I often focus on the big picture rather than the details.", "Intuitive"),
+                ("I trust my gut feelings over concrete evidence.", "Intuitive"),
+                ("I enjoy tasks that require attention to detail.", "Sensing"),
+                ("I prefer practical solutions over theoretical ideas.", "Sensing"),
+                ("I am drawn to abstract concepts and patterns.", "Intuitive"),
+                ("I notice details that others might miss.", "Sensing"),
+                ("I like to imagine possibilities and what could be.", "Intuitive"),
+                ("I rely on past experiences to guide me.", "Sensing"),
+                ("I am energized by exploring new ideas.", "Intuitive"),
+            ],
+            "Visual/Verbal": [
+                ("I remember best what I see (pictures, diagrams, charts).", "Visual"),
+                ("I remember best what I hear or read.", "Verbal"),
+                ("I prefer to learn through images and spatial understanding.", "Visual"),
+                ("I prefer to learn through words and explanations.", "Verbal"),
+            ],
+            "Active/Reflective": [
+                ("I learn best by doing and trying things out.", "Active"),
+                ("I learn best by thinking and reflecting.", "Reflective"),
+                ("I prefer group work and discussions.", "Active"),
+                ("I prefer to work alone and think things through.", "Reflective"),
+            ],
+            "Sequential/Global": [
+                ("I learn best in a step-by-step, logical order.", "Sequential"),
+                ("I like to see the big picture before the details.", "Global"),
+                ("I prefer to follow clear, linear instructions.", "Sequential"),
+                ("I often make connections between ideas in a holistic way.", "Global"),
+            ],
+        }
         if "learning_style_answers" not in st.session_state:
             st.session_state.learning_style_answers = {}
         for dichotomy, qs in questions.items():
@@ -1320,7 +1303,7 @@ elif tab == "Learning Style Test":
                     ["Strongly Disagree", "Disagree", "Somewhat Disagree", "Neutral", "Somewhat Agree", "Agree", "Strongly Agree"],
                     key=key
                 )
-        if st.button("Submit", key="learning_style_submit_2_initial"):
+        if st.button("Submit"):
             # Scoring: Strongly Disagree=0, ..., Neutral=50, ..., Strongly Agree=100 (for positive phrasing)
             # For each question, if side matches dichotomy, score as is; if not, reverse
             score_map = {0: 0, 1: 17, 2: 33, 3: 50, 4: 67, 5: 83, 6: 100}
@@ -1341,9 +1324,9 @@ elif tab == "Learning Style Test":
             with show_lottie_loading("Saving your learning style and personalizing your experience..."):
                 save_learning_style(user.get("email", ""), scores)
                 st.session_state.learning_style_answers = {}
-                st.session_state.needs_refresh = True
-            st.success("Learning style saved! Your experience will be personalized.")
+            st.success("Learning style saved! Reloading...")
             st.balloons()
+            st.experimental_rerun()
 
 elif tab == "Paper Solver/Exam Guide":
     st.header("📝 " + t("Paper Solver/Exam Guide"))
@@ -1385,7 +1368,7 @@ elif tab == "Paper Solver/Exam Guide":
             help="Choose which questions you want the AI to solve."
         )
         selected_indices = [int(s[1:]) - 1 for s in selected]
-        if st.button("🚀 " + t("Solve Selected Questions"), key="solve_questions_button_initial") and selected_indices:
+        if st.button("🚀 " + t("Solve Selected Questions")) and selected_indices:
             answers = []
             progress = st.progress(0, text="Solving questions...")
             for idx, qidx in enumerate(selected_indices):
@@ -1427,7 +1410,7 @@ elif tab == "Paper Solver/Exam Guide":
             st.subheader("📅 Detected Deadlines")
             for d in deadlines:
                 st.write(f"{d['date']}: {d['description']}")
-                if st.button(f"Add to Google Calendar: {d['description']}", key=f"cal_exam_{d['date']}_{d['description']}_initial"):
+                if st.button(f"Add to Google Calendar: {d['description']}", key=f"cal_exam_{d['date']}_{d['description']}"):
                     add_to_google_calendar(d)
                     st.toast("Added to Google Calendar!")
 
@@ -1563,43 +1546,41 @@ elif tab == t("Document Q&A"):
         # --- Batch Export ---
         if all_flashcards:
             st.info("Export all generated flashcards as an Anki-compatible CSV file.")
-            if st.button("Export All Flashcards to Anki CSV", key="export_flashcards_button_initial"):
+            if st.button("Export All Flashcards to Anki CSV"):
                 fname = export_flashcards_to_anki(all_flashcards)
                 st.success(f"Flashcards exported: {fname}")
                 st.toast("Flashcards exported!")
         if all_summaries:
             st.info("Export all generated summaries as a PDF file.")
-            if st.button("Export All Summaries to PDF", key="export_summaries_button_initial"):
+            if st.button("Export All Summaries to PDF"):
                 combined_summary = "\n\n".join(all_summaries)
                 fname = export_summary_to_pdf(combined_summary)
                 st.success(f"Summary exported: {fname}")
                 st.toast("Summary exported!")
 
-# --- Product Hunt Integration ---
+# --- Product Hunt API Integration ---
 PRODUCT_HUNT_TOKEN = st.secrets.get("producthunt", {}).get("api_token", "")
-PRODUCT_HUNT_ID = st.secrets.get("producthunt", {}).get("product_id", "")  # Your Product Hunt post ID
+PRODUCT_HUNT_ID = st.secrets.get("producthunt", {}).get("product_id", "")  # e.g., "vekkam"
 
-@st.cache_data(ttl=300)  # Cache for 5 minutes
+import time
+@st.cache_data(ttl=300)
 def get_ph_stats():
-    """Get Product Hunt stats using their GraphQL API"""
     if not PRODUCT_HUNT_TOKEN or not PRODUCT_HUNT_ID:
         return {"votes": 0, "comments": []}
-    
     headers = {"Authorization": f"Bearer {PRODUCT_HUNT_TOKEN}"}
-    query = {
+    # Get upvotes
+    votes_url = f"https://api.producthunt.com/v2/api/graphql"
+    votes_query = {
         "query": f"""
         query {{
-          post(id: {PRODUCT_HUNT_ID}) {{
+          post(slug: \"{PRODUCT_HUNT_ID}\") {{
             votesCount
             comments(first: 5) {{
               edges {{
                 node {{
                   id
                   body
-                  user {{ 
-                    name 
-                    profileImage 
-                  }}
+                  user {{ name profileImage }}
                 }}
               }}
             }}
@@ -1607,19 +1588,12 @@ def get_ph_stats():
         }}
         """
     }
-    
     try:
-        response = requests.post(
-            "https://api.producthunt.com/v2/api/graphql",
-            headers=headers,
-            json=query
-        )
-        data = response.json()
+        r = requests.post(votes_url, headers=headers, json=votes_query)
+        data = r.json()
         post = data['data']['post']
-        
-        return {
-            "votes": post['votesCount'],
-            "comments": [
+        votes = post['votesCount']
+        comments = [
             {
                 "body": edge['node']['body'],
                 "user": edge['node']['user']['name'],
@@ -1627,66 +1601,162 @@ def get_ph_stats():
             }
             for edge in post['comments']['edges']
         ]
-        }
-    except Exception as e:
-        st.error(f"Error fetching Product Hunt stats: {str(e)}")
+        return {"votes": votes, "comments": comments}
+    except Exception:
         return {"votes": 0, "comments": []}
 
-# Get Product Hunt stats
+# --- Footer: Product Hunt Upvote Button & Live Stats ---
 ph_stats = get_ph_stats()
 
-# Add Product Hunt upvote section to sidebar
-st.sidebar.markdown("---")
-st.sidebar.markdown("### 🚀 Support Vekkam")
-st.sidebar.markdown(
-    f'''
-    <div style="text-align:center;">
-        <a href="https://www.producthunt.com/posts/vekkam" target="_blank" id="ph-upvote-link">
-            <img src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id={PRODUCT_HUNT_ID}&theme=light" 
-                 alt="Upvote Vekkam on Product Hunt" 
-                 style="width: 150px; margin-bottom: 8px;"/>
-        </a><br>
-        <span style="font-size:1em; font-weight:bold; color:#da552f;">🔥 {ph_stats['votes']} upvotes</span><br>
-        <a href="https://www.producthunt.com/posts/vekkam" 
-           target="_blank" 
-           style="font-size:0.9em; font-weight:bold; color:#da552f; text-decoration:none;">
-           👉 Upvote & Comment!
-        </a>
-    </div>
-    ''', 
-    unsafe_allow_html=True
-)
+# --- Duolingo-Style Onboarding ---
+if 'onboarding_complete' not in st.session_state:
+    st.session_state['onboarding_complete'] = False
+if 'onboarding_step' not in st.session_state:
+    st.session_state['onboarding_step'] = 0
 
-# Add upvote tracking
-if 'ph_upvoted' not in st.session_state:
-    st.session_state['ph_upvoted'] = False
+ONBOARDING_STEPS = [
+    'Welcome',
+    'Language',
+    'Goal',
+    'LearningStyle',
+    'Finish'
+]
 
-# Add upvote confirmation button
-if not st.session_state['ph_upvoted']:
-    if st.sidebar.button("👍 I upvoted Vekkam!"):
-        st.session_state['ph_upvoted'] = True
-        st.sidebar.success("Thank you for supporting us! 🎉")
-        # Refresh stats
-        ph_stats = get_ph_stats()
-else:
-    st.sidebar.info("Thanks for your upvote! 🧡")
-
-# Display recent comments if available
-if ph_stats['comments']:
-    st.sidebar.markdown("### 💬 Recent Comments")
-    for comment in ph_stats['comments']:
-        st.sidebar.markdown(
-            f'''
-            <div style="margin-bottom:0.5em; font-size:0.9em;">
-                <img src="{comment['avatar']}" 
-                     width="24" 
-                     style="vertical-align:middle;border-radius:50%;margin-right:4px;"/> 
-                <b>{comment['user']}</b><br>
-                <span style="font-size:0.85em;">{comment['body']}</span>
-            </div>
-            ''',
-            unsafe_allow_html=True
-        )
+if not st.session_state['onboarding_complete']:
+    step = st.session_state['onboarding_step']
+    st.markdown("""
+        <style>
+        .onboard-center {text-align:center; margin-top:2em;}
+        </style>
+    """, unsafe_allow_html=True)
+    st.progress((step+1)/len(ONBOARDING_STEPS), text=f"Step {step+1} of {len(ONBOARDING_STEPS)}")
+    if ONBOARDING_STEPS[step] == 'Welcome':
+        st.markdown('<div class="onboard-center"><img src="https://github.com/rekfdjkzbdfvkgjerkdfnfcbvgewhs/Vekkam/blob/main/logo.png" width="120"/><h2>Welcome to Vekkam!</h2><p>Your AI-powered study companion.</p></div>', unsafe_allow_html=True)
+        if st.button("Let's get started!"):
+            st.session_state['onboarding_step'] += 1
+            
+    elif ONBOARDING_STEPS[step] == 'Language':
+        st.markdown('<div class="onboard-center"><h3>🌐 Choose your language</h3></div>', unsafe_allow_html=True)
+        lang_choice = st.selectbox("Language", list(languages.keys()), index=0)
+        st.session_state["language"] = languages[lang_choice]
+        if st.button("Next"):
+            st.session_state['onboarding_step'] += 1
+            
+    elif ONBOARDING_STEPS[step] == 'Goal':
+        st.markdown('<div class="onboard-center"><h3>🎯 What is your main study goal?</h3></div>', unsafe_allow_html=True)
+        goal = st.radio("Choose a goal:", ["Exam Prep", "Daily Review", "Master a Subject", "Ace Assignments"], key="onboard_goal")
+        st.session_state['study_goal'] = goal
+        if st.button("Next"):
+            st.session_state['onboarding_step'] += 1
+            
+    elif ONBOARDING_STEPS[step] == 'LearningStyle':
+        st.markdown('<div class="onboard-center"><h3>🧠 Discover your learning style</h3><p>This helps us personalize your experience!</p></div>', unsafe_allow_html=True)
+        # Use the same learning style test as before
+        likert = [
+            "Strongly Disagree", "Disagree", "Somewhat Disagree", "Neutral", "Somewhat Agree", "Agree", "Strongly Agree"
+        ]
+        questions = {
+            "Sensing/Intuitive": [
+                ("I am more interested in what is actual than what is possible.", "Sensing"),
+                ("I often focus on the big picture rather than the details.", "Intuitive"),
+                ("I trust my gut feelings over concrete evidence.", "Intuitive"),
+                ("I enjoy tasks that require attention to detail.", "Sensing"),
+                ("I prefer practical solutions over theoretical ideas.", "Sensing"),
+                ("I am drawn to abstract concepts and patterns.", "Intuitive"),
+                ("I notice details that others might miss.", "Sensing"),
+                ("I like to imagine possibilities and what could be.", "Intuitive"),
+                ("I rely on past experiences to guide me.", "Sensing"),
+                ("I am energized by exploring new ideas.", "Intuitive"),
+            ],
+            "Visual/Verbal": [
+                ("I remember best what I see (pictures, diagrams, charts).", "Visual"),
+                ("I find it easier to follow spoken instructions than written ones.", "Verbal"),
+                ("I prefer to learn through images and spatial understanding.", "Visual"),
+                ("I often take notes to help me remember.", "Verbal"),
+                ("I visualize information in my mind.", "Visual"),
+                ("I prefer reading to watching videos.", "Verbal"),
+                ("I use color and layout to organize my notes.", "Visual"),
+                ("I find it easier to express myself in writing.", "Verbal"),
+                ("I am drawn to infographics and visual summaries.", "Visual"),
+                ("I enjoy listening to lectures or podcasts.", "Verbal"),
+            ],
+            "Active/Reflective": [
+                ("I learn best by doing and trying things out.", "Active"),
+                ("I prefer to think things through before acting.", "Reflective"),
+                ("I enjoy group work and discussions.", "Active"),
+                ("I need time alone to process new information.", "Reflective"),
+                ("I like to experiment and take risks in learning.", "Active"),
+                ("I often review my notes quietly after class.", "Reflective"),
+                ("I am energized by interacting with others.", "Active"),
+                ("I prefer to observe before participating.", "Reflective"),
+                ("I learn by teaching others or explaining concepts aloud.", "Active"),
+                ("I keep a journal or log to reflect on my learning.", "Reflective"),
+            ],
+            "Sequential/Global": [
+                ("I learn best in a step-by-step, logical order.", "Sequential"),
+                ("I like to see the big picture before the details.", "Global"),
+                ("I prefer to follow clear, linear instructions.", "Sequential"),
+                ("I often make connections between ideas in a holistic way.", "Global"),
+                ("I am comfortable breaking tasks into smaller parts.", "Sequential"),
+                ("I sometimes jump to conclusions without all the steps.", "Global"),
+                ("I like outlines and structured notes.", "Sequential"),
+                ("I understand concepts better when I see how they fit together.", "Global"),
+                ("I prefer to finish one thing before starting another.", "Sequential"),
+                ("I enjoy brainstorming and exploring many ideas at once.", "Global"),
+            ],
+        }
+        if "learning_style_answers" not in st.session_state:
+            st.session_state.learning_style_answers = {}
+        for dichotomy, qs in questions.items():
+            st.subheader(dichotomy)
+            for i, (q, side) in enumerate(qs):
+                key = f"{dichotomy}_{i}"
+                st.session_state.learning_style_answers[key] = st.radio(
+                    q,
+                    ["Strongly Disagree", "Disagree", "Somewhat Disagree", "Neutral", "Somewhat Agree", "Agree", "Strongly Agree"],
+                    key=key
+                )
+        if st.button("Finish Onboarding"):
+            # Scoring: Strongly Disagree=0, ..., Neutral=50, ..., Strongly Agree=100 (for positive phrasing)
+            scores = {}
+            for dichotomy, qs in questions.items():
+                total = 0
+                for i, (q, side) in enumerate(qs):
+                    key = f"{dichotomy}_{i}"
+                    val = st.session_state.learning_style_answers[key]
+                    # Direct mapping of responses to scores
+                    if val == "Strongly Disagree":
+                        score = 0
+                    elif val == "Disagree":
+                        score = 17
+                    elif val == "Somewhat Disagree":
+                        score = 33
+                    elif val == "Neutral":
+                        score = 50
+                    elif val == "Somewhat Agree":
+                        score = 67
+                    elif val == "Agree":
+                        score = 83
+                    else:  # Strongly Agree
+                        score = 100
+                    
+                    # If the question is for the opposite side, reverse the score
+                    if side != dichotomy.split("/")[0]:
+                        score = 100 - score
+                    
+                    total += score
+                scores[dichotomy] = int(total / len(qs))
+            save_learning_style(user.get("email", ""), scores)
+            st.session_state.learning_style_answers = {}
+            st.session_state['onboarding_step'] += 1
+            
+    elif ONBOARDING_STEPS[step] == 'Finish':
+        st.markdown('<div class="onboard-center"><h2>🎉 You are all set!</h2><p>Your experience is now personalized. Let\'s start learning!</p></div>', unsafe_allow_html=True)
+        st.balloons()
+        if st.button("Go to Dashboard"):
+            st.session_state['onboarding_complete'] = True
+            
+    st.stop()
 
 elif tab == "⚡ 6-Hour Battle Plan":
     st.header("⚡ 6-Hour Battle Plan")
@@ -1708,7 +1778,7 @@ elif tab == "⚡ 6-Hour Battle Plan":
     weak_topics = st.text_area("Topics you find challenging (optional)", help="List topics you find difficult, separated by commas")
     strong_topics = st.text_area("Topics you're confident in (optional)", help="List topics you're good at, separated by commas")
 
-    if st.button("Generate Battle Plan", key="generate_battle_plan_button_initial"):
+    if st.button("Generate Battle Plan"):
         if not uploaded_files:
             st.warning("Please upload at least one study material.")
             st.stop()
@@ -1821,7 +1891,7 @@ elif tab == "⚡ 6-Hour Battle Plan":
             st.markdown("## 📤 Export Options")
             col1, col2 = st.columns(2)
             with col1:
-                if st.button("📱 Export to PDF", key="export_battle_plan_pdf_initial"):
+                if st.button("📱 Export to PDF"):
                     pdf_content = f"""
                     BATTLE PLAN
                     ==========
@@ -1844,7 +1914,7 @@ elif tab == "⚡ 6-Hour Battle Plan":
                     st.success(f"Battle plan exported to {filename}")
             
             with col2:
-                if st.button("📅 Add to Calendar", key="add_battle_plan_calendar_initial"):
+                if st.button("📅 Add to Calendar"):
                     # Create calendar event for study session
                     event_title = "6-Hour Study Battle Plan"
                     event_desc = f"""
@@ -1860,205 +1930,36 @@ elif tab == "⚡ 6-Hour Battle Plan":
                     })
                     st.success("Added to your calendar!")
 
-def generate_mind_map(text):
-    """
-    Generate a mind map from text using Gemini AI and render it using igraph and plotly.
-    """
-    prompt = (
-        "You are a mind map generator. Create a detailed mind map from the following text. "
-        "Return ONLY a JSON object with the following structure:\n"
-        "{\n"
-        '  "title": "Main topic",\n'
-        '  "children": [\n'
-        '    {\n'
-        '      "title": "Subtopic 1",\n'
-        '      "children": [\n'
-        '        {"title": "Detail 1"},\n'
-        '        {"title": "Detail 2"}\n'
-        '      ]\n'
-        '    },\n'
-        '    {\n'
-        '      "title": "Subtopic 2",\n'
-        '      "children": [\n'
-        '        {"title": "Detail 3"},\n'
-        '        {"title": "Detail 4"}\n'
-        '      ]\n'
-        '    }\n'
-        '  ]\n'
-        "}\n\n"
-        "Rules:\n"
-        "1. The JSON must be valid and properly formatted\n"
-        "2. Each node must have a 'title' field\n"
-        "3. Parent nodes can have a 'children' array\n"
-        "4. Leaf nodes should not have a 'children' field\n"
-        "5. Keep titles concise but descriptive\n"
-        "6. Organize information hierarchically\n"
-        "7. Include all important concepts from the text\n"
-        "8. Maximum depth should be 3 levels\n\n"
-        f"Text to analyze:\n{text}"
-    )
-    
-    # Get mind map data from Gemini
-    mind_map_json = call_gemini(prompt)
-    
-    try:
-        # Parse the JSON response
-        mind_map = json.loads(mind_map_json)
-        
-        # Create igraph graph
-        g = ig.Graph(directed=True)
-        
-        # Add nodes and edges recursively
-        def add_node(node, parent=None):
-            nonlocal counter
-            nid = counter
-            counter += 1
-            label = node.get("title", "Node")
-            g.add_vertex(name=str(nid), label=label)
-            if parent is not None:
-                g.add_edge(parent, str(nid))
-            if "children" in node:
-                for child in node["children"]:
-                    add_node(child, str(nid))
-        
-        counter = 0
-        add_node(mind_map)
-        
-        # Calculate layout
-        layout = g.layout("tree")
-        
-        # Create edge traces
-        edge_x = []
-        edge_y = []
-        for edge in g.es:
-            x0, y0 = layout[g.vs[edge.source].index]
-            x1, y1 = layout[g.vs[edge.target].index]
-            edge_x.extend([x0, x1, None])
-            edge_y.extend([y0, y1, None])
-        
-        edge_trace = go.Scatter(
-            x=edge_x, y=edge_y,
-            line=dict(width=1, color='#888'),
-            hoverinfo='none',
-            mode='lines'
+# Keep only this section in the sidebar:
+st.sidebar.markdown("---")
+st.sidebar.markdown("### 🚀 Support Vekkam")
+st.sidebar.markdown(
+    f'''
+    <div style="text-align:center;">
+        <a href="https://www.producthunt.com/products/vekkam" target="_blank" id="ph-upvote-link">
+            <img src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=456789&theme=light" alt="Upvote Vekkam on Product Hunt" style="width: 150px; margin-bottom: 8px;"/>
+        </a><br>
+        <span style="font-size:1em; font-weight:bold; color:#da552f;">🔥 {ph_stats['votes']} upvotes</span><br>
+        <a href="https://www.producthunt.com/products/vekkam" target="_blank" style="font-size:0.9em; font-weight:bold; color:#da552f; text-decoration:none;">👉 Upvote & Comment!</a>
+    </div>
+    ''', unsafe_allow_html=True
+)
+
+# Add upvote nudge to sidebar
+if 'ph_upvoted' not in st.session_state:
+    st.session_state['ph_upvoted'] = False
+if not st.session_state['ph_upvoted']:
+    if st.sidebar.button("👍 I upvoted Vekkam!"):
+        st.session_state['ph_upvoted'] = True
+        st.sidebar.success("Thank you for supporting us! 🎉")
+else:
+    st.sidebar.info("Thanks for your upvote! 🧡")
+
+# Add recent comments to sidebar if available
+if ph_stats['comments']:
+    st.sidebar.markdown("### 💬 Recent Comments")
+    for c in ph_stats['comments']:
+        st.sidebar.markdown(
+            f'<div style="margin-bottom:0.5em; font-size:0.9em;"><img src="{c["avatar"]}" width="24" style="vertical-align:middle;border-radius:50%;margin-right:4px;"/> <b>{c["user"]}</b><br><span style="font-size:0.85em;">{c["body"]}</span></div>',
+            unsafe_allow_html=True
         )
-        
-        # Create node traces
-        node_x = []
-        node_y = []
-        node_text = []
-        for node in g.vs:
-            x, y = layout[node.index]
-            node_x.append(x)
-            node_y.append(y)
-            node_text.append(node["label"])
-        
-        node_trace = go.Scatter(
-            x=node_x, y=node_y,
-            mode='markers+text',
-            hoverinfo='text',
-            text=node_text,
-            textposition="top center",
-            marker=dict(
-                showscale=True,
-                colorscale='YlGnBu',
-                size=20,
-                colorbar=dict(
-                    thickness=15,
-                    title='Node Connections',
-                    xanchor='left',
-                    titleside='right'
-                )
-            )
-        )
-        
-        # Create figure
-        fig = go.Figure(
-            data=[edge_trace, node_trace],
-            layout=go.Layout(
-                title=dict(
-                    text=mind_map["title"],
-                    font=dict(size=16),
-                    x=0.5,
-                    y=0.95
-                ),
-                showlegend=False,
-                hovermode='closest',
-                margin=dict(b=20, l=5, r=5, t=40),
-                xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
-                yaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
-                plot_bgcolor='white'
-            )
-        )
-        
-        # Add interactivity
-        fig.update_layout(
-            dragmode='pan',
-            modebar_add=['zoom', 'pan', 'reset', 'zoomIn', 'zoomOut'],
-            modebar_remove=['lasso', 'select'],
-            modebar_activecolor='#FF4B4B'
-        )
-        
-        # Display in Streamlit
-        st.plotly_chart(fig, use_container_width=True)
-        
-        return mind_map
-        
-    except json.JSONDecodeError:
-        st.error("Failed to parse mind map JSON from Gemini AI")
-        return None
-    except Exception as e:
-        st.error(f"Error generating mind map: {str(e)}")
-        return None
-
-# Add a state check at the beginning of the app
-if st.session_state.needs_refresh:
-    st.session_state.needs_refresh = False
-    st.rerun()
-
-# Onboarding buttons
-if st.button("Let's get started!", key="onboarding_start_initial"):
-    st.session_state['onboarding_step'] += 1
-
-if st.button("Next", key="onboarding_next_1_initial"):
-    st.session_state['onboarding_step'] += 1
-
-if st.button("Next", key="onboarding_next_2_initial"):
-    st.session_state['onboarding_step'] += 1
-
-if st.button("Finish Onboarding", key="onboarding_finish_initial"):
-    # Scoring logic remains the same
-    scores = {}
-    for dichotomy, qs in questions.items():
-        total = 0
-        for i, (q, side) in enumerate(qs):
-            key = f"{dichotomy}_{i}"
-            val = st.session_state.learning_style_answers[key]
-            # Scoring logic remains the same
-            if val == "Strongly Disagree":
-                score = 0
-            elif val == "Disagree":
-                score = 17
-            elif val == "Somewhat Disagree":
-                score = 33
-            elif val == "Neutral":
-                score = 50
-            elif val == "Somewhat Agree":
-                score = 67
-            elif val == "Agree":
-                score = 83
-            else:  # Strongly Agree
-                score = 100
-            
-            if side != dichotomy.split("/")[0]:
-                score = 100 - score
-            
-            total += score
-        scores[dichotomy] = int(total / len(qs))
-    
-    save_learning_style(user.get("email", ""), scores)
-    st.session_state.learning_style_answers = {}
-    st.session_state['onboarding_step'] += 1
-
-if st.button("Go to Dashboard", key="onboarding_dashboard_initial"):
-    st.session_state['onboarding_complete'] = True
