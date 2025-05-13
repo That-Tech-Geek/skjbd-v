@@ -641,7 +641,7 @@ ensure_logged_in()
 # --- After authentication UI ---
 user = st.session_state.user
 
-# Check for learning style in DB
+a# Ensure the learning style test only appears when the learning style is not already stored
 learning_style = get_learning_style(user.get("email", ""))
 if learning_style is None:
     st.title(f"Welcome, {user.get('name', '')}!")
@@ -719,6 +719,8 @@ if learning_style is None:
         
         
     st.stop()
+else:
+    st.sidebar.write("Your learning style has been saved.")
 
 st.sidebar.image(user.get("picture", ""), width=48)
 st.sidebar.write(user.get("email", ""))
