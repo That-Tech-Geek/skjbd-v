@@ -31,6 +31,8 @@ from gtts import gTTS  # Import Google Text-to-Speech library
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+import os
+import vlc  # For playing ambient sounds
 
 # Define missing variables
 all_summaries = []
@@ -74,7 +76,7 @@ def call_gemini(prompt, temperature=0.7, max_tokens=2048):
         
     url = (
         f"https://generativelanguage.googleapis.com/v1beta/"
-        f"models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
+        f"models/gemini-2.0-flash-lite:generateContent?key={GEMINI_API_KEY}"
     )
     payload = {
         "contents": [{"parts": [{"text": prompt}]}],
@@ -1858,20 +1860,83 @@ if tab == "🎯 Discipline Hub": # Corrected from elif to if
         "🚫 Distraction Blocker"
     ])
     
+    # --- Helper Functions ---
+    def play_sound(file_path):
+        """Play a sound file using VLC."""
+        if os.path.exists(file_path):
+            player = vlc.MediaPlayer(file_path)
+            player.play()
+            return player
+        else:
+            st.error("Sound file not found.")
+            return None
+
+    # --- Update Study Streak Feature ---
+    if 'study_streak' not in st.session_state:
+        st.session_state.study_streak = {
+            'current_streak': 0,
+            'longest_streak': 0,
+            'last_study_date': None,
+            'free_passes_remaining': 1,
+            'total_study_time': 0
+        }
+
+    # Save streak data to a file
+    STREAK_FILE = "streak_data.json"
+    def save_streak_data():
+        with open(STREAK_FILE, "w") as f:
+            json.dump(st.session_state.study_streak, f)
+
+    def load_streak_data():
+        if os.path.exists(STREAK_FILE):
+            with open(STREAK_FILE, "r") as f:
+                st.session_state.study_streak = json.load(f)
+
+    load_streak_data()
+
+    # --- Update Productivity Scores ---
+    if 'study_analytics' not in st.session_state:
+        st.session_state.study_analytics = {
+            'daily_hours': [],
+            'topics': {},
+            'productivity_score': 0,
+            'focus_sessions': 0
+        }
+
+    ANALYTICS_FILE = "analytics_data.json"
+    def save_analytics_data():
+        with open(ANALYTICS_FILE, "w") as f:
+            json.dump(st.session_state.study_analytics, f)
+
+    def load_analytics_data():
+        if os.path.exists(ANALYTICS_FILE):
+            with open(ANALYTICS_FILE, "r") as f:
+                st.session_state.study_analytics = json.load(f)
+
+    load_analytics_data()
+
+    # --- Ambient Sounds ---
+    SOUND_FILES = {
+        "Rain": "sounds/rain.mp3",
+        "Cafe": "sounds/cafe.mp3",
+        "White Noise": "sounds/white_noise.mp3",
+        "Nature": "sounds/nature.mp3",
+        "Classical Music": "sounds/classical.mp3"
+    }
+
+    with discipline_tabs[6]:  # Study Environment
+        st.subheader("🎯 Study Environment")
+
+        # Ambient sounds
+        st.write("### 🎵 Ambient Sounds")
+        selected_sound = st.selectbox("Choose ambient sound", list(SOUND_FILES.keys()))
+        if st.button("Play Sound"):
+            file_path = SOUND_FILES.get(selected_sound)
+            if file_path:
+                play_sound(file_path)
+
     with discipline_tabs[0]:  # Study Streak
         st.subheader("📊 Study Streak")
-        
-        # Initialize streak in session state if not exists
-        if 'study_streak' not in st.session_state:
-            st.session_state.study_streak = {
-                'current_streak': 0,
-                'longest_streak': 0,
-                'last_study_date': None,
-                'free_passes_remaining': 1,
-                'total_study_time': 0
-            }
-        
-        # Display streak stats
         col1, col2, col3 = st.columns(3)
         with col1:
             st.metric("Current Streak", f"{st.session_state.study_streak['current_streak']} days")
@@ -1879,282 +1944,13 @@ if tab == "🎯 Discipline Hub": # Corrected from elif to if
             st.metric("Longest Streak", f"{st.session_state.study_streak['longest_streak']} days")
         with col3:
             st.metric("Total Study Time", f"{st.session_state.study_streak['total_study_time']} hours")
-        
-        # Daily study goal
-        st.subheader("🎯 Today's Study Goal")
-        goal = st.number_input("Set your study goal (hours)", min_value=0.5, max_value=12.0, value=2.0, step=0.5)
-        
-        if st.button("Start Study Session"):
-            st.session_state['study_session_start'] = datetime.datetime.now()
-            st.session_state['study_goal'] = goal
-            st.success("Study session started! Keep going! 💪")
-        
-        # Study session tracking
-        if 'study_session_start' in st.session_state:
-            elapsed = (datetime.datetime.now() - st.session_state['study_session_start']).total_seconds() / 3600
-            progress = min(elapsed / st.session_state['study_goal'], 1.0)
-            st.progress(progress)
-            st.write(f"Time studied: {elapsed:.1f} hours")
-            
-            if st.button("End Study Session"):
-                # Update streak
-                today = datetime.datetime.now().date()
-                last_study = st.session_state.study_streak['last_study_date']
-                
-                if last_study is None or (today - last_study).days == 1:
-                    st.session_state.study_streak['current_streak'] += 1
-                elif (today - last_study).days > 1:
-                    if st.session_state.study_streak['free_passes_remaining'] > 0:
-                        st.session_state.study_streak['free_passes_remaining'] -= 1
-                        st.warning("Used a free pass to maintain your streak!")
-                    else:
-                        st.session_state.study_streak['current_streak'] = 1
-                
-                # Update longest streak
-                if st.session_state.study_streak['current_streak'] > st.session_state.study_streak['longest_streak']:
-                    st.session_state.study_streak['longest_streak'] = st.session_state.study_streak['current_streak']
-                
-                # Update total study time
-                st.session_state.study_streak['total_study_time'] += elapsed
-                st.session_state.study_streak['last_study_date'] = today
-                
-                del st.session_state['study_session_start']
-                st.success("Great job! Study session completed! 🎉")
-    
-    with discipline_tabs[1]:  # Accountability
-        st.subheader("👥 Accountability Partners")
-        
-        # Study buddy matching
-        st.write("Find a study buddy with similar goals!")
-        if st.button("Find Study Buddy"):
-            # TODO: Implement study buddy matching algorithm
-            st.info("Matching you with a study buddy...")
-        
-        # Group study sessions
-        st.subheader("Group Study Sessions")
-        if st.button("Create Study Group"):
-            st.info("Creating a new study group...")
-        
-        # Progress sharing
-        st.subheader("Share Progress")
-        if st.button("Share Today's Progress"):
-            st.info("Sharing your progress with accountability partners...")
-    
-    with discipline_tabs[2]:  # Focus Mode
-        st.subheader("⏱️ Focus Mode")
-        
-        # Pomodoro timer
-        st.write("Set up a Pomodoro study session")
-        work_time = st.number_input("Work duration (minutes)", min_value=5, max_value=60, value=25)
-        break_time = st.number_input("Break duration (minutes)", min_value=1, max_value=30, value=5)
-        
-        if st.button("Start Pomodoro"):
-            st.session_state['pomodoro_start'] = datetime.datetime.now()
-            st.session_state['pomodoro_work_time'] = work_time
-            st.session_state['pomodoro_break_time'] = break_time
-            st.success("Pomodoro session started! Stay focused! 🎯")
-        
-        # Display timer if active
-        if 'pomodoro_start' in st.session_state:
-            elapsed = (datetime.datetime.now() - st.session_state['pomodoro_start']).total_seconds() / 60
-            if elapsed < st.session_state['pomodoro_work_time']:
-                progress = elapsed / st.session_state['pomodoro_work_time']
-                st.progress(progress)
-                st.write(f"Work time remaining: {st.session_state['pomodoro_work_time'] - elapsed:.1f} minutes")
-            else:
-                st.info("Time for a break! 🎉")
-                if st.button("End Break"):
-                    del st.session_state['pomodoro_start']
-    
-    with discipline_tabs[3]:  # Smart Schedule
-        st.subheader("📅 Smart Schedule")
-        
-        # Schedule optimization
-        st.write("Let AI optimize your study schedule")
-        if st.button("Generate Smart Schedule"):
-            # TODO: Implement AI schedule optimization
-            st.info("Generating your optimized study schedule...")
-        
-        # Time blocking
-        st.subheader("Time Blocking")
-        if st.button("Create Time Blocks"):
-            st.info("Creating time blocks for focused study...")
-        
-        # Priority management
-        st.subheader("Priority Management")
-        if st.button("Set Study Priorities"):
-            st.info("Setting up your study priorities...")
-    
+
+        if st.button("Save Streak Data"):
+            save_streak_data()
+            st.success("Streak data saved!")
+
     with discipline_tabs[4]:  # Study Analytics
         st.subheader("📈 Study Analytics")
-        
-        # Initialize analytics in session state if not exists
-        if 'study_analytics' not in st.session_state:
-            st.session_state.study_analytics = {
-                'daily_hours': [],
-                'topics': {},
-                'productivity_score': 0,
-                'focus_sessions': 0
-            }
-        
-        # Time distribution chart
-        st.write("### 📊 Study Time Distribution")
-        if st.session_state.study_analytics['daily_hours']:
-            chart_data = pd.DataFrame({
-                'Date': pd.date_range(start='2024-01-01', periods=len(st.session_state.study_analytics['daily_hours'])),
-                'Hours': st.session_state.study_analytics['daily_hours']
-            })
-            st.line_chart(chart_data.set_index('Date'))
-        
-        # Topic breakdown
-        st.write("### 📚 Topic Breakdown")
-        if st.session_state.study_analytics['topics']:
-            topic_data = pd.DataFrame({
-                'Topic': list(st.session_state.study_analytics['topics'].keys()),
-                'Hours': list(st.session_state.study_analytics['topics'].values())
-            })
-            st.bar_chart(topic_data.set_index('Topic'))
-        
-        # Productivity insights
-        st.write("### 💡 Productivity Insights")
-        col1, col2 = st.columns(2)
-        with col1:
-            st.metric("Productivity Score", f"{st.session_state.study_analytics['productivity_score']}/100")
-        with col2:
-            st.metric("Focus Sessions", f"{st.session_state.study_analytics['focus_sessions']}")
-        
-        # Recommendations
-        st.write("### 🎯 Recommendations")
-        if st.session_state.study_analytics['productivity_score'] < 70:
-            st.info("Try increasing your focus sessions and maintaining a consistent study schedule.")
-        else:
-            st.success("Great job! Keep up the good work!")
-    
-    with discipline_tabs[5]:  # Rewards
-        st.subheader("🏆 Rewards & Achievements")
-        
-        # Initialize rewards in session state if not exists
-        if 'rewards' not in st.session_state:
-            st.session_state.rewards = {
-                'points': 0,
-                'level': 1,
-                'achievements': [],
-                'streak_bonus': 0
-            }
-        
-        # Display current status
-        col1, col2 = st.columns(2)
-        with col1:
-            st.metric("Study Points", f"{st.session_state.rewards['points']}")
-        with col2:
-            st.metric("Level", f"{st.session_state.rewards['level']}")
-        
-        # Achievements
-        st.write("### 🏅 Achievements")
-        achievements = [
-            {"name": "Early Bird", "description": "Study before 9 AM", "points": 50},
-            {"name": "Night Owl", "description": "Study after 8 PM", "points": 50},
-            {"name": "Streak Master", "description": "Maintain a 7-day streak", "points": 100},
-            {"name": "Focus Champion", "description": "Complete 5 focus sessions", "points": 75}
-        ]
-        
-        for achievement in achievements:
-            if achievement["name"] in st.session_state.rewards['achievements']:
-                st.success(f"🏆 {achievement['name']} - {achievement['description']}")
-            else:
-                st.info(f"🔒 {achievement['name']} - {achievement['description']}")
-        
-        # Rewards shop
-        st.write("### 🎁 Rewards Shop")
-        rewards = [
-            {"name": "Free Pass", "description": "Skip a day without breaking streak", "cost": 100},
-            {"name": "Study Music", "description": "Unlock premium study music", "cost": 200},
-            {"name": "Custom Theme", "description": "Unlock custom app theme", "cost": 300}
-        ]
-        
-        for reward in rewards:
-            col1, col2 = st.columns([3, 1])
-            with col1:
-                st.write(f"**{reward['name']}** - {reward['description']}")
-            with col2:
-                if st.button(f"Buy ({reward['cost']} pts)", key=f"buy_{reward['name']}"):
-                    if st.session_state.rewards['points'] >= reward['cost']:
-                        st.session_state.rewards['points'] -= reward['cost']
-                        st.success(f"Purchased {reward['name']}!")
-                    else:
-                        st.error("Not enough points!")
-    
-    with discipline_tabs[6]:  # Study Environment
-        st.subheader("🎯 Study Environment")
-        
-        # Environment checklist
-        st.write("### ✅ Environment Checklist")
-        checklist_items = [
-            "Quiet, well-lit space",
-            "Comfortable seating",
-            "All materials ready",
-            "Water and snacks nearby",
-            "Phone on silent",
-            "Notifications disabled",
-            "Music/white noise if preferred"
-        ]
-        
-        for item in checklist_items:
-            st.checkbox(item)
-        
-        # Study space tips
-        st.write("### 💡 Study Space Tips")
-        tips = [
-            "Keep your study area clean and organized",
-            "Use natural lighting when possible",
-            "Maintain a comfortable temperature",
-            "Have a dedicated space for studying",
-            "Keep distractions out of sight"
-        ]
-        
-        for tip in tips:
-            st.info(tip)
-        
-        # Ambient sounds
-        st.write("### 🎵 Ambient Sounds")
-        sound_options = ["Rain", "Cafe", "White Noise", "Nature", "Classical Music"]
-        selected_sound = st.selectbox("Choose ambient sound", sound_options)
-        if st.button("Play Sound"):
-            st.info(f"Playing {selected_sound}...")
-    
-    with discipline_tabs[7]:  # Distraction Blocker
-        st.subheader("🚫 Distraction Blocker")
-        
-        # Block distracting websites
-        st.write("### 🌐 Block Distracting Websites")
-        distracting_sites = st.multiselect(
-            "Select websites to block",
-            ["Facebook", "Instagram", "Twitter", "YouTube", "TikTok", "Reddit"],
-            default=["Facebook", "Instagram", "Twitter"]
-        )
-        
-        if st.button("Start Blocking"):
-            st.success(f"Blocking {len(distracting_sites)} websites during study sessions")
-        
-        # Focus mode settings
-        st.write("### ⚙️ Focus Mode Settings")
-        col1, col2 = st.columns(2)
-        with col1:
-            block_duration = st.number_input("Block duration (minutes)", min_value=15, max_value=240, value=60)
-        with col2:
-            break_duration = st.number_input("Break duration (minutes)", min_value=5, max_value=30, value=10)
-        
-        # Notification settings
-        st.write("### 🔔 Notification Settings")
-        notification_options = {
-            "Block all notifications": True,
-            "Allow important calls": True,
-            "Allow study-related notifications": True,
-            "Block social media notifications": True
-        }
-        
-        for option, default in notification_options.items():
-            st.checkbox(option, value=default)
-        
-        if st.button("Apply Settings"):
-            st.success("Focus mode settings applied!")
+        if st.button("Save Analytics Data"):
+            save_analytics_data()
+            st.success("Analytics data saved!")
