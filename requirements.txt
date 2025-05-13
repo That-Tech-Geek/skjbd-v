@@ -10,7 +10,7 @@ Pillow
 pytesseract
 python-pptx
 html2text
-vlc
+python-vlc
 networkx
 gtts
 fpdf
