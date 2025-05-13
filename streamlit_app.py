@@ -1842,7 +1842,7 @@ def generate_mind_map(text):
         st.error(f"Error generating mind map: {str(e)}")
         return None
 
-elif tab == "🎯 Discipline Hub":
+if tab == "🎯 Discipline Hub": # Corrected from elif to if
     st.header("🎯 Discipline Hub")
     st.info("Build strong study habits and stay accountable with our discipline features!")
 
