@@ -851,9 +851,10 @@ def generate_podcast(text, filename="explainer_podcast.mp3"):
     """
     # Step 1: Generate podcast script using call_gemini
     prompt = (
-        "You are an expert educator. Create a conversational podcast script that explains the following document "
+        "You are an expert educator. Create an explainer podcast script that explains the following document "
         "in a clear, engaging, and easy-to-understand manner. Use examples, analogies, and a friendly tone. "
         "Structure the explanation into sections with transitions between topics.\n\n"
+        "Output only the text, no fancy formatting. No need for any intros, just get started right off the bat."
         f"Document Content:\n{text}"
     )
     try:
