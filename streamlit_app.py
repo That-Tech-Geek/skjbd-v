@@ -244,11 +244,16 @@ def get_learning_style(email):
 
 # --- Export Helpers ---
 def export_flashcards_to_anki(flashcards, filename="flashcards.csv"):
-    with open(filename, "w", newline='', encoding='utf-8') as f:
-        writer = csv.writer(f)
-        writer.writerow(["Front", "Back"])
-        for q, a in flashcards:
-            writer.writerow([q, a])
+    """Export flashcards to a CSV file in Anki format."""
+    try:
+        with open(filename, "w", newline='', encoding='utf-8') as f:
+            writer = csv.writer(f)
+            writer.writerow(["Front", "Back"])
+            for q, a in flashcards:
+                writer.writerow([q, a])
+        st.success(f"Flashcards exported successfully to {filename}.")
+    except Exception as e:
+        st.error(f"Failed to export flashcards: {str(e)}")
     return filename
 
 init_db()
@@ -851,10 +856,9 @@ def generate_podcast(text, filename="explainer_podcast.mp3"):
     """
     # Step 1: Generate podcast script using call_gemini
     prompt = (
-        "You are an expert educator. Create an explainer podcast script that explains the following document "
+        "You are an expert educator. Create a conversational podcast script that explains the following document "
         "in a clear, engaging, and easy-to-understand manner. Use examples, analogies, and a friendly tone. "
         "Structure the explanation into sections with transitions between topics.\n\n"
-        "Output only the text, no fancy formatting. No need for any intros, just get started right off the bat."
         f"Document Content:\n{text}"
     )
     try:
@@ -999,15 +1003,6 @@ def t(key, **kwargs):
     txt = ui_translations.get(lang, ui_translations["en"]).get(key, key)
     return txt.format(**kwargs)
 
-def export_summary_to_pdf(summary, filename="summary.pdf"):
-    pdf = FPDF()
-    pdf.add_page()
-    pdf.set_font("Arial", size=12)
-    for line in summary.split('\n'):
-        pdf.cell(200, 10, txt=line, ln=1, align='L')
-    pdf.output(filename)
-    return filename
-
 # Language selector in sidebar
 if "language" not in st.session_state:
     st.session_state["language"] = "en"
@@ -1041,7 +1036,7 @@ with st.sidebar.expander("❓ How to use this app", expanded=False):
     """)
 
 # --- Main UI ---
-quiz_tabs = [t("Guide Book Chat"), t("Document Q&A"), t("Learning Style Test"), t("Paper Solver/Exam Guide"), "🗓️ Daily Quiz", "⚡ 6-Hour Battle Plan", "🎯 Discipline Hub"]
+quiz_tabs = [t("Guide Book Chat"), t("Document Q&A"), t("Learning Style Test"), t("Paper Solver/Exam Guide"), "⚡ 6-Hour Battle Plan", "🎯 Discipline Hub"]
 tab = st.sidebar.selectbox(t("Feature"), quiz_tabs)
 
 # Add this after the existing imports
@@ -1281,13 +1276,6 @@ elif tab == t("Document Q&A"):
                 fname = export_flashcards_to_anki(all_flashcards)
                 st.success(f"Flashcards exported: {fname}")
                 st.toast("Flashcards exported!")
-        if all_summaries:
-            st.info("Export all generated summaries as a PDF file.")
-            if st.button("Export All Summaries to PDF"):
-                combined_summary = "\n\n".join(all_summaries)
-                fname = export_summary_to_pdf(combined_summary)
-                st.success(f"Summary exported: {fname}")
-                st.toast("Summary exported!")
 
 # --- Product Hunt API Integration ---
 PRODUCT_HUNT_TOKEN = st.secrets.get("producthunt", {}).get("api_token", "")
@@ -1622,27 +1610,7 @@ elif tab == "⚡ 6-Hour Battle Plan":
             st.markdown("## 📤 Export Options")
             col1, col2 = st.columns(2)
             with col1:
-                if st.button("📱 Export to PDF"):
-                    pdf_content = f"""
-                    BATTLE PLAN
-                    ==========
-                    
-                    {battle_plan}
-                    
-                    TOPIC-SPECIFIC RESOURCES
-                    =======================
-                    {resources}
-                    
-                    QUICK REFERENCE GUIDE
-                    ====================
-                    {reference_guide}
-                    
-                    MENTAL PREPARATION
-                    =================
-                    {mental_prep}
-                    """
-                    filename = export_summary_to_pdf(pdf_content, "battle_plan.pdf")
-                    st.success(f"Battle plan exported to {filename}")
+                st.info("Battle plan is ready. You can copy it manually if needed.")
             
             with col2:
                 if st.button("📅 Add to Calendar"):
@@ -1718,7 +1686,6 @@ def generate_mind_map(text):
         '        {"title": "Detail 3"},\n'
         '        {"title": "Detail 4"}\n'
         '      ]\n'
-        '    }\n'
         "}\n\n"
         "Rules:\n"
         "1. The JSON must be valid and properly formatted\n"
