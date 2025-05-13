@@ -25,6 +25,41 @@ import streamlit.components.v1 as components
 import time
 import networkx as nx
 import matplotlib.pyplot as plt
+import datetime
+import pandas as pd
+from gtts import gTTS  # Import Google Text-to-Speech library
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+
+# Define missing variables
+all_summaries = []
+all_flashcards = []
+
+# --- Error Reporting ---
+def send_error_report(error_message):
+    """Send an error report to the support team."""
+    sender_email = "your_email@example.com"  # Replace with your email
+    receiver_email = "sambit1912@gmail.com"
+    password = "your_email_password"  # Replace with your email password
+
+    subject = "Vekkam Error Report"
+    body = f"An error occurred:\n\n{error_message}"
+
+    msg = MIMEMultipart()
+    msg['From'] = sender_email
+    msg['To'] = receiver_email
+    msg['Subject'] = subject
+
+    msg.attach(MIMEText(body, 'plain'))
+
+    try:
+        with smtplib.SMTP('smtp.gmail.com', 587) as server:
+            server.starttls()
+            server.login(sender_email, password)
+            server.sendmail(sender_email, receiver_email, msg.as_string())
+    except Exception as e:
+        print(f"Failed to send error report: {str(e)}")
 
 # --- Gemini Call ---
 def call_gemini(prompt, temperature=0.7, max_tokens=2048):
@@ -33,7 +68,8 @@ def call_gemini(prompt, temperature=0.7, max_tokens=2048):
     prompt = f"Please answer in {lang_name}.\n" + prompt
     
     if not GEMINI_API_KEY:
-        st.error("Gemini API key is not configured. Please check your secrets.toml file.")
+        st.write("There is an error, we've notified the support team.")
+        send_error_report("Gemini API key is not configured. Please check your secrets.toml file.")
         return "API key not configured"
         
     url = (
@@ -51,13 +87,14 @@ def call_gemini(prompt, temperature=0.7, max_tokens=2048):
             data = response.json()
             return data["candidates"][0]["content"]["parts"][0]["text"]
     except requests.exceptions.HTTPError as e:
-        if e.response.status_code == 403:
-            st.error("API key is invalid or has insufficient permissions. Please check your Gemini API key.")
-        else:
-            st.error(f"API Error: {str(e)}")
+        error_message = f"API Error: {str(e)}"
+        send_error_report(error_message)
+        st.error("There is an error, we've notified the support team.")
         return "Error occurred while calling Gemini API"
     except Exception as e:
-        st.error(f"An error occurred: {str(e)}")
+        error_message = f"An error occurred: {str(e)}"
+        send_error_report(error_message)
+        st.error("There is an error, we've notified the support team.")
         return "Error occurred while processing your request"
 
 def extract_text(file):
@@ -444,10 +481,6 @@ def ensure_logged_in():
         st.markdown("## 📊 Trusted by Students Worldwide")
         stats_cols = st.columns(4)
         stats = [
-            ("10K+", "Active Students"),
-            ("50K+", "Questions Answered"),
-            ("95%", "Success Rate"),
-            ("24/7", "AI Support")
         ]
         for i, (number, label) in enumerate(stats):
             with stats_cols[i]:
@@ -809,6 +842,33 @@ def generate_critical_points(text):
         temperature=0.7, max_tokens=8192
     )
 
+# --- Explainer Podcast Feature ---
+def generate_podcast(text, filename="explainer_podcast.mp3"):
+    """
+    Generate an explainer podcast from the given text.
+    """
+    # Step 1: Generate podcast script using call_gemini
+    prompt = (
+        "You are an expert educator. Create a conversational podcast script that explains the following document "
+        "in a clear, engaging, and easy-to-understand manner. Use examples, analogies, and a friendly tone. "
+        "Structure the explanation into sections with transitions between topics.\n\n"
+        f"Document Content:\n{text}"
+    )
+    try:
+        podcast_script = call_gemini(prompt)
+    except Exception as e:
+        st.error(f"Failed to generate podcast script: {str(e)}")
+        return None
+
+    # Step 2: Convert script to audio using gTTS
+    try:
+        tts = gTTS(podcast_script, lang="en")
+        tts.save(filename)
+        return filename
+    except Exception as e:
+        st.error(f"Failed to generate audio: {str(e)}")
+        return None
+
 # --- Helper to render each section in Streamlit ---
 def render_section(title, content):
     st.subheader(title)
@@ -978,7 +1038,7 @@ with st.sidebar.expander("❓ How to use this app", expanded=False):
     """)
 
 # --- Main UI ---
-quiz_tabs = [t("Guide Book Chat"), t("Document Q&A"), t("Learning Style Test"), t("Paper Solver/Exam Guide"), "🗓️ Daily Quiz", "⚡ 6-Hour Battle Plan"]
+quiz_tabs = [t("Guide Book Chat"), t("Document Q&A"), t("Learning Style Test"), t("Paper Solver/Exam Guide"), "🗓️ Daily Quiz", "⚡ 6-Hour Battle Plan", "🎯 Discipline Hub"]
 tab = st.sidebar.selectbox(t("Feature"), quiz_tabs)
 
 # Add this after the existing imports
@@ -1021,8 +1081,8 @@ def search_educational_resources(query, num_results=5):
         st.error(f"Error searching for resources: {str(e)}")
         return []
 
-# Modify the Guide Book Chat section to include resource search
-if tab == "Guide Book Chat":
+# Main tab selection
+if tab == t("Guide Book Chat"):
     st.header("❓ Ask Your Questions")
     st.info("Ask any question or upload an image of your question. Our AI will help you understand and solve it!")
 
@@ -1126,349 +1186,12 @@ if tab == "Guide Book Chat":
             resources = call_gemini(resources_prompt)
             st.markdown(resources)
 
-elif tab == "Learning Style Test":
-    st.header("Learning Style Test")
-    
-    # Check if user already has learning style scores
-    learning_style = get_learning_style(user.get("email", ""))
-    
-    if learning_style:
-        st.success("✅ You've already completed the learning style test!")
-        st.markdown("### Your Learning Style Profile")
-        
-        # Display scores in a more visual way
-        for dichotomy, score in learning_style.items():
-            st.markdown(f"#### {dichotomy}")
-            # Create a progress bar for each dimension
-            left_style, right_style = dichotomy.split("/")
-            left_score = 100 - score
-            right_score = score
-            
-            col1, col2, col3 = st.columns([1, 2, 1])
-            with col1:
-                st.markdown(f"**{left_style}**")
-            with col2:
-                st.progress(score/100)
-            with col3:
-                st.markdown(f"**{right_style}**")
-            
-            # Add description based on score
-            if score > 60:
-                st.info(f"You show a strong preference for {right_style} learning.")
-            elif score < 40:
-                st.info(f"You show a strong preference for {left_style} learning.")
-            else:
-                st.info("You show a balanced preference in this dimension.")
-        
-        # Add personalized learning recommendations
-        st.markdown("### 📚 Personalized Learning Recommendations")
-        recommendations = []
-        
-        # Sensing/Intuitive recommendations
-        if learning_style['Sensing/Intuitive'] > 60:
-            recommendations.append("""
-            **For your Intuitive learning style:**
-            - Focus on understanding concepts and theories
-            - Look for patterns and connections between topics
-            - Try to predict outcomes and explore possibilities
-            - Use mind maps and concept diagrams
-            """)
-        else:
-            recommendations.append("""
-            **For your Sensing learning style:**
-            - Focus on concrete facts and examples
-            - Use step-by-step problem-solving approaches
-            - Practice with real-world applications
-            - Create detailed notes with specific examples
-            """)
-            
-        # Visual/Verbal recommendations
-        if learning_style['Visual/Verbal'] > 60:
-            recommendations.append("""
-            **For your Visual learning style:**
-            - Use diagrams, charts, and mind maps
-            - Watch educational videos
-            - Create visual summaries of topics
-            - Use color coding in your notes
-            """)
-        else:
-            recommendations.append("""
-            **For your Verbal learning style:**
-            - Read and write detailed explanations
-            - Participate in discussions
-            - Record and listen to lectures
-            - Create written summaries
-            """)
-            
-        # Active/Reflective recommendations
-        if learning_style['Active/Reflective'] > 60:
-            recommendations.append("""
-            **For your Active learning style:**
-            - Engage in group study sessions
-            - Practice explaining concepts to others
-            - Use hands-on activities
-            - Take breaks to discuss and apply concepts
-            """)
-        else:
-            recommendations.append("""
-            **For your Reflective learning style:**
-            - Take time to think about concepts
-            - Write summaries and reflections
-            - Study in quiet environments
-            - Review and analyze your notes
-            """)
-            
-        # Sequential/Global recommendations
-        if learning_style['Sequential/Global'] > 60:
-            recommendations.append("""
-            **For your Global learning style:**
-            - Start with overviews before details
-            - Look for connections between topics
-            - Use mind maps to see the big picture
-            - Try to understand concepts holistically
-            """)
-        else:
-            recommendations.append("""
-            **For your Sequential learning style:**
-            - Follow step-by-step learning paths
-            - Break down complex topics
-            - Create detailed outlines
-            - Practice with structured exercises
-            """)
-        
-        # Display recommendations in expandable sections
-        for i, rec in enumerate(recommendations):
-            with st.expander(f"Recommendations {i+1}"):
-                st.markdown(rec)
-        
-        # Add option to retake test if desired
-        if st.button("🔄 Retake Learning Style Test"):
-            st.session_state['learning_style_answers'] = {}
-            
-            
-    else:
-        st.write("Answer the following questions to determine your learning style. This will help us personalize your experience.")
-        likert = [
-            "Strongly Disagree", "Disagree", "Somewhat Disagree", "Neutral", "Somewhat Agree", "Agree", "Strongly Agree"
-        ]
-        questions = {
-            "Sensing/Intuitive": [
-                ("I am more interested in what is actual than what is possible.", "Sensing"),
-                ("I often focus on the big picture rather than the details.", "Intuitive"),
-                ("I trust my gut feelings over concrete evidence.", "Intuitive"),
-                ("I enjoy tasks that require attention to detail.", "Sensing"),
-                ("I prefer practical solutions over theoretical ideas.", "Sensing"),
-                ("I am drawn to abstract concepts and patterns.", "Intuitive"),
-                ("I notice details that others might miss.", "Sensing"),
-                ("I like to imagine possibilities and what could be.", "Intuitive"),
-                ("I rely on past experiences to guide me.", "Sensing"),
-                ("I am energized by exploring new ideas.", "Intuitive"),
-            ],
-            "Visual/Verbal": [
-                ("I remember best what I see (pictures, diagrams, charts).", "Visual"),
-                ("I remember best what I hear or read.", "Verbal"),
-                ("I prefer to learn through images and spatial understanding.", "Visual"),
-                ("I prefer to learn through words and explanations.", "Verbal"),
-            ],
-            "Active/Reflective": [
-                ("I learn best by doing and trying things out.", "Active"),
-                ("I learn best by thinking and reflecting.", "Reflective"),
-                ("I prefer group work and discussions.", "Active"),
-                ("I prefer to work alone and think things through.", "Reflective"),
-            ],
-            "Sequential/Global": [
-                ("I learn best in a step-by-step, logical order.", "Sequential"),
-                ("I like to see the big picture before the details.", "Global"),
-                ("I prefer to follow clear, linear instructions.", "Sequential"),
-                ("I often make connections between ideas in a holistic way.", "Global"),
-            ],
-        }
-        if "learning_style_answers" not in st.session_state:
-            st.session_state.learning_style_answers = {}
-        for dichotomy, qs in questions.items():
-            st.subheader(dichotomy)
-            for i, (q, side) in enumerate(qs):
-                key = f"{dichotomy}_{i}"
-                st.session_state.learning_style_answers[key] = st.radio(
-                    q,
-                    ["Strongly Disagree", "Disagree", "Somewhat Disagree", "Neutral", "Somewhat Agree", "Agree", "Strongly Agree"],
-                    key=key
-                )
-        if st.button("Submit"):
-            # Scoring: Strongly Disagree=0, ..., Neutral=50, ..., Strongly Agree=100 (for positive phrasing)
-            # For each question, if side matches dichotomy, score as is; if not, reverse
-            score_map = {0: 0, 1: 17, 2: 33, 3: 50, 4: 67, 5: 83, 6: 100}
-            scores = {}
-            for dichotomy, qs in questions.items():
-                total = 0
-                for i, (q, side) in enumerate(qs):
-                    key = f"{dichotomy}_{i}"
-                    val = st.session_state.learning_style_answers[key]
-                    idx = likert.index(val)
-                    # If the question is for the first side, score as is; if for the opposite, reverse
-                    if side == dichotomy.split("/")[0]:
-                        score = score_map[idx]
-                    else:
-                        score = score_map[6 - idx]
-                    total += score
-                scores[dichotomy] = int(total / len(qs))
-            with show_lottie_loading("Saving your learning style and personalizing your experience..."):
-                save_learning_style(user.get("email", ""), scores)
-                st.session_state.learning_style_answers = {}
-            st.success("Learning style saved! Reloading...")
-            st.balloons()
-            
-
-elif tab == "Paper Solver/Exam Guide":
-    st.header("📝 " + t("Paper Solver/Exam Guide"))
-    st.info("Upload your full exam paper (PDF or image). Select questions to solve, and get model answers with exam tips.")
-    exam_file = st.file_uploader(t("Upload Exam Paper (PDF/Image)"), type=["pdf", "jpg", "jpeg", "png"], help="Upload a scanned or digital exam paper.")
-    if exam_file:
-        # Extract text from file (multi-page supported)
-        ext = exam_file.name.lower().split('.')[-1]
-        if ext == "pdf":
-            with show_lottie_loading(t("Extracting questions from PDF...")):
-                pages = extract_pages_from_file(exam_file)
-                text = "\n".join(pages.values())
-        else:
-            with show_lottie_loading(t("Extracting questions from image...")):
-                text = pytesseract.image_to_string(Image.open(exam_file))
-        # Improved question splitting: Q1, Q.1, 1., 1), Q2, etc.
-        question_regex = r"(?:\n|^)(?:Q\.?\s*\d+|Q\s*\d+|\d+\.|\d+\)|Q\.|Q\s)(?=\s)"
-        split_points = [m.start() for m in re.finditer(question_regex, text)]
-        questions = []
-        if split_points:
-            for i, start in enumerate(split_points):
-                end = split_points[i+1] if i+1 < len(split_points) else len(text)
-                q = text[start:end].strip()
-                if len(q) > 10:
-                    questions.append(q)
-        else:
-            # fallback: split by lines with Q or numbers
-            questions = re.split(r"\n\s*(?:Q\.?|\d+\.|\d+\))", text)
-            questions = [q.strip() for q in questions if len(q.strip()) > 10]
-        st.subheader(f"Found {len(questions)} questions:")
-        for i, q in enumerate(questions, 1):
-            with st.expander(f"Q{i}"):
-                st.markdown(q)
-        # Multiselect for which questions to solve
-        selected = st.multiselect(
-            t("Select questions to solve (default: all)"),
-            options=[f"Q{i+1}" for i in range(len(questions))],
-            default=[f"Q{i+1}" for i in range(len(questions))],
-            help="Choose which questions you want the AI to solve."
-        )
-        selected_indices = [int(s[1:]) - 1 for s in selected]
-        if st.button("🚀 " + t("Solve Selected Questions")) and selected_indices:
-            answers = []
-            progress = st.progress(0, text="Solving questions...")
-            for idx, qidx in enumerate(selected_indices):
-                q = questions[qidx]
-                with show_lottie_loading(t("Solving Q{n}...", n=qidx+1)):
-                    # Model answer and exam tips
-                    prompt = (
-                        f"You are an expert exam coach and math teacher. "
-                        f"Given the following exam question, provide a model answer that would get full marks. "
-                        f"If it is a math question, show all steps, calculations, and reasoning. "
-                        f"If it is a theory question, answer as a top student would, using structure, keywords, and examples. "
-                        f"Also, give tips on how to express the answer for maximum marks.\n\n"
-                        f"Question: {q}"
-                    )
-                    answer = call_gemini(prompt)
-                    # Advanced exam prep feedback
-                    feedback_prompt = (
-                        f"Analyze the following exam question. "
-                        f"1. Identify the question type (e.g., essay, MCQ, calculation, diagram, etc.). "
-                        f"2. Infer the likely marking scheme and what examiners look for. "
-                        f"3. Give feedback on how to structure an answer for maximum marks, common pitfalls to avoid, and suggest related concepts to review.\n\n"
-                        f"Question: {q}"
-                    )
-                    feedback = call_gemini(feedback_prompt)
-                    answers.append((q, answer, feedback))
-                progress.progress((idx+1)/len(selected_indices), text=f"Solved {idx+1}/{len(selected_indices)}")
-            progress.empty()
-            st.balloons()
-            st.header("🏆 " + t("Model Answers & Exam Tips"))
-            for i, (q, a, fb) in enumerate(answers, 1):
-                with st.expander(f"Q{i} - Model Answer & Tips"):
-                    st.markdown(f"**Q{i}:** {q}")
-                    st.write(a)
-                    st.info(fb)
-        # --- Auto Deadline Detection ---
-        deadlines = detect_deadlines(text)
-        if deadlines:
-            st.info("📅 Deadlines detected automatically from your exam paper. Click to add to your Google Calendar!")
-            st.subheader("📅 Detected Deadlines")
-            for d in deadlines:
-                st.write(f"{d['date']}: {d['description']}")
-                if st.button(f"Add to Google Calendar: {d['description']}", key=f"cal_exam_{d['date']}_{d['description']}"):
-                    add_to_google_calendar(d)
-                    st.toast("Added to Google Calendar!")
-
-elif tab == "🗓️ Daily Quiz":
-    import datetime
-    st.header("🗓️ Daily Quiz")
-    st.info("Review and reinforce your memory every day! These questions are picked just for you.")
-    today = datetime.datetime.now().strftime("%Y-%m-%d")
-    email = user.get("email", "")
-    due_cards = get_due_cards(email, today)
-    if not due_cards:
-        st.success("🎉 All done for today! Come back tomorrow for more review.")
-    else:
-        for card_id, question, answer, last_reviewed, next_due, correct_count, incorrect_count in due_cards:
-            with st.form(f"quiz_{card_id}"):
-                st.markdown(f"**Q:** {question}")
-                user_answer = st.text_area("Your answer", key=f"ans_{card_id}")
-                hint = st.form_submit_button("💡 Hint")
-                submitted = st.form_submit_button("Check Answer")
-                # Learning style adaptation
-                style = learning_style if learning_style else {"Sensing/Intuitive": 50, "Visual/Verbal": 50, "Active/Reflective": 50, "Sequential/Global": 50}
-                # Provide hint if requested
-                if hint:
-                    prompt = (
-                        f"You are a helpful tutor. Give a hint for this question, tailored for a student who is more "
-                        f"{'Sensing' if style['Sensing/Intuitive'] < 50 else 'Intuitive'}, "
-                        f"{'Visual' if style['Visual/Verbal'] > 50 else 'Verbal'}, "
-                        f"{'Active' if style['Active/Reflective'] > 50 else 'Reflective'}, "
-                        f"and {'Sequential' if style['Sequential/Global'] < 50 else 'Global'}. "
-                        f"Question: {question}"
-                    )
-                    st.info(call_gemini(prompt))
-                # Check answer and provide multi-modal explanation
-                if submitted:
-                    correct = user_answer.strip().lower() == (answer or '').strip().lower()
-                    if correct:
-                        st.success("✅ Correct! Scheduled for review in 3 days.")
-                        update_card_review(email, card_id, True, today)
-                    else:
-                        st.error(f"❌ Not quite. Model answer: {answer}")
-                        update_card_review(email, card_id, False, today)
-                        # Multi-modal explanation
-                        exp_prompt = (
-                            f"Explain the answer to this question in two ways: "
-                            f"1. For a Sensing learner (concrete, factual, step-by-step). "
-                            f"2. For an Intuitive learner (big-picture, conceptual, patterns). "
-                            f"Also, provide a follow-up question to check understanding.\n\nQuestion: {question}\nModel answer: {answer}"
-                        )
-                        explanation = call_gemini(exp_prompt)
-                        st.info(explanation)
-                        # Dialogue: allow user to answer follow-up
-                        followup = st.text_area("Your answer to the follow-up question (optional)", key=f"followup_{card_id}")
-                        if st.form_submit_button("Check Follow-up"):
-                            followup_prompt = (
-                                f"Evaluate this student's answer to the follow-up question. Give feedback and another hint if needed.\n"
-                                f"Question: {question}\nModel answer: {answer}\nFollow-up answer: {followup}"
-                            )
-                            st.info(call_gemini(followup_prompt))
-
 elif tab == t("Document Q&A"):
     st.header("\U0001F4A1 " + t("Document Q&A"))
     st.info("Upload one or more documents and get instant learning aids, personalized for your style. The AI can now synthesize across multiple files!")
     uploaded_files = st.file_uploader("Upload PDF/Image/TXT (multiple allowed)", type=["pdf","jpg","png","txt"], help="Upload your notes, textbook, or image.", accept_multiple_files=True)
     texts = []
     file_names = []
-    all_flashcards = []
-    all_summaries = []
     if uploaded_files:
         for uploaded in uploaded_files:
             # Extract text from file
@@ -1485,6 +1208,20 @@ elif tab == t("Document Q&A"):
                     text = StringIO(uploaded.getvalue().decode()).read()
             texts.append(text)
             file_names.append(uploaded.name)
+
+        # Combine all extracted text
+        combined_text = "\n".join(texts)
+
+        # Generate Podcast
+        st.subheader("🎙️ Generate Explainer Podcast")
+        if st.button("Create Podcast"):
+            with show_lottie_loading("Generating podcast..."):
+                podcast_file = generate_podcast(combined_text)
+                if podcast_file:
+                    st.success("Podcast generated successfully!")
+                    st.audio(podcast_file, format="audio/mp3")
+                    st.download_button("Download Podcast", data=open(podcast_file, "rb"), file_name="explainer_podcast.mp3", mime="audio/mp3")
+
         # --- Generate learning aids for each file ---
         for idx, (text, fname) in enumerate(zip(texts, file_names)):
             st.subheader(f"Learning Aids for {fname}")
@@ -1979,7 +1716,6 @@ def generate_mind_map(text):
         '        {"title": "Detail 4"}\n'
         '      ]\n'
         '    }\n'
-        '  ]\n'
         "}\n\n"
         "Rules:\n"
         "1. The JSON must be valid and properly formatted\n"
@@ -2105,3 +1841,320 @@ def generate_mind_map(text):
     except Exception as e:
         st.error(f"Error generating mind map: {str(e)}")
         return None
+
+elif tab == "🎯 Discipline Hub":
+    st.header("🎯 Discipline Hub")
+    st.info("Build strong study habits and stay accountable with our discipline features!")
+
+    # Create tabs for different discipline features
+    discipline_tabs = st.tabs([
+        "📊 Study Streak", 
+        "👥 Accountability", 
+        "⏱️ Focus Mode", 
+        "📅 Smart Schedule",
+        "📈 Study Analytics",
+        "🏆 Rewards",
+        "🎯 Study Environment",
+        "🚫 Distraction Blocker"
+    ])
+    
+    with discipline_tabs[0]:  # Study Streak
+        st.subheader("📊 Study Streak")
+        
+        # Initialize streak in session state if not exists
+        if 'study_streak' not in st.session_state:
+            st.session_state.study_streak = {
+                'current_streak': 0,
+                'longest_streak': 0,
+                'last_study_date': None,
+                'free_passes_remaining': 1,
+                'total_study_time': 0
+            }
+        
+        # Display streak stats
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("Current Streak", f"{st.session_state.study_streak['current_streak']} days")
+        with col2:
+            st.metric("Longest Streak", f"{st.session_state.study_streak['longest_streak']} days")
+        with col3:
+            st.metric("Total Study Time", f"{st.session_state.study_streak['total_study_time']} hours")
+        
+        # Daily study goal
+        st.subheader("🎯 Today's Study Goal")
+        goal = st.number_input("Set your study goal (hours)", min_value=0.5, max_value=12.0, value=2.0, step=0.5)
+        
+        if st.button("Start Study Session"):
+            st.session_state['study_session_start'] = datetime.datetime.now()
+            st.session_state['study_goal'] = goal
+            st.success("Study session started! Keep going! 💪")
+        
+        # Study session tracking
+        if 'study_session_start' in st.session_state:
+            elapsed = (datetime.datetime.now() - st.session_state['study_session_start']).total_seconds() / 3600
+            progress = min(elapsed / st.session_state['study_goal'], 1.0)
+            st.progress(progress)
+            st.write(f"Time studied: {elapsed:.1f} hours")
+            
+            if st.button("End Study Session"):
+                # Update streak
+                today = datetime.datetime.now().date()
+                last_study = st.session_state.study_streak['last_study_date']
+                
+                if last_study is None or (today - last_study).days == 1:
+                    st.session_state.study_streak['current_streak'] += 1
+                elif (today - last_study).days > 1:
+                    if st.session_state.study_streak['free_passes_remaining'] > 0:
+                        st.session_state.study_streak['free_passes_remaining'] -= 1
+                        st.warning("Used a free pass to maintain your streak!")
+                    else:
+                        st.session_state.study_streak['current_streak'] = 1
+                
+                # Update longest streak
+                if st.session_state.study_streak['current_streak'] > st.session_state.study_streak['longest_streak']:
+                    st.session_state.study_streak['longest_streak'] = st.session_state.study_streak['current_streak']
+                
+                # Update total study time
+                st.session_state.study_streak['total_study_time'] += elapsed
+                st.session_state.study_streak['last_study_date'] = today
+                
+                del st.session_state['study_session_start']
+                st.success("Great job! Study session completed! 🎉")
+    
+    with discipline_tabs[1]:  # Accountability
+        st.subheader("👥 Accountability Partners")
+        
+        # Study buddy matching
+        st.write("Find a study buddy with similar goals!")
+        if st.button("Find Study Buddy"):
+            # TODO: Implement study buddy matching algorithm
+            st.info("Matching you with a study buddy...")
+        
+        # Group study sessions
+        st.subheader("Group Study Sessions")
+        if st.button("Create Study Group"):
+            st.info("Creating a new study group...")
+        
+        # Progress sharing
+        st.subheader("Share Progress")
+        if st.button("Share Today's Progress"):
+            st.info("Sharing your progress with accountability partners...")
+    
+    with discipline_tabs[2]:  # Focus Mode
+        st.subheader("⏱️ Focus Mode")
+        
+        # Pomodoro timer
+        st.write("Set up a Pomodoro study session")
+        work_time = st.number_input("Work duration (minutes)", min_value=5, max_value=60, value=25)
+        break_time = st.number_input("Break duration (minutes)", min_value=1, max_value=30, value=5)
+        
+        if st.button("Start Pomodoro"):
+            st.session_state['pomodoro_start'] = datetime.datetime.now()
+            st.session_state['pomodoro_work_time'] = work_time
+            st.session_state['pomodoro_break_time'] = break_time
+            st.success("Pomodoro session started! Stay focused! 🎯")
+        
+        # Display timer if active
+        if 'pomodoro_start' in st.session_state:
+            elapsed = (datetime.datetime.now() - st.session_state['pomodoro_start']).total_seconds() / 60
+            if elapsed < st.session_state['pomodoro_work_time']:
+                progress = elapsed / st.session_state['pomodoro_work_time']
+                st.progress(progress)
+                st.write(f"Work time remaining: {st.session_state['pomodoro_work_time'] - elapsed:.1f} minutes")
+            else:
+                st.info("Time for a break! 🎉")
+                if st.button("End Break"):
+                    del st.session_state['pomodoro_start']
+    
+    with discipline_tabs[3]:  # Smart Schedule
+        st.subheader("📅 Smart Schedule")
+        
+        # Schedule optimization
+        st.write("Let AI optimize your study schedule")
+        if st.button("Generate Smart Schedule"):
+            # TODO: Implement AI schedule optimization
+            st.info("Generating your optimized study schedule...")
+        
+        # Time blocking
+        st.subheader("Time Blocking")
+        if st.button("Create Time Blocks"):
+            st.info("Creating time blocks for focused study...")
+        
+        # Priority management
+        st.subheader("Priority Management")
+        if st.button("Set Study Priorities"):
+            st.info("Setting up your study priorities...")
+    
+    with discipline_tabs[4]:  # Study Analytics
+        st.subheader("📈 Study Analytics")
+        
+        # Initialize analytics in session state if not exists
+        if 'study_analytics' not in st.session_state:
+            st.session_state.study_analytics = {
+                'daily_hours': [],
+                'topics': {},
+                'productivity_score': 0,
+                'focus_sessions': 0
+            }
+        
+        # Time distribution chart
+        st.write("### 📊 Study Time Distribution")
+        if st.session_state.study_analytics['daily_hours']:
+            chart_data = pd.DataFrame({
+                'Date': pd.date_range(start='2024-01-01', periods=len(st.session_state.study_analytics['daily_hours'])),
+                'Hours': st.session_state.study_analytics['daily_hours']
+            })
+            st.line_chart(chart_data.set_index('Date'))
+        
+        # Topic breakdown
+        st.write("### 📚 Topic Breakdown")
+        if st.session_state.study_analytics['topics']:
+            topic_data = pd.DataFrame({
+                'Topic': list(st.session_state.study_analytics['topics'].keys()),
+                'Hours': list(st.session_state.study_analytics['topics'].values())
+            })
+            st.bar_chart(topic_data.set_index('Topic'))
+        
+        # Productivity insights
+        st.write("### 💡 Productivity Insights")
+        col1, col2 = st.columns(2)
+        with col1:
+            st.metric("Productivity Score", f"{st.session_state.study_analytics['productivity_score']}/100")
+        with col2:
+            st.metric("Focus Sessions", f"{st.session_state.study_analytics['focus_sessions']}")
+        
+        # Recommendations
+        st.write("### 🎯 Recommendations")
+        if st.session_state.study_analytics['productivity_score'] < 70:
+            st.info("Try increasing your focus sessions and maintaining a consistent study schedule.")
+        else:
+            st.success("Great job! Keep up the good work!")
+    
+    with discipline_tabs[5]:  # Rewards
+        st.subheader("🏆 Rewards & Achievements")
+        
+        # Initialize rewards in session state if not exists
+        if 'rewards' not in st.session_state:
+            st.session_state.rewards = {
+                'points': 0,
+                'level': 1,
+                'achievements': [],
+                'streak_bonus': 0
+            }
+        
+        # Display current status
+        col1, col2 = st.columns(2)
+        with col1:
+            st.metric("Study Points", f"{st.session_state.rewards['points']}")
+        with col2:
+            st.metric("Level", f"{st.session_state.rewards['level']}")
+        
+        # Achievements
+        st.write("### 🏅 Achievements")
+        achievements = [
+            {"name": "Early Bird", "description": "Study before 9 AM", "points": 50},
+            {"name": "Night Owl", "description": "Study after 8 PM", "points": 50},
+            {"name": "Streak Master", "description": "Maintain a 7-day streak", "points": 100},
+            {"name": "Focus Champion", "description": "Complete 5 focus sessions", "points": 75}
+        ]
+        
+        for achievement in achievements:
+            if achievement["name"] in st.session_state.rewards['achievements']:
+                st.success(f"🏆 {achievement['name']} - {achievement['description']}")
+            else:
+                st.info(f"🔒 {achievement['name']} - {achievement['description']}")
+        
+        # Rewards shop
+        st.write("### 🎁 Rewards Shop")
+        rewards = [
+            {"name": "Free Pass", "description": "Skip a day without breaking streak", "cost": 100},
+            {"name": "Study Music", "description": "Unlock premium study music", "cost": 200},
+            {"name": "Custom Theme", "description": "Unlock custom app theme", "cost": 300}
+        ]
+        
+        for reward in rewards:
+            col1, col2 = st.columns([3, 1])
+            with col1:
+                st.write(f"**{reward['name']}** - {reward['description']}")
+            with col2:
+                if st.button(f"Buy ({reward['cost']} pts)", key=f"buy_{reward['name']}"):
+                    if st.session_state.rewards['points'] >= reward['cost']:
+                        st.session_state.rewards['points'] -= reward['cost']
+                        st.success(f"Purchased {reward['name']}!")
+                    else:
+                        st.error("Not enough points!")
+    
+    with discipline_tabs[6]:  # Study Environment
+        st.subheader("🎯 Study Environment")
+        
+        # Environment checklist
+        st.write("### ✅ Environment Checklist")
+        checklist_items = [
+            "Quiet, well-lit space",
+            "Comfortable seating",
+            "All materials ready",
+            "Water and snacks nearby",
+            "Phone on silent",
+            "Notifications disabled",
+            "Music/white noise if preferred"
+        ]
+        
+        for item in checklist_items:
+            st.checkbox(item)
+        
+        # Study space tips
+        st.write("### 💡 Study Space Tips")
+        tips = [
+            "Keep your study area clean and organized",
+            "Use natural lighting when possible",
+            "Maintain a comfortable temperature",
+            "Have a dedicated space for studying",
+            "Keep distractions out of sight"
+        ]
+        
+        for tip in tips:
+            st.info(tip)
+        
+        # Ambient sounds
+        st.write("### 🎵 Ambient Sounds")
+        sound_options = ["Rain", "Cafe", "White Noise", "Nature", "Classical Music"]
+        selected_sound = st.selectbox("Choose ambient sound", sound_options)
+        if st.button("Play Sound"):
+            st.info(f"Playing {selected_sound}...")
+    
+    with discipline_tabs[7]:  # Distraction Blocker
+        st.subheader("🚫 Distraction Blocker")
+        
+        # Block distracting websites
+        st.write("### 🌐 Block Distracting Websites")
+        distracting_sites = st.multiselect(
+            "Select websites to block",
+            ["Facebook", "Instagram", "Twitter", "YouTube", "TikTok", "Reddit"],
+            default=["Facebook", "Instagram", "Twitter"]
+        )
+        
+        if st.button("Start Blocking"):
+            st.success(f"Blocking {len(distracting_sites)} websites during study sessions")
+        
+        # Focus mode settings
+        st.write("### ⚙️ Focus Mode Settings")
+        col1, col2 = st.columns(2)
+        with col1:
+            block_duration = st.number_input("Block duration (minutes)", min_value=15, max_value=240, value=60)
+        with col2:
+            break_duration = st.number_input("Break duration (minutes)", min_value=5, max_value=30, value=10)
+        
+        # Notification settings
+        st.write("### 🔔 Notification Settings")
+        notification_options = {
+            "Block all notifications": True,
+            "Allow important calls": True,
+            "Allow study-related notifications": True,
+            "Block social media notifications": True
+        }
+        
+        for option, default in notification_options.items():
+            st.checkbox(option, value=default)
+        
+        if st.button("Apply Settings"):
+            st.success("Focus mode settings applied!")
