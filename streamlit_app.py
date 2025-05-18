@@ -803,7 +803,8 @@ def ask_concept(pages, concept):
 # --- AI Learning Aids Functions ---
 def generate_summary(text): 
     return call_gemini(
-        f"Summarize this for an exam and separately list any formulae that are mentioned in the text. "
+        f"Summarize this for an exam and separately list any formulae that are mentioned in the text."
+        f"Format the formulae such that the terms are the terms themselves, like 'Quick Ratio = (Cash + Short-Term marketable securities + Receivables) / Current liabilities'"
         f"If there aren't any, skip this section. Output only.:\n\n{text}",
         temperature=0.5
     )
