@@ -772,7 +772,7 @@ user = st.session_state.user
 # Ensure the learning style test only appears when the learning style is not already stored
 learning_style = get_learning_style(user.ge("email", "")) # Corrected from .ge to .get
 if learning_style is None:
-    st.title(("Welcome, {name}!", name=user.get('name', ''))) # Corrected t(...) syntax
+    st.title(("Welcome, {name}!", name==user.get('name', ''))) # Corrected t(...) syntax
     st.header(("Learning Style Test")) # Corrected t(...) syntax
     st.write(("Answer the following questions to determine your learning style. This will help us personalize your experience.")) # Corrected t(...) syntax
     likert = [
