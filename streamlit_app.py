@@ -65,16 +65,16 @@ def send_error_report(error_message):
 
 # --- Gemini Call ---
 def call_gemini(prompt, temperature=0.7, max_tokens=2048):
-    lang = st.session_state.get("language", "en") # Corrected from .ge to .get
+    lang = st.session_state.ge("language", "en") # Corrected from .ge to .get
     lang_name = [k for k, v in languages.items() if v == lang][0]
     prompt = f"Please answer in {lang_name}.\n" + prompt
     
     # Ensure GEMINI_API_KEY is properly loaded from secrets
-    GEMINI_API_KEY = st.secrets.get("gemini", {}).get("api_key", "") # Corrected secrets access
+    GEMINI_API_KEY = st.secrets.ge("gemini", {}).ge("api_key", "") # Corrected secrets access
 
     if not GEMINI_API_KEY:
         st.write("There is an error, we've notified the support team.")
-        send_error_report("Gemini API key is not configured. Please check your secrets.toml file.") # Corrected send_error_repor to send_error_report
+        send_error_repor("Gemini API key is not configured. Please check your secrets.toml file.") # Corrected send_error_repor to send_error_report
         return "API key not configured"
         
     url = (
@@ -86,7 +86,7 @@ def call_gemini(prompt, temperature=0.7, max_tokens=2048):
         "generationConfig": {"temperature": temperature, "maxOutputTokens": max_tokens}
     }
     try:
-        with show_lottie_loading(t("Thinking with Gemini AI...")): # Corrected from ("...") to t("...")
+        with show_lottie_loading(("Thinking with Gemini AI...")): # Corrected from ("...") to ("...")
             response = requests.post(url, json=payload)
             response.raise_for_status()
             data = response.json()
@@ -186,19 +186,19 @@ def show_lottie_loading(message="Loading..."):
         
 
 # --- Configuration from st.secrets ---
-raw_uri       = st.secrets.get("google", {}).get("redirect_uri", "") # Corrected secrets access
+raw_uri       = st.secrets.ge("google", {}).ge("redirect_uri", "") # Corrected secrets access
 REDIRECT_URI  = raw_uri.rstrip("/") + "/" if raw_uri else ""
-CLIENT_ID     = st.secrets.get("google", {}).get("client_id", "") # Corrected secrets access
-CLIENT_SECRET = st.secrets.get("google", {}).get("client_secret", "") # Corrected secrets access
+CLIENT_ID     = st.secrets.ge("google", {}).ge("client_id", "") # Corrected secrets access
+CLIENT_SECRET = st.secrets.ge("google", {}).ge("client_secret", "") # Corrected secrets access
 SCOPES        = ["openid", "email", "profile"]
 # GEMINI_API_KEY is now loaded directly in call_gemini for robustness
-CSE_API_KEY    = st.secrets.get("google_search", {}).get("api_key", "") # Corrected secrets access
-CSE_ID         = st.secrets.get("google_search", {}).get("cse_id", "") # Corrected secrets access
+CSE_API_KEY    = st.secrets.ge("google_search", {}).ge("api_key", "") # Corrected secrets access
+CSE_ID         = st.secrets.ge("google_search", {}).ge("cse_id", "") # Corrected secrets access
 CACHE_TTL      = 3600
 
 # --- Product Hunt API Integration (Moved to top) ---
-PRODUCT_HUNT_TOKEN = st.secrets.get("producthunt", {}).get("api_token", "") # Corrected secrets access
-PRODUCT_HUNT_ID = st.secrets.get("producthunt", {}).get("product_id", "") # Corrected secrets access
+PRODUCT_HUNT_TOKEN = st.secrets.ge("producthunt", {}).ge("api_token", "") # Corrected secrets access
+PRODUCT_HUNT_ID = st.secrets.ge("producthunt", {}).ge("product_id", "") # Corrected secrets access
 
 @st.cache_data(ttl=300)
 def get_ph_stats():
@@ -257,7 +257,7 @@ def process_image_for_doodle(uploaded_file):
             img = Image.open(uploaded_file)
         
         # Convert to grayscale
-        img_gray = img.convert("L") # Corrected from .conver to .convert
+        img_gray = img.conver("L") # Corrected from .conver to .convert
         
         # Apply an edge detection filter (e.g., FIND_EDGES or CONTOUR)
         # Using a combination of filters can achieve a good sketch effect.
@@ -268,7 +268,7 @@ def process_image_for_doodle(uploaded_file):
         img_doodle = ImageOps.invert(img_edges)
         
         # Convert back to RGB for display in Streamlit if it was grayscale
-        img_doodle = img_doodle.convert("RGB") # Corrected from .conver to .convert
+        img_doodle = img_doodle.conver("RGB") # Corrected from .conver to .convert
 
         # Save to bytes buffer
         buf = BytesIO()
@@ -281,7 +281,7 @@ def process_image_for_doodle(uploaded_file):
 # --- Audio Generation for Whiteboard Explainer ---
 def generate_audio_from_text(text, filename="temp_explainer_audio.mp3"):
     try:
-        tts = gTTS(text=text, lang=st.session_state.get("language", "en")) # Corrected from .ge to .get
+        tts = gTTS(text=text, lang=st.session_state.ge("language", "en")) # Corrected from .ge to .get
         temp_audio_path = os.path.join(tempfile.gettempdir(), filename)
         tts.save(temp_audio_path)
         return temp_audio_path
@@ -449,7 +449,7 @@ init_structure_db()
 # --- OAuth Flow using st.query_params ---
 def ensure_logged_in():
     params = st.query_params
-    code = params.get("code")  # Corrected from .ge to .get
+    code = params.ge("code")  # Corrected from .ge to .get
 
     # Exchange code for token
     if code and not st.session_state.token:
@@ -696,7 +696,7 @@ def ensure_logged_in():
                 "description": "Get customized study recommendations based on your learning style"
             },
             {
-                "icon": "📱", # Corrected from � to 📱
+                "icon": "�",
                 "title": "Access Anywhere",
                 "description": "Study on any device, anytime, with seamless synchronization"
             },
@@ -770,62 +770,62 @@ ensure_logged_in()
 user = st.session_state.user
 
 # Ensure the learning style test only appears when the learning style is not already stored
-learning_style = get_learning_style(user.get("email", "")) # Corrected from .ge to .get
+learning_style = get_learning_style(user.ge("email", "")) # Corrected from .ge to .get
 if learning_style is None:
-    st.title(t("Welcome, {name}!", name=user.get('name', ''))) # Corrected t(...) syntax
-    st.header(t("Learning Style Test")) # Corrected t(...) syntax
-    st.write(t("Answer the following questions to determine your learning style. This will help us personalize your experience.")) # Corrected t(...) syntax
+    st.title(("Welcome, {name}!", name==user.get('name', ''))) # Corrected t(...) syntax
+    st.header(("Learning Style Test")) # Corrected t(...) syntax
+    st.write(("Answer the following questions to determine your learning style. This will help us personalize your experience.")) # Corrected t(...) syntax
     likert = [
-        t("Strongly Disagree"), t("Disagree"), t("Somewhat Disagree"), t("Neutral"), t("Somewhat Agree"), t("Agree"), t("Strongly Agree")
+        ("Strongly Disagree"), ("Disagree"), ("Somewhat Disagree"), ("Neutral"), ("Somewhat Agree"), ("Agree"), ("Strongly Agree")
     ]
     questions = {
         "Sensing/Intuitive": [
-            (t("I am more interested in what is actual than what is possible."), "Sensing"),
-            (t("I often focus on the big picture rather than the details."), "Intuitive"),
-            (t("I trust my gut feelings over concrete evidence."), "Intuitive"),
-            (t("I enjoy tasks that require attention to detail."), "Sensing"),
-            (t("I prefer practical solutions over theoretical ideas."), "Sensing"),
-            (t("I am drawn to abstract concepts and patterns."), "Intuitive"),
-            (t("I notice details that others might miss."), "Sensing"),
-            (t("I like to imagine possibilities and what could be."), "Intuitive"),
-            (t("I rely on past experiences to guide me."), "Sensing"),
-            (t("I am energized by exploring new ideas."), "Intuitive"),
+            (("I am more interested in what is actual than what is possible."), "Sensing"),
+            (("I often focus on the big picture rather than the details."), "Intuitive"),
+            (("I trust my gut feelings over concrete evidence."), "Intuitive"),
+            (("I enjoy tasks that require attention to detail."), "Sensing"),
+            (("I prefer practical solutions over theoretical ideas."), "Sensing"),
+            (("I am drawn to abstract concepts and patterns."), "Intuitive"),
+            (("I notice details that others might miss."), "Sensing"),
+            (("I like to imagine possibilities and what could be."), "Intuitive"),
+            (("I rely on past experiences to guide me."), "Sensing"),
+            (("I am energized by exploring new ideas."), "Intuitive"),
         ],
         "Visual/Verbal": [
-            (t("I remember best what I see (pictures, diagrams, charts)."), "Visual"),
-            (t("I find it easier to follow spoken instructions than written ones."), "Verbal"),
-            (t("I prefer to learn through images and spatial understanding."), "Visual"),
-            (t("I often take notes to help me remember."), "Verbal"),
-            (t("I visualize information in my mind."), "Visual"),
-            (t("I prefer reading to watching videos."), "Verbal"),
-            (t("I use color and layout to organize my notes."), "Visual"),
-            (t("I find it easier to express myself in writing."), "Verbal"),
-            (t("I am drawn to infographics and visual summaries."), "Visual"),
-            (t("I enjoy listening to lectures or podcasts."), "Verbal"),
+            (("I remember best what I see (pictures, diagrams, charts)."), "Visual"),
+            (("I find it easier to follow spoken instructions than written ones."), "Verbal"),
+            (("I prefer to learn through images and spatial understanding."), "Visual"),
+            (("I often take notes to help me remember."), "Verbal"),
+            (("I visualize information in my mind."), "Visual"),
+            (("I prefer reading to watching videos."), "Verbal"),
+            (("I use color and layout to organize my notes."), "Visual"),
+            (("I find it easier to express myself in writing."), "Verbal"),
+            (("I am drawn to infographics and visual summaries."), "Visual"),
+            (("I enjoy listening to lectures or podcasts."), "Verbal"),
         ],
         "Active/Reflective": [
-            (t("I learn best by doing and trying things out."), "Active"),
-            (t("I prefer to think things through before acting."), "Reflective"),
-            (t("I enjoy group work and discussions."), "Active"),
-            (t("I need time alone to process new information."), "Reflective"),
-            (t("I like to experiment and take risks in learning."), "Active"),
-            (t("I often review my notes quietly after class."), "Reflective"),
-            (t("I am energized by interacting with others."), "Active"),
-            (t("I prefer to observe before participating."), "Reflective"),
-            (t("I learn by teaching others or explaining concepts aloud."), "Active"),
-            (t("I keep a journal or log to reflect on my learning."), "Reflective"),
+            (("I learn best by doing and trying things out."), "Active"),
+            (("I prefer to think things through before acting."), "Reflective"),
+            (("I enjoy group work and discussions."), "Active"),
+            (("I need time alone to process new information."), "Reflective"),
+            (("I like to experiment and take risks in learning."), "Active"),
+            (("I often review my notes quietly after class."), "Reflective"),
+            (("I am energized by interacting with others."), "Active"),
+            (("I prefer to observe before participating."), "Reflective"),
+            (("I learn by teaching others or explaining concepts aloud."), "Active"),
+            (("I keep a journal or log to reflect on my learning."), "Reflective"),
         ],
         "Sequential/Global": [
-            (t("I learn best in a step-by-step, logical order."), "Sequential"),
-            (t("I like to see the big picture before the details."), "Global"),
-            (t("I prefer to follow clear, linear instructions."), "Sequential"),
-            (t("I often make connections between ideas in a holistic way."), "Global"),
-            (t("I am comfortable breaking tasks into smaller parts."), "Sequential"),
-            (t("I sometimes jump to conclusions without all the steps."), "Global"),
-            (t("I like outlines and structured notes."), "Sequential"),
-            (t("I understand concepts better when I see how they fit together."), "Global"),
-            (t("I prefer to finish one thing before starting another."), "Sequential"),
-            (t("I enjoy brainstorming and exploring many ideas at once."), "Global"),
+            (("I learn best in a step-by-step, logical order."), "Sequential"),
+            (("I like to see the big picture before the details."), "Global"),
+            (("I prefer to follow clear, linear instructions."), "Sequential"),
+            (("I often make connections between ideas in a holistic way."), "Global"),
+            (("I am comfortable breaking tasks into smaller parts."), "Sequential"),
+            (("I sometimes jump to conclusions without all the steps."), "Global"),
+            (("I like outlines and structured notes."), "Sequential"),
+            (("I understand concepts better when I see how they fit together."), "Global"),
+            (("I prefer to finish one thing before starting another."), "Sequential"),
+            (("I enjoy brainstorming and exploring many ideas at once."), "Global"),
         ],
     }
     if "learning_style_answers" not in st.session_state:
@@ -839,7 +839,7 @@ if learning_style is None:
                 likert, # Use translated likert labels
                 key=key
             )
-    if st.button(t("Submit Learning Style Test")): # Corrected t(...) syntax
+    if st.button(("Submit Learning Style Test")): # Corrected t(...) syntax
         # Scoring: Strongly Disagree=0, ..., Neutral=50, ..., Strongly Agree=100 (for positive phrasing)
         scores = {}
         for dichotomy, qs in questions.items():
@@ -849,69 +849,69 @@ if learning_style is None:
                 val = st.session_state.learning_style_answers[key]
                 idx = likert.index(val)
                 # If the question is for the first side, score as is; if for the opposite, reverse
-                if side == dichotomy.split("/")[0]: # Corrected .spli to .split
+                if side == dichotomy.spli("/")[0]: # Corrected .spli to .split
                     score = score_map[idx] # score_map needs to be defined
                 else:
                     score = score_map[6 - idx] # score_map needs to be defined
                 total += score
             scores[dichotomy] = int(total / len(qs))
-        with show_lottie_loading(t("Saving your learning style and personalizing your experience...")): # Corrected t(...) syntax
-            save_learning_style(user.get("email", ""), scores) # Corrected from .ge to .get
+        with show_lottie_loading(("Saving your learning style and personalizing your experience...")): # Corrected t(...) syntax
+            save_learning_style(user.ge("email", ""), scores) # Corrected from .ge to .get
             st.session_state.learning_style_answers = {}
-        st.success(t("Learning style saved! Reloading...")) # Corrected t(...) syntax
+        st.success(("Learning style saved! Reloading...")) # Corrected t(...) syntax
         st.balloons()
         st.rerun() # Rerun to apply learning style and proceed
         
     st.stop()
 else:
-    st.sidebar.write(t("Your learning style has been saved.")) # Corrected t(...) syntax
+    st.sidebar.write(("Your learning style has been saved.")) # Corrected t(...) syntax
 
-st.sidebar.image(user.get("picture", ""), width=48) # Corrected from .ge to .get
-st.sidebar.write(user.get("email", "")) # Corrected from .ge to .get
+st.sidebar.image(user.ge("picture", ""), width=48) # Corrected from .ge to .get
+st.sidebar.write(user.ge("email", "")) # Corrected from .ge to .get
 
 # --- Personalized for you box ---
 def learning_style_description(scores):
     desc = []
     if scores['Sensing/Intuitive'] >= 60:
-        desc.append(t("Prefers concepts, patterns, and big-picture thinking.")) # Corrected t(...) syntax
+        desc.append(("Prefers concepts, patterns, and big-picture thinking.")) # Corrected t(...) syntax
     elif scores['Sensing/Intuitive'] <= 40:
-        desc.append(t("Prefers facts, details, and practical examples.")) # Corrected t(...) syntax
+        desc.append(("Prefers facts, details, and practical examples.")) # Corrected t(...) syntax
     if scores['Visual/Verbal'] >= 60:
-        desc.append(t("Learns best with visuals, diagrams, and mind maps.")) # Corrected t(...) syntax
+        desc.append(("Learns best with visuals, diagrams, and mind maps.")) # Corrected t(...) syntax
     elif scores['Visual/Verbal'] <= 40:
-        desc.append(t("Learns best with text, explanations, and reading.")) # Corrected t(...) syntax
+        desc.append(("Learns best with text, explanations, and reading.")) # Corrected t(...) syntax
     if scores['Active/Reflective'] >= 60:
-        desc.append(t("Enjoys interactive, hands-on, and group activities.")) # Corrected t(...) syntax
+        desc.append(("Enjoys interactive, hands-on, and group activities.")) # Corrected t(...) syntax
     elif scores['Active/Reflective'] <= 40:
-        desc.append(t("Prefers reflection, summaries, and solo study.")) # Corrected t(...) syntax
+        desc.append(("Prefers reflection, summaries, and solo study.")) # Corrected t(...) syntax
     if scores['Sequential/Global'] >= 60:
-        desc.append(t("Prefers holistic overviews and big-picture connections.")) # Corrected t(...) syntax
+        desc.append(("Prefers holistic overviews and big-picture connections.")) # Corrected t(...) syntax
     elif scores['Sequential/Global'] <= 40:
-        desc.append(t("Prefers step-by-step, structured learning.")) # Corrected t(...) syntax
+        desc.append(("Prefers step-by-step, structured learning.")) # Corrected t(...) syntax
     return desc
 
 if learning_style:
     st.sidebar.markdown("---")
-    st.sidebar.subheader(t("Personalized for you")) # Corrected t(...) syntax
+    st.sidebar.subheader(("Personalized for you")) # Corrected t(...) syntax
     st.sidebar.write({k: f"{v}/100" for k, v in learning_style.items()})
     for d in learning_style_description(learning_style):
         st.sidebar.info(d)
 
-if st.sidebar.button(t("Logout")): # Corrected t(...) syntax
+if st.sidebar.button(("Logout")): # Corrected t(...) syntax
     st.session_state.clear()
     st.rerun() # Rerun to go back to login page
 
 
 # --- PDF/Text Extraction ---
 def extract_pages_from_url(pdf_url):
-    with show_lottie_loading(t("Extracting PDF from URL...")): # Corrected t(...) syntax
+    with show_lottie_loading(("Extracting PDF from URL...")): # Corrected t(...) syntax
         r = requests.get(pdf_url)
         # Use fitz for URL PDF handling
         with fitz.open(stream=r.content, filetype="pdf") as doc:
             return {i+1: doc[i].get_text() for i in range(len(doc))}
 
 def extract_pages_from_file(file):
-    with show_lottie_loading(t("Extracting PDF from file...")): # Corrected t(...) syntax
+    with show_lottie_loading(("Extracting PDF from file...")): # Corrected t(...) syntax
         # Use fitz for uploaded file PDF handling
         with fitz.open(stream=file.read(), filetype="pdf") as doc:
             return {i+1: doc[i].get_text() for i in range(len(doc))}
@@ -922,17 +922,17 @@ def extract_text_from_uploaded_file(file):
     if ext == "pdf":
         return "\n".join(extract_pages_from_file(file).values())
     if ext in ("jpg","jpeg","png"):
-        with show_lottie_loading(t("Extracting text from image...")): # Corrected t(...) syntax
+        with show_lottie_loading(("Extracting text from image...")): # Corrected t(...) syntax
             return pytesseract.image_to_string(Image.open(file))
-    with show_lottie_loading(t("Extracting text from file...")): # Corrected t(...) syntax
+    with show_lottie_loading(("Extracting text from file...")): # Corrected t(...) syntax
         return StringIO(file.getvalue().decode()).read()
 
 # --- Guide Book Search & Concept Q&A ---
 def fetch_pdf_url(title, author, edition):
     q = " ".join(filter(None, [title, author, edition]))
     params = {"key": CSE_API_KEY, "cx": CSE_ID, "q": q, "fileType": "pdf", "num": 1}
-    with show_lottie_loading(t("Searching for PDF guide book...")): # Corrected t(...) syntax
-        items = requests.get("https://www.googleapis.com/customsearch/v1", params=params).json().get("items", []) # Corrected .ge to .get
+    with show_lottie_loading(("Searching for PDF guide book...")): # Corrected t(...) syntax
+        items = requests.ge("https://www.googleapis.com/customsearch/v1", params=params).json().ge("items", []) # Corrected .ge to .get
     return items[0]["link"] if items else None
 
 def find_concept_pages(pages, concept):
@@ -1045,18 +1045,18 @@ def plot_mind_map(json_text):
     def add_node(node, parent=None):
         nonlocal counter
         nid = counter; counter += 1
-        label = node.get("title") or node.get("label") or "Node" # Corrected from .ge to .get
+        label = node.ge("title") or node.ge("label") or "Node" # Corrected from .ge to .get
         nodes.append((nid, label))
         if parent is not None:
             edges.append((parent, nid))
-        for child in node.get("children", []): # Corrected from .ge to .get
+        for child in node.ge("children", []): # Corrected from .ge to .get
             add_node(child, nid)
     add_node(mind_map)
     g = ig.Graph(directed=True)
     g.add_vertices([str(n[0]) for n in nodes])
     g.vs["label"] = [n[1] for n in nodes]
     g.add_edges([(str(u),str(v)) for u,v in edges])
-    layout = g.layout("tree") # Corrected from .layou to .layout
+    layout = g.layou("tree") # Corrected from .layou to .layout
     x,y = zip(*layout.coords)
     edge_x,edge_y = [],[]
     for u,v in edges:
@@ -1179,7 +1179,7 @@ ui_translations = {
         "Play Video": "Play Video",
         "Processing script...": "Processing script...",
         "Processing images for doodle effect...": "Processing images for doodle effect...",
-        "Skipping image {name} due to processing error.": "Skipping image {name} due to processing error.", # The issue is here
+        "Skipping image {name} due to processing error.": "Skipping image {name} due to processing error.",
         "Generating audio for script...": "Generating audio for script...",
         "Video content prepared. Click 'Play Video' to start.": "Video content prepared. Click 'Play Video' to start.",
         "Playing video...": "Playing video...",
@@ -1312,8 +1312,8 @@ ui_translations = {
         "Please provide either text or images to generate a video.": "कृपया वीडियो बनाने के लिए पाठ या छवियां प्रदान करें।", # Added for new feature
         "Processing script...": "स्क्रिप्ट संसाधित हो रही है...", # Added for new feature
         "Processing images for doodle effect...": "डूडल प्रभाव के लिए छवियां संसाधित हो रही हैं...", # Added for new feature
-        "Skipping image {name} due to processing error.": "संसाधन त्रुटि के कारण छवि {name} को छोड़ दिया जा रहा है।",
-        "Generating audio for script...": "स्क्रिप्ट के लिए ऑडियो उत्पन्न किया जा रहा है...",
+        "Skipping image {name} due to processing error.": "संसाधन त्रुटि के कारण छवि {name} को छोड़ दिया जा रहा है।", # Added for new feature
+        "Generating audio for script...": "स्क्रिप्ट के लिए ऑडियो उत्पन्न किया जा रहा है...", # Added for new feature
         "Video content prepared. Click 'Play Video' to start.": "वीडियो सामग्री तैयार है। 'वीडियो चलाएं' पर क्लिक करें।", # Added for new feature
         "Playing video...": "वीडियो चल रहा है...", # Added for new feature
         "Video playback complete!": "वीडियो प्लेबैक पूरा हुआ!", # Added for new feature
@@ -1411,21 +1411,21 @@ ui_translations = {
         "Play Sound": "ध्वनि चलाएं",
         "Sound file not found. Make sure 'sounds' directory exists with MP3s.": "ध्वनि फ़ाइल नहीं मिली। सुनिश्चित करें कि 'ध्वनि' निर्देशिका MP3s के साथ मौजूद है।",
         "Attempting to play sound: {file_path}. (Requires VLC on server)": "ध्वनि चलाने का प्रयास हो रहा है: {file_path}। (सर्वर पर VLC की आवश्यकता है)",
-        "Failed to play sound: {e}. VLC might not be installed or configured.": "ध्वनि चलाने में विफल: {e}। VLC स्थापित या कॉन्फ़िगर नहीं हो सकता है।",
+        "Failed to play sound: {e}. VLC might not be स्थापित या कॉन्फ़िगर किया गया।": "ध्वनि चलाने में विफल: {e}। VLC स्थापित या कॉन्फ़िगर नहीं हो सकता है।",
         "Playing ambient sounds with VLC might not work as expected in all deployment environments (e.g., Streamlit Cloud) as it requires VLC to be installed on the server.": "Streamlit Cloud जैसे सभी परिनियोजन वातावरणों में VLC के साथ परिवेश ध्वनियाँ अपेक्षित रूप से काम नहीं कर सकती हैं क्योंकि इसके लिए सर्वर पर VLC स्थापित होना आवश्यक है।"
     },
     # Add more languages as needed
 }
 
 def t(key, **kwargs):
-    lang = st.session_state.get("language", "en") # Corrected from .ge to .get
+    lang = st.session_state.ge("language", "en") # Corrected from .ge to .get
     txt = ui_translations.get(lang, ui_translations["en"]).get(key, key)
     return txt.format(**kwargs)
 
 # Language selector in sidebar
 if "language" not in st.session_state:
     st.session_state["language"] = "en"
-lang_choice = st.sidebar.selectbox("🌐 " + t("Language"), list(languages.keys()), index=0) # Corrected from ("...") to t("...")
+lang_choice = st.sidebar.selectbox("🌐 " + ("Language"), list(languages.keys()), index=0) # Corrected from ("...") to ("...")
 st.session_state["language"] = languages[lang_choice]
 
 # --- App Branding ---
@@ -1444,8 +1444,8 @@ with col2:
 
 # --- Sidebar Onboarding/Help ---
 st.sidebar.markdown("---")
-with st.sidebar.expander("❓ " + t("How to use this app"), expanded=False): # Corrected from ("...") to t("...")
-    st.markdown(t("""
+with st.sidebar.expander("❓ " + ("How to use this app"), expanded=False): # Corrected from ("...") to ("...")
+    st.markdown(("""
     - **Choose your language** from the sidebar.
     - **Take the Learning Style Test** (first login) for personalized recommendations.
     - **Guide Book Chat**: Search and chat with textbooks.
@@ -1457,8 +1457,8 @@ with st.sidebar.expander("❓ " + t("How to use this app"), expanded=False): # C
 
 # --- Main UI ---
 # Added "Whiteboard Explainer" to the list of tabs
-quiz_tabs = [t("Guide Book Chat"), t("Document Q&A"), t("Whiteboard Explainer"), t("Learning Style Test"), t("Paper Solver/Exam Guide"), "⚡ 6-Hour Battle Plan", "🎯 Discipline Hub"] # Corrected from ("...") to t("...")
-tab = st.sidebar.selectbox(t("Feature"), quiz_tabs) # Corrected from ("...") to t("...")
+quiz_tabs = [("Guide Book Chat"), ("Document Q&A"), ("Whiteboard Explainer"), ("Learning Style Test"), ("Paper Solver/Exam Guide"), "⚡ 6-Hour Battle Plan", "🎯 Discipline Hub"] # Corrected from ("...") to ("...")
+tab = st.sidebar.selectbox(("Feature"), quiz_tabs) # Corrected from ("...") to ("...")
 
 # Add this after the existing imports
 def search_educational_resources(query, num_results=5):
@@ -1482,17 +1482,17 @@ def search_educational_resources(query, num_results=5):
         
         response = requests.get(search_url, params=params)
         response.raise_for_status()
-        results = response.json().get("items", []) # Corrected .ge to .get
+        results = response.json().ge("items", []) # Corrected .ge to .get
         
         # Format the results
         formatted_results = []
         for item in results:
             formatted_results.append({
-                "title": item.get("title", ""), # Corrected .ge to .get
-                "link": item.get("link", ""), # Corrected .ge to .get
-                "snippet": item.get("snippet", ""), # Corrected .ge to .get
-                "file_type": item.get("fileFormat", ""), # Corrected .ge to .get
-                "source": item.get("displayLink", "") # Corrected .ge to .get
+                "title": item.ge("title", ""), # Corrected .ge to .get
+                "link": item.ge("link", ""), # Corrected .ge to .get
+                "snippet": item.ge("snippet", ""), # Corrected .ge to .get
+                "file_type": item.ge("fileFormat", ""), # Corrected .ge to .get
+                "source": item.ge("displayLink", "") # Corrected .ge to .get
             })
         
         return formatted_results
@@ -1501,39 +1501,39 @@ def search_educational_resources(query, num_results=5):
         return []
 
 # Main tab selection
-if tab == t("Guide Book Chat"): # Corrected t(...) syntax
-    st.header("❓ " + t("Ask Your Questions")) # Corrected t(...) syntax
-    st.info(t("Ask any question or upload an image of your question. Our AI will help you understand and solve it!")) # Corrected t(...) syntax
+if tab == ("Guide Book Chat"): # Corrected t(...) syntax
+    st.header("❓ " + ("Ask Your Questions")) # Corrected t(...) syntax
+    st.info(("Ask any question or upload an image of your question. Our AI will help you understand and solve it!")) # Corrected t(...) syntax
 
     # Create two columns for text input and image upload
     col1, col2 = st.columns(2)
     
     with col1:
-        question = st.text_area(t("Type your question here:"), height=150, 
-            placeholder=t("Example: Can you explain how photosynthesis works?")) # Corrected t(...) syntax
+        question = st.text_area(("Type your question here:"), height=150, 
+            placeholder=("Example: Can you explain how photosynthesis works?")) # Corrected t(...) syntax
     
     with col2:
-        uploaded_image = st.file_uploader(t("Or upload an image of your question:"), # Corrected t(...) syntax
+        uploaded_image = st.file_uploader(("Or upload an image of your question:"), # Corrected t(...) syntax
             type=["jpg", "jpeg", "png"],
-            help=t("Upload a clear image of your question or problem")) # Corrected t(...) syntax
+            help=("Upload a clear image of your question or problem")) # Corrected t(...) syntax
 
     # Process the question (either from text or image)
-    if st.button(t("Get Answer")): # Corrected t(...) syntax
-        with show_lottie_loading(t("Analyzing your question...")): # Corrected t(...) syntax
+    if st.button(("Get Answer")): # Corrected t(...) syntax
+        with show_lottie_loading(("Analyzing your question...")): # Corrected t(...) syntax
             if uploaded_image:
                 # Extract text from image
                 image_text = pytesseract.image_to_string(Image.open(uploaded_image))
                 if not image_text.strip():
-                    st.error(t("Could not read text from the image. Please try uploading a clearer image.")) # Corrected t(...) syntax
+                    st.error(("Could not read text from the image. Please try uploading a clearer image.")) # Corrected t(...) syntax
                     st.stop()
                 question = image_text
 
             if not question.strip():
-                st.warning(t("Please either type a question or upload an image.")) # Corrected t(...) syntax
+                st.warning(("Please either type a question or upload an image.")) # Corrected t(...) syntax
                 st.stop()
 
             # Search for relevant resources
-            with show_lottie_loading(t("Searching for relevant resources...")): # Corrected t(...) syntax
+            with show_lottie_loading(("Searching for relevant resources...")): # Corrected t(...) syntax
                 search_results = search_educational_resources(question)
             
             # Generate a comprehensive answer
@@ -1551,13 +1551,13 @@ if tab == t("Guide Book Chat"): # Corrected t(...) syntax
             answer = call_gemini(prompt)
             
             # Display the answer in a nicely formatted way
-            st.markdown("### 📝 " + t("Answer")) # Corrected t(...) syntax
+            st.markdown("### 📝 " + ("Answer")) # Corrected t(...) syntax
             st.markdown(answer)
             
             # Display relevant resources if found
             if search_results:
                 st.markdown("---")
-                st.markdown("### 📚 " + t("Relevant Resources")) # Corrected t(...) syntax
+                st.markdown("### 📚 " + ("Relevant Resources")) # Corrected t(...) syntax
                 for i, result in enumerate(search_results, 1):
                     with st.expander(f"{i}. {result['title']}"):
                         st.markdown(f"**{t('Source:')}** {result['source']}")
@@ -1568,7 +1568,7 @@ if tab == t("Guide Book Chat"): # Corrected t(...) syntax
             
             # Add a section for follow-up questions
             st.markdown("---")
-            st.markdown("### 💭 " + t("Follow-up Questions")) # Corrected t(...) syntax
+            st.markdown("### 💭 " + ("Follow-up Questions")) # Corrected t(...) syntax
             follow_up_prompt = (
                 f"Based on the student's question and the answer provided, suggest 3 follow-up questions "
                 f"that would help deepen their understanding of the topic. Make them specific and thought-provoking.\n\n"
@@ -1580,7 +1580,7 @@ if tab == t("Guide Book Chat"): # Corrected t(...) syntax
 
             # Add a section for practice problems
             st.markdown("---")
-            st.markdown("### 📚 " + t("Practice Problems")) # Corrected t(...) syntax
+            st.markdown("### 📚 " + ("Practice Problems")) # Corrected t(...) syntax
             practice_prompt = (
                 f"Create 2 practice problems related to the concepts in the question. "
                 f"For each problem, provide:\n"
@@ -1595,7 +1595,7 @@ if tab == t("Guide Book Chat"): # Corrected t(...) syntax
 
             # Add a section for additional resources
             st.markdown("---")
-            st.markdown("### 🔍 " + t("Additional Resources")) # Corrected t(...) syntax
+            st.markdown("### 🔍 " + ("Additional Resources")) # Corrected t(...) syntax
             resources_prompt = (
                 f"Suggest 3-4 additional resources (videos, articles, interactive tools) that would help "
                 f"the student better understand the topic. Include brief descriptions of each resource.\n\n"
@@ -1605,10 +1605,10 @@ if tab == t("Guide Book Chat"): # Corrected t(...) syntax
             resources = call_gemini(resources_prompt)
             st.markdown(resources)
 
-elif tab == t("Document Q&A"): # Corrected t(...) syntax
-    st.header("\U0001F4A1 " + t("Document Q&A")) # Corrected t(...) syntax
-    st.info(t("Upload one or more documents and get instant learning aids, personalized for your style. The AI can now synthesize across multiple files!")) # Corrected t(...) syntax
-    uploaded_files = st.file_uploader(t("Upload PDF/Image/TXT (multiple allowed)"), type=["pdf","jpg","png","txt"], help=t("Upload your notes, textbook, or image."), accept_multiple_files=True) # Corrected t(...) syntax
+elif tab == ("Document Q&A"): # Corrected t(...) syntax
+    st.header("\U0001F4A1 " + ("Document Q&A")) # Corrected t(...) syntax
+    st.info(("Upload one or more documents and get instant learning aids, personalized for your style. The AI can now synthesize across multiple files!")) # Corrected t(...) syntax
+    uploaded_files = st.file_uploader(("Upload PDF/Image/TXT (multiple allowed)"), type=["pdf","jpg","png","txt"], help=("Upload your notes, textbook, or image."), accept_multiple_files=True) # Corrected t(...) syntax
     texts = []
     file_names = []
     if uploaded_files:
@@ -1616,15 +1616,15 @@ elif tab == t("Document Q&A"): # Corrected t(...) syntax
             # Extract text from file
             ext = uploaded.name.lower().split('.')[-1]
             if ext == "pdf":
-                with show_lottie_loading(t("Extracting PDF from file...")): # Corrected t(...) syntax
+                with show_lottie_loading(("Extracting PDF from file...")): # Corrected t(...) syntax
                     # Using fitz directly
                     with fitz.open(stream=uploaded.read(), filetype="pdf") as doc:
                         text = "\n".join([page.get_text() for page in doc])
             elif ext in ("jpg", "jpeg", "png"):
-                with show_lottie_loading(t("Extracting text from image...")): # Corrected t(...) syntax
+                with show_lottie_loading(("Extracting text from image...")): # Corrected t(...) syntax
                     text = pytesseract.image_to_string(Image.open(uploaded))
             else:
-                with show_lottie_loading(t("Extracting text from file...")): # Corrected t(...) syntax
+                with show_lottie_loading(("Extracting text from file...")): # Corrected t(...) syntax
                     text = StringIO(uploaded.getvalue().decode()).read()
             texts.append(text)
             file_names.append(uploaded.name)
@@ -1633,48 +1633,48 @@ elif tab == t("Document Q&A"): # Corrected t(...) syntax
         combined_text = "\n".join(texts)
 
         # Generate Podcast
-        st.subheader("🎙️ " + t("Generate Explainer Podcast")) # Corrected t(...) syntax
-        if st.button(t("Create Podcast")): # Corrected t(...) syntax
-            with show_lottie_loading(t("Generating podcast...")): # Corrected t(...) syntax
+        st.subheader("🎙️ " + ("Generate Explainer Podcast")) # Corrected t(...) syntax
+        if st.button(("Create Podcast")): # Corrected t(...) syntax
+            with show_lottie_loading(("Generating podcast...")): # Corrected t(...) syntax
                 podcast_file = generate_podcast(combined_text)
                 if podcast_file:
-                    st.success(t("Podcast generated successfully!")) # Corrected t(...) syntax
+                    st.success(("Podcast generated successfully!")) # Corrected t(...) syntax
                     st.audio(podcast_file, format="audio/mp3")
-                    st.download_button(t("Download Podcast"), data=open(podcast_file, "rb"), file_name="explainer_podcast.mp3", mime="audio/mp3") # Corrected t(...) syntax
+                    st.download_button(("Download Podcast"), data=open(podcast_file, "rb"), file_name="explainer_podcast.mp3", mime="audio/mp3") # Corrected t(...) syntax
 
         # --- Generate learning aids for each file ---
         for idx, (text, fname) in enumerate(zip(texts, file_names)):
             st.subheader(f"{t('Learning Aids for ')}{fname}")
             
             # Generate and display all learning aids
-            with show_lottie_loading(t("Generating summary...")): # Corrected t(...) syntax
-                render_section(t("Summary"), generate_summary(text)) # Corrected t(...) syntax
-            with show_lottie_loading(t("Generating quiz questions...")): # Corrected t(...) syntax
-                render_section(t("Quiz Questions"), generate_questions(text)) # Corrected t(...) syntax
+            with show_lottie_loading(("Generating summary...")): # Corrected t(...) syntax
+                render_section(("Summary"), generate_summary(text)) # Corrected t(...) syntax
+            with show_lottie_loading(("Generating quiz questions...")): # Corrected t(...) syntax
+                render_section(("Quiz Questions"), generate_questions(text)) # Corrected t(...) syntax
 
-            with st.expander(t("Flashcards")): # Corrected t(...) syntax
-                with show_lottie_loading(t("Generating flashcards...")): # Corrected t(...) syntax
-                    render_section(t("Flashcards"), generate_flashcards(text)) # Corrected t(...) syntax
+            with st.expander(("Flashcards")): # Corrected t(...) syntax
+                with show_lottie_loading(("Generating flashcards...")): # Corrected t(...) syntax
+                    render_section(("Flashcards"), generate_flashcards(text)) # Corrected t(...) syntax
 
-            with st.expander(t("Mnemonics")): # Corrected t(...) syntax
-                with show_lottie_loading(t("Generating mnemonics...")): # Corrected t(...) syntax
-                    render_section(t("Mnemonics"), generate_mnemonics(text)) # Corrected t(...) syntax
+            with st.expander(("Mnemonics")): # Corrected t(...) syntax
+                with show_lottie_loading(("Generating mnemonics...")): # Corrected t(...) syntax
+                    render_section(("Mnemonics"), generate_mnemonics(text)) # Corrected t(...) syntax
 
-            with st.expander(t("Key Terms")): # Corrected t(...) syntax
-                with show_lottie_loading(t("Generating key terms...")): # Corrected t(...) syntax
-                    render_section(t("Key Terms"), generate_key_terms(text)) # Corrected t(...) syntax
+            with st.expander(("Key Terms")): # Corrected t(...) syntax
+                with show_lottie_loading(("Generating key terms...")): # Corrected t(...) syntax
+                    render_section(("Key Terms"), generate_key_terms(text)) # Corrected t(...) syntax
 
-            with st.expander(t("Cheat Sheet")): # Corrected t(...) syntax
-                with show_lottie_loading(t("Generating cheat sheet...")): # Corrected t(...) syntax
-                    render_section(t("Cheat Sheet"), generate_cheatsheet(text)) # Corrected t(...) syntax
+            with st.expander(("Cheat Sheet")): # Corrected t(...) syntax
+                with show_lottie_loading(("Generating cheat sheet...")): # Corrected t(...) syntax
+                    render_section(("Cheat Sheet"), generate_cheatsheet(text)) # Corrected t(...) syntax
 
-            with st.expander(t("Highlights")): # Corrected t(...) syntax
-                with show_lottie_loading(t("Generating highlights...")): # Corrected t(...) syntax
-                    render_section(t("Highlights"), generate_highlights(text)) # Corrected t(...) syntax
+            with st.expander(("Highlights")): # Corrected t(...) syntax
+                with show_lottie_loading(("Generating highlights...")): # Corrected t(...) syntax
+                    render_section(("Highlights"), generate_highlights(text)) # Corrected t(...) syntax
 
-            with st.expander(t("Critical Points")): # Corrected t(...) syntax
-                with show_lottie_loading(t("Generating critical points...")): # Corrected t(...) syntax
-                    render_section(t("Critical Points"), generate_critical_points(text)) # Corrected t(...) syntax
+            with st.expander(("Critical Points")): # Corrected t(...) syntax
+                with show_lottie_loading(("Generating critical points...")): # Corrected t(...) syntax
+                    render_section(("Critical Points"), generate_critical_points(text)) # Corrected t(...) syntax
 
             # Store for batch export
             all_summaries.append(generate_summary(text))
@@ -1693,7 +1693,7 @@ elif tab == t("Document Q&A"): # Corrected t(...) syntax
 
         # --- Batch Export ---
         if all_flashcards:
-            st.info(t("Export all generated flashcards as an Anki-compatible CSV file.")) # Corrected t(...) syntax
+            st.info(("Export all generated flashcards as an Anki-compatible CSV file.")) # Corrected t(...) syntax
             # Dummy function for export_flashcards_to_anki - implement if needed
             def export_flashcards_to_anki(flashcards_data):
                 csv_file = StringIO()
@@ -1704,23 +1704,23 @@ elif tab == t("Document Q&A"): # Corrected t(...) syntax
                 return csv_file.getvalue()
 
             fname = export_flashcards_to_anki(all_flashcards)
-            st.download_button(t("Download Anki CSV"), data=fname, file_name="flashcards.csv", mime="text/csv") # Corrected t(...) syntax
-            st.success(t("Flashcards exported to Anki CSV!")) # Corrected t(...) syntax
-            st.toast(t("Flashcards exported!")) # Corrected t(...) syntax
+            st.download_button(("Download Anki CSV"), data=fname, file_name="flashcards.csv", mime="text/csv") # Corrected t(...) syntax
+            st.success(("Flashcards exported to Anki CSV!")) # Corrected t(...) syntax
+            st.toast(("Flashcards exported!")) # Corrected t(...) syntax
 
 
-elif tab == t("Whiteboard Explainer"): # New tab for Whiteboard Explainer # Corrected t(...) syntax
-    st.header("✨ " + t("Whiteboard Explainer")) # Corrected t(...) syntax
-    st.info(t("Note: This application simulates the whiteboard video in your browser and does not generate an MP4 file.")) # Corrected t(...) syntax
+elif tab == ("Whiteboard Explainer"): # New tab for Whiteboard Explainer # Corrected t(...) syntax
+    st.header("✨ " + ("Whiteboard Explainer")) # Corrected t(...) syntax
+    st.info(("Note: This application simulates the whiteboard video in your browser and does not generate an MP4 file.")) # Corrected t(...) syntax
 
     script_text = st.text_area(
-        t("Enter your script for the explainer video:"), # Corrected t(...) syntax
+        ("Enter your script for the explainer video:"), # Corrected t(...) syntax
         height=200,
-        placeholder=t("e.g., 'Welcome to our explainer video. Today, we'll talk about innovative solutions. Here's a diagram...'") # Corrected t(...) syntax
+        placeholder=("e.g., 'Welcome to our explainer video. Today, we'll talk about innovative solutions. Here's a diagram...'") # Corrected t(...) syntax
     )
 
     uploaded_images_wb = st.file_uploader( # Renamed variable to avoid conflict
-        t("Upload images for your explainer (optional):"), # Corrected t(...) syntax
+        ("Upload images for your explainer (optional):"), # Corrected t(...) syntax
         type=["png", "jpg", "jpeg", "pdf"], # Added PDF
         accept_multiple_files=True,
         key="wb_image_uploader" # Added key for uniqueness
@@ -1729,20 +1729,20 @@ elif tab == t("Whiteboard Explainer"): # New tab for Whiteboard Explainer # Corr
     col1_wb, col2_wb = st.columns([1,1]) # Renamed columns to avoid conflict
 
     with col1_wb:
-        generate_button_wb = st.button(t("Generate Whiteboard Video"), disabled=st.session_state['wb_processing'] or (not script_text and not uploaded_images_wb), key="generate_wb_button") # Corrected t(...) syntax
+        generate_button_wb = st.button(("Generate Whiteboard Video"), disabled=st.session_state['wb_processing'] or (not script_text and not uploaded_images_wb), key="generate_wb_button") # Corrected t(...) syntax
 
     with col2_wb:
-        play_button_wb = st.button(t("Play Video"), disabled=st.session_state['wb_video_playing'] or st.session_state['wb_processing'] or not st.session_state['wb_frames'], key="play_wb_button") # Corrected t(...) syntax
+        play_button_wb = st.button(("Play Video"), disabled=st.session_state['wb_video_playing'] or st.session_state['wb_processing'] or not st.session_state['wb_frames'], key="play_wb_button") # Corrected t(...) syntax
 
     if generate_button_wb:
         if not script_text and not uploaded_images_wb:
-            st.session_state['wb_message'] = t("Please provide either text or images to generate a video.") # Corrected t(...) syntax
+            st.session_state['wb_message'] = ("Please provide either text or images to generate a video.") # Corrected t(...) syntax
         else:
             st.session_state['wb_processing'] = True
             st.session_state['wb_video_playing'] = False # Stop any ongoing playback
             st.session_state['wb_frames'] = []
             st.session_state['wb_generated_audio_path'] = None
-            st.session_state['wb_message'] = t("Preparing video content... This may take a moment.") # Corrected t(...) syntax
+            st.session_state['wb_message'] = ("Preparing video content... This may take a moment.") # Corrected t(...) syntax
             # st.rerun() # Rerun will be handled by the processing logic below
 
     # This block executes only when processing is True, and reruns are triggered.
@@ -1751,7 +1751,7 @@ elif tab == t("Whiteboard Explainer"): # New tab for Whiteboard Explainer # Corr
         
         # Process script text
         if script_text:
-            st.session_state['wb_message'] = t("Processing script...") # Corrected t(...) syntax
+            st.session_state['wb_message'] = ("Processing script...") # Corrected t(...) syntax
             sentences = re.split(r'(?<=[.?!])\s+', script_text) # Use re.split for more robust sentence splitting
             sentences = [s.strip() for s in sentences if s.strip()] # Filter out empty strings
             # Estimate duration based on sentence length for rough synchronization
@@ -1761,26 +1761,25 @@ elif tab == t("Whiteboard Explainer"): # New tab for Whiteboard Explainer # Corr
         
         # Process images
         if uploaded_images_wb:
-            st.session_state['wb_message'] = t("Processing images for doodle effect...") # Corrected t(...) syntax
+            st.session_state['wb_message'] = ("Processing images for doodle effect...") # Corrected t(...) syntax
             for i, image_file in enumerate(uploaded_images_wb):
                 doodle_image_bytes = process_image_for_doodle(image_file)
                 if doodle_image_bytes:
                     # Add a 3 second delay for each image
                     new_frames.append({'type': 'image', 'content': doodle_image_bytes, 'duration': 3000}) 
                 else:
-                    st.session_state['wb_message'] = t("Skipping image {name} due to processing error.", name=image_file.name) # Fixed NameError
-                    
+                    st.session_state['wb_message'] = ("Skipping image {name} due to processing error.", name==image_file.name) # Corrected t(...) syntax
 
         st.session_state['wb_frames'] = new_frames
         
         # Generate audio for the full script
         if script_text:
-            st.session_state['wb_message'] = t("Generating audio for script...") # Corrected t(...) syntax
+            st.session_state['wb_message'] = ("Generating audio for script...") # Corrected t(...) syntax
             audio_path = generate_audio_from_text(script_text)
             st.session_state['wb_generated_audio_path'] = audio_path
         
         st.session_state['wb_processing'] = False
-        st.session_state['wb_message'] = t("Video content prepared. Click 'Play Video' to start.") # Corrected t(...) syntax
+        st.session_state['wb_message'] = ("Video content prepared. Click 'Play Video' to start.") # Corrected t(...) syntax
         st.rerun() # Rerun to update UI after processing is complete
 
     st.markdown(f"<p class='text-center text-sm font-medium text-gray-600'>{st.session_state['wb_message']}</p>", unsafe_allow_html=True)
@@ -1790,7 +1789,7 @@ elif tab == t("Whiteboard Explainer"): # New tab for Whiteboard Explainer # Corr
 
     if play_button_wb and st.session_state['wb_frames'] and not st.session_state['wb_processing']:
         st.session_state['wb_video_playing'] = True
-        st.session_state['wb_message'] = t("Playing video...") # Corrected t(...) syntax
+        st.session_state['wb_message'] = ("Playing video...") # Corrected t(...) syntax
         
         # Play audio if available
         if st.session_state['wb_generated_audio_path']:
@@ -1800,7 +1799,7 @@ elif tab == t("Whiteboard Explainer"): # New tab for Whiteboard Explainer # Corr
                 st.audio(audio_bytes, format='audio/mp3', start_time=0, key="wb_audio_player") # Added key
                 audio_file.close()
             except FileNotFoundError:
-                st.session_state['wb_message'] = t("Audio file not found. Please regenerate video.") # Corrected t(...) syntax
+                st.session_state['wb_message'] = ("Audio file not found. Please regenerate video.") # Corrected t(...) syntax
                 st.session_state['wb_video_playing'] = False
                 st.rerun()
                 
@@ -1841,7 +1840,7 @@ elif tab == t("Whiteboard Explainer"): # New tab for Whiteboard Explainer # Corr
                 time.sleep(0.2) # Short pause between frames
         
         st.session_state['wb_video_playing'] = False
-        st.session_state['wb_message'] = t("Video playback complete!") # Corrected t(...) syntax
+        st.session_state['wb_message'] = ("Video playback complete!") # Corrected t(...) syntax
         # Clean up temporary audio file after playback
         if st.session_state['wb_generated_audio_path'] and os.path.exists(st.session_state['wb_generated_audio_path']):
             os.remove(st.session_state['wb_generated_audio_path'])
@@ -1849,12 +1848,12 @@ elif tab == t("Whiteboard Explainer"): # New tab for Whiteboard Explainer # Corr
         st.rerun() # Rerun to update button state and message
 
 
-elif tab == t("Learning Style Test"): # Corrected t(...) syntax
-    st.header("🧠 " + t("Learning Style Test")) # Corrected t(...) syntax
-    st.write(t("Answer the following questions to determine your learning style.")) # Corrected t(...) syntax
+elif tab == ("Learning Style Test"): # Corrected t(...) syntax
+    st.header("🧠 " + ("Learning Style Test")) # Corrected t(...) syntax
+    st.write(("Answer the following questions to determine your learning style.")) # Corrected t(...) syntax
     
     likert_labels = [
-        t("Strongly Disagree"), t("Disagree"), t("Somewhat Disagree"), t("Neutral"), t("Somewhat Agree"), t("Agree"), t("Strongly Agree")
+        ("Strongly Disagree"), ("Disagree"), ("Somewhat Disagree"), ("Neutral"), ("Somewhat Agree"), ("Agree"), ("Strongly Agree")
     ]
     # Re-define score_map here for the learning style test to be self-contained
     score_map = {
@@ -1863,52 +1862,52 @@ elif tab == t("Learning Style Test"): # Corrected t(...) syntax
 
     questions = {
         "Sensing/Intuitive": [
-            (t("I am more interested in what is actual than what is possible."), "Sensing"),
-            (t("I often focus on the big picture rather than the details."), "Intuitive"),
-            (t("I trust my gut feelings over concrete evidence."), "Intuitive"),
-            (t("I enjoy tasks that require attention to detail."), "Sensing"),
-            (t("I prefer practical solutions over theoretical ideas."), "Sensing"),
-            (t("I am drawn to abstract concepts and patterns."), "Intuitive"),
-            (t("I notice details that others might miss."), "Sensing"),
-            (t("I like to imagine possibilities and what could be."), "Intuitive"),
-            (t("I rely on past experiences to guide me."), "Sensing"),
-            (t("I am energized by exploring new ideas."), "Intuitive"),
+            (("I am more interested in what is actual than what is possible."), "Sensing"),
+            (("I often focus on the big picture rather than the details."), "Intuitive"),
+            (("I trust my gut feelings over concrete evidence."), "Intuitive"),
+            (("I enjoy tasks that require attention to detail."), "Sensing"),
+            (("I prefer practical solutions over theoretical ideas."), "Sensing"),
+            (("I am drawn to abstract concepts and patterns."), "Intuitive"),
+            (("I notice details that others might miss."), "Sensing"),
+            (("I like to imagine possibilities and what could be."), "Intuitive"),
+            (("I rely on past experiences to guide me."), "Sensing"),
+            (("I am energized by exploring new ideas."), "Intuitive"),
         ],
         "Visual/Verbal": [
-            (t("I remember best what I see (pictures, diagrams, charts)."), "Visual"),
-            (t("I find it easier to follow spoken instructions than written ones."), "Verbal"),
-            (t("I prefer to learn through images and spatial understanding."), "Visual"),
-            (t("I often take notes to help me remember."), "Verbal"),
-            (t("I visualize information in my mind."), "Visual"),
-            (t("I prefer reading to watching videos."), "Verbal"),
-            (t("I use color and layout to organize my notes."), "Visual"),
-            (t("I find it easier to express myself in writing."), "Verbal"),
-            (t("I am drawn to infographics and visual summaries."), "Visual"),
-            (t("I enjoy listening to lectures or podcasts."), "Verbal"),
+            (("I remember best what I see (pictures, diagrams, charts)."), "Visual"),
+            (("I find it easier to follow spoken instructions than written ones."), "Verbal"),
+            (("I prefer to learn through images and spatial understanding."), "Visual"),
+            (("I often take notes to help me remember."), "Verbal"),
+            (("I visualize information in my mind."), "Visual"),
+            (("I prefer reading to watching videos."), "Verbal"),
+            (("I use color and layout to organize my notes."), "Visual"),
+            (("I find it easier to express myself in writing."), "Verbal"),
+            (("I am drawn to infographics and visual summaries."), "Visual"),
+            (("I enjoy listening to lectures or podcasts."), "Verbal"),
         ],
         "Active/Reflective": [
-            (t("I learn best by doing and trying things out."), "Active"),
-            (t("I prefer to think things through before acting."), "Reflective"),
-            (t("I enjoy group work and discussions."), "Active"),
-            (t("I need time alone to process new information."), "Reflective"),
-            (t("I like to experiment and take risks in learning."), "Active"),
-            (t("I often review my notes quietly after class."), "Reflective"),
-            (t("I am energized by interacting with others."), "Active"),
-            (t("I prefer to observe before participating."), "Reflective"),
-            (t("I learn by teaching others or explaining concepts aloud."), "Active"),
-            (t("I keep a journal or log to reflect on my learning."), "Reflective"),
+            (("I learn best by doing and trying things out."), "Active"),
+            (("I prefer to think things through before acting."), "Reflective"),
+            (("I enjoy group work and discussions."), "Active"),
+            (("I need time alone to process new information."), "Reflective"),
+            (("I like to experiment and take risks in learning."), "Active"),
+            (("I often review my notes quietly after class."), "Reflective"),
+            (("I am energized by interacting with others."), "Active"),
+            (("I prefer to observe before participating."), "Reflective"),
+            (("I learn by teaching others or explaining concepts aloud."), "Active"),
+            (("I keep a journal or log to reflect on my learning."), "Reflective"),
         ],
         "Sequential/Global": [
-            (t("I learn best in a step-by-step, logical order."), "Sequential"),
-            (t("I like to see the big picture before the details."), "Global"),
-            (t("I prefer to follow clear, linear instructions."), "Sequential"),
-            (t("I often make connections between ideas in a holistic way."), "Global"),
-            (t("I am comfortable breaking tasks into smaller parts."), "Sequential"),
-            (t("I sometimes jump to conclusions without all the steps."), "Global"),
-            (t("I like outlines and structured notes."), "Sequential"),
-            (t("I understand concepts better when I see how they fit together."), "Global"),
-            (t("I prefer to finish one thing before starting another."), "Sequential"),
-            (t("I enjoy brainstorming and exploring many ideas at once."), "Global"),
+            (("I learn best in a step-by-step, logical order."), "Sequential"),
+            (("I like to see the big picture before the details."), "Global"),
+            (("I prefer to follow clear, linear instructions."), "Sequential"),
+            (("I often make connections between ideas in a holistic way."), "Global"),
+            (("I am comfortable breaking tasks into smaller parts."), "Sequential"),
+            (("I sometimes jump to conclusions without all the steps."), "Global"),
+            (("I like outlines and structured notes."), "Sequential"),
+            (("I understand concepts better when I see how they fit together."), "Global"),
+            (("I prefer to finish one thing before starting another."), "Sequential"),
+            (("I enjoy brainstorming and exploring many ideas at once."), "Global"),
         ],
     }
 
@@ -1925,7 +1924,7 @@ elif tab == t("Learning Style Test"): # Corrected t(...) syntax
                 key=key
             )
     
-    if st.button(t("Submit Learning Style Test")): # Corrected t(...) syntax
+    if st.button(("Submit Learning Style Test")): # Corrected t(...) syntax
         scores = {}
         for dichotomy, qs in questions.items():
             total = 0
@@ -1942,7 +1941,7 @@ elif tab == t("Learning Style Test"): # Corrected t(...) syntax
                 # score should lean towards Sensing (high score).
                 
                 # Determine which side of the dichotomy the current question's 'side' parameter refers to
-                dichotomy_sides = dichotomy.split("/")
+                dichotomy_sides = dichotomy.spli("/")
                 
                 if side == dichotomy_sides[0]: # If question aligns with the first part (e.g., Sensing for Sensing/Intuitive)
                     adjusted_score = score
@@ -1954,28 +1953,28 @@ elif tab == t("Learning Style Test"): # Corrected t(...) syntax
                 total += adjusted_score
             scores[dichotomy] = int(total / len(qs))
 
-        with show_lottie_loading(t("Saving your learning style and personalizing your experience...")): # Corrected t(...) syntax
-            save_learning_style(user.get("email", ""), scores) # Corrected from .ge to .get
+        with show_lottie_loading(("Saving your learning style and personalizing your experience...")): # Corrected t(...) syntax
+            save_learning_style(user.ge("email", ""), scores) # Corrected from .ge to .get
             st.session_state.learning_style_answers = {}
-        st.success(t("Learning style saved! Reloading...")) # Corrected t(...) syntax
+        st.success(("Learning style saved! Reloading...")) # Corrected t(...) syntax
         st.balloons()
         st.rerun()
 
-elif tab == t("Paper Solver/Exam Guide"): # Corrected t(...) syntax
-    st.header("📝 " + t("Paper Solver/Exam Guide")) # Corrected t(...) syntax
-    st.info(t("Upload your exam paper (PDF or image). The AI will extract questions and show you how to answer for full marks!")) # Corrected t(...) syntax
+elif tab == ("Paper Solver/Exam Guide"): # Corrected t(...) syntax
+    st.header("📝 " + ("Paper Solver/Exam Guide")) # Corrected t(...) syntax
+    st.info(("Upload your exam paper (PDF or image). The AI will extract questions and show you how to answer for full marks!")) # Corrected t(...) syntax
 
-    exam_paper_file = st.file_uploader(t("Upload Exam Paper (PDF/Image)"), type=["pdf", "jpg", "jpeg", "png"]) # Corrected t(...) syntax
+    exam_paper_file = st.file_uploader(("Upload Exam Paper (PDF/Image)"), type=["pdf", "jpg", "jpeg", "png"]) # Corrected t(...) syntax
 
     if exam_paper_file:
         raw_text = extract_text_from_file(exam_paper_file) # Use the correct extraction function
 
         if not raw_text.strip():
-            st.error(t("Could not extract text from the uploaded file. Please ensure it's a clear document or image.")) # Corrected t(...) syntax
+            st.error(("Could not extract text from the uploaded file. Please ensure it's a clear document or image.")) # Corrected t(...) syntax
             st.stop()
 
         # Step 1: Extract questions
-        with show_lottie_loading(t("Extracting questions from PDF..." if exam_paper_file.type == "application/pdf" else "Extracting questions from image...")): # Corrected t(...) syntax
+        with show_lottie_loading(("Extracting questions from PDF..." if exam_paper_file.type == "application/pdf" else "Extracting questions from image...")): # Corrected t(...) syntax
             question_extraction_prompt = (
                 "From the following exam paper text, extract each question. "
                 "List them numerically, starting with Q1., Q2., etc.\n\n"
@@ -1986,28 +1985,28 @@ elif tab == t("Paper Solver/Exam Guide"): # Corrected t(...) syntax
             # Parse extracted questions
             questions_list = re.findall(r'Q\d+\.\s*(.*)', extracted_questions_raw)
             if not questions_list:
-                st.warning(t("Could not extract any questions from the document. Please ensure the format is clear.")) # Corrected t(...) syntax
+                st.warning(("Could not extract any questions from the document. Please ensure the format is clear.")) # Corrected t(...) syntax
                 st.stop()
 
             st.session_state['extracted_questions'] = questions_list
-            st.subheader(t("Found {n} questions:", n=len(questions_list))) # Corrected t(...) syntax
+            st.subheader(("Found {n} questions:", n==len(questions_list))) # Corrected t(...) syntax
 
             # Step 2: Allow selection of questions
             selected_questions_indices = []
             if questions_list:
-                st.write(t("Select questions to solve (default: all)")) # Corrected t(...) syntax
+                st.write(("Select questions to solve (default: all)")) # Corrected t(...) syntax
                 for i, q in enumerate(questions_list):
                     if st.checkbox(f"Q{i+1}: {q}", value=True, key=f"q_checkbox_{i}"):
                         selected_questions_indices.append(i)
             
-            if st.button(t("Solve Selected Questions")): # Corrected t(...) syntax
+            if st.button(("Solve Selected Questions")): # Corrected t(...) syntax
                 if not selected_questions_indices:
-                    st.warning(t("Please select at least one question to solve.")) # Corrected t(...) syntax
+                    st.warning(("Please select at least one question to solve.")) # Corrected t(...) syntax
                 else:
-                    st.subheader(t("Model Answers & Exam Tips")) # Corrected t(...) syntax
+                    st.subheader(("Model Answers & Exam Tips")) # Corrected t(...) syntax
                     for i in selected_questions_indices:
                         question_text = questions_list[i]
-                        with show_lottie_loading(t("Solving Q{n}...", n=i+1)): # Corrected t(...) syntax
+                        with show_lottie_loading(("Solving Q{n}...", n==i+1)): # Corrected t(...) syntax
                             answer_prompt = (
                                 f"You are an expert examiner. Provide a comprehensive model answer for the following exam question "
                                 f"to achieve full marks. Also, include specific exam tips and common pitfalls to avoid for this type of question.\n\n"
@@ -2021,30 +2020,30 @@ elif tab == t("Paper Solver/Exam Guide"): # Corrected t(...) syntax
 
 elif tab == "⚡ 6-Hour Battle Plan":
     st.header("⚡ 6-Hour Battle Plan")
-    st.info(t("Upload your syllabus, guide books, and study materials. We'll create a focused 6-hour study plan using Vekkam's features to help you ace your exam!")) # Corrected t(...) syntax
+    st.info(("Upload your syllabus, guide books, and study materials. We'll create a focused 6-hour study plan using Vekkam's features to help you ace your exam!")) # Corrected t(...) syntax
 
     # File upload section
-    st.subheader("📚 " + t("Upload Your Materials")) # Corrected t(...) syntax
+    st.subheader("📚 " + ("Upload Your Materials")) # Corrected t(...) syntax
     uploaded_files = st.file_uploader(
-        t("Upload your syllabus, guide books, and study materials (PDF/Image/TXT)"), # Corrected t(...) syntax
+        ("Upload your syllabus, guide books, and study materials (PDF/Image/TXT)"), # Corrected t(...) syntax
         type=["pdf", "jpg", "jpeg", "png", "txt"],
         accept_multiple_files=True,
-        help=t("Upload all relevant study materials. The more you provide, the better the plan will be!") # Corrected t(...) syntax
+        help=("Upload all relevant study materials. The more you provide, the better the plan will be!") # Corrected t(...) syntax
     )
 
     # Additional information
-    st.subheader("📝 " + t("Additional Information")) # Corrected t(...) syntax
-    exam_date = st.date_input(t("When is your exam?"), help=t("This helps us prioritize topics")) # Corrected t(...) syntax
-    exam_duration = st.number_input(t("Exam duration (in hours)"), min_value=1, max_value=6, value=3, help=t("How long is your exam?")) # Corrected t(...) syntax
-    weak_topics = st.text_area(t("Topics you find challenging (optional)"), help=t("List topics you find difficult, separated by commas")) # Corrected t(...) syntax
-    strong_topics = st.text_area(t("Topics you're confident in (optional)"), help=t("List topics you're good at, separated by commas")) # Corrected t(...) syntax
+    st.subheader("📝 " + ("Additional Information")) # Corrected t(...) syntax
+    exam_date = st.date_input(("When is your exam?"), help=("This helps us prioritize topics")) # Corrected t(...) syntax
+    exam_duration = st.number_input(("Exam duration (in hours)"), min_value=1, max_value=6, value=3, help=("How long is your exam?")) # Corrected t(...) syntax
+    weak_topics = st.text_area(("Topics you find challenging (optional)"), help=("List topics you find difficult, separated by commas")) # Corrected t(...) syntax
+    strong_topics = st.text_area(("Topics you're confident in (optional)"), help=("List topics you're good at, separated by commas")) # Corrected t(...) syntax
 
-    if st.button(t("Generate Battle Plan")): # Corrected t(...) syntax
+    if st.button(("Generate Battle Plan")): # Corrected t(...) syntax
         if not uploaded_files:
-            st.warning(t("Please upload at least one study material.")) # Corrected t(...) syntax
+            st.warning(("Please upload at least one study material.")) # Corrected t(...) syntax
             st.stop()
 
-        with show_lottie_loading(t("Analyzing your materials and creating a battle plan...")): # Corrected t(...) syntax
+        with show_lottie_loading(("Analyzing your materials and creating a battle plan...")): # Corrected t(...) syntax
             # Extract text from all files
             all_text = []
             for file in uploaded_files:
@@ -2101,12 +2100,12 @@ elif tab == "⚡ 6-Hour Battle Plan":
             battle_plan = call_gemini(battle_plan_prompt)
 
             # Display the battle plan in a structured way
-            st.markdown("## 📋 " + t("Your 6-Hour Battle Plan")) # Corrected t(...) syntax
+            st.markdown("## 📋 " + ("Your 6-Hour Battle Plan")) # Corrected t(...) syntax
             st.markdown(battle_plan)
 
             # Generate topic-specific resources
             st.markdown("---")
-            st.markdown("## 📚 " + t("Topic-Specific Resources")) # Corrected t(...) syntax
+            st.markdown("## 📚 " + ("Topic-Specific Resources")) # Corrected t(...) syntax
             resources_prompt = (
                 f"Based on the content analysis and battle plan, create a list of resources for each topic:\n"
                 f"1. Key formulas to memorize\n"
@@ -2121,7 +2120,7 @@ elif tab == "⚡ 6-Hour Battle Plan":
 
             # Generate a quick reference guide
             st.markdown("---")
-            st.markdown("## 📝 " + t("Quick Reference Guide")) # Corrected t(...) syntax
+            st.markdown("## 📝 " + ("Quick Reference Guide")) # Corrected t(...) syntax
             reference_prompt = (
                 f"Create a quick reference guide that includes:\n"
                 f"1. All key formulas and concepts\n"
@@ -2136,7 +2135,7 @@ elif tab == "⚡ 6-Hour Battle Plan":
 
             # Add a section for mental preparation
             st.markdown("---")
-            st.markdown("## 🧠 " + t("Mental Preparation")) # Corrected t(...) syntax
+            st.markdown("## 🧠 " + ("Mental Preparation")) # Corrected t(...) syntax
             mental_prompt = (
                 f"Provide advice on:\n"
                 f"1. How to stay calm during the exam\n"
@@ -2150,13 +2149,13 @@ elif tab == "⚡ 6-Hour Battle Plan":
 
             # Add export options
             st.markdown("---")
-            st.markdown("## 📤 " + t("Export Options")) # Corrected t(...) syntax
+            st.markdown("## 📤 " + ("Export Options")) # Corrected t(...) syntax
             col1, col2 = st.columns(2)
             with col1:
-                st.info(t("Battle plan is ready. You can copy it manually if needed.")) # Corrected t(...) syntax
+                st.info(("Battle plan is ready. You can copy it manually if needed.")) # Corrected t(...) syntax
             
             with col2:
-                if st.button(t("Add to Calendar")): # Corrected t(...) syntax
+                if st.button(("Add to Calendar")): # Corrected t(...) syntax
                     # Create calendar event for study session
                     event_title = "6-Hour Study Battle Plan"
                     event_desc = f"""
@@ -2170,22 +2169,22 @@ elif tab == "⚡ 6-Hour Battle Plan":
                         "date": exam_date.strftime("%Y-%m-%d"),
                         "description": event_title
                     })
-                    st.success(t("Added to your calendar!")) # Corrected t(...) syntax
+                    st.success(("Added to your calendar!")) # Corrected t(...) syntax
 
 elif tab == "🎯 Discipline Hub": # Corrected from elif to if
-    st.header("🎯 " + t("Discipline Hub")) # Corrected t(...) syntax
-    st.info(t("Build strong study habits and stay accountable with our discipline features!")) # Corrected t(...) syntax
+    st.header("🎯 " + ("Discipline Hub")) # Corrected t(...) syntax
+    st.info(("Build strong study habits and stay accountable with our discipline features!")) # Corrected t(...) syntax
 
     # Create tabs for different discipline features
     discipline_tabs = st.tabs([
-        "📊 " + t("Study Streak"), # Corrected t(...) syntax
-        "👥 " + t("Accountability"), # Corrected t(...) syntax
-        "⏱️ " + t("Focus Mode"), # Corrected t(...) syntax
-        "📅 " + t("Smart Schedule"), # Corrected t(...) syntax
-        "📈 " + t("Study Analytics"), # Corrected t(...) syntax
-        "🏆 " + t("Rewards"), # Corrected t(...) syntax
-        "🎯 " + t("Study Environment"), # Corrected t(...) syntax
-        "🚫 " + t("Distraction Blocker") # Corrected t(...) syntax
+        "📊 " + ("Study Streak"), # Corrected t(...) syntax
+        "👥 " + ("Accountability"), # Corrected t(...) syntax
+        "⏱️ " + ("Focus Mode"), # Corrected t(...) syntax
+        "📅 " + ("Smart Schedule"), # Corrected t(...) syntax
+        "📈 " + ("Study Analytics"), # Corrected t(...) syntax
+        "🏆 " + ("Rewards"), # Corrected t(...) syntax
+        "🎯 " + ("Study Environment"), # Corrected t(...) syntax
+        "🚫 " + ("Distraction Blocker") # Corrected t(...) syntax
     ])
     
     # --- Helper Functions ---
@@ -2196,7 +2195,7 @@ elif tab == "🎯 Discipline Hub": # Corrected from elif to if
         # For a web environment like Streamlit Cloud, direct VLC playback
         # on the server-side might not be the ideal approach.
         # Consider client-side audio playback or embedding if this causes issues.
-        st.warning(t("Playing ambient sounds with VLC might not work as expected in all deployment environments (e.g., Streamlit Cloud) as it requires VLC to be installed on the server.")) # Corrected t(...) syntax
+        st.warning(("Playing ambient sounds with VLC might not work as expected in all deployment environments (e.g., Streamlit Cloud) as it requires VLC to be installed on the server.")) # Corrected t(...) syntax
         if os.path.exists(file_path):
             # This would typically run on the server.
             # For client-side audio in Streamlit, you'd usually use st.audio
@@ -2205,15 +2204,15 @@ elif tab == "🎯 Discipline Hub": # Corrected from elif to if
                 # Placeholder for direct server-side VLC command if available
                 # import subprocess
                 # subprocess.Popen(["vlc", "--play-and-exit", file_path])
-                st.info(t("Attempting to play sound: {file_path}. (Requires VLC on server)", file_path=file_path)) # Corrected t(...) syntax
+                st.info(("Attempting to play sound: {file_path}. (Requires VLC on server)", file_path==file_path)) # Corrected t(...) syntax
             except Exception as e:
-                st.error(t("Failed to play sound: {e}. VLC might not be installed or configured.", e=e)) # Corrected t(...) syntax
+                st.error(("Failed to play sound: {e}. VLC might not be installed or configured.", e==e)) # Corrected t(...) syntax
             
             # Alternative: If you want client-side sound, you'd need to serve the sound file
             # or use a base64 encoding with st.audio
             # For now, keeping it as is based on original structure.
         else:
-            st.error(t("Sound file not found. Make sure 'sounds' directory exists with MP3s.")) # Corrected t(...) syntax
+            st.error(("Sound file not found. Make sure 'sounds' directory exists with MP3s.")) # Corrected t(...) syntax
             return None
 
     # --- Update Study Streak Feature ---
@@ -2270,50 +2269,50 @@ elif tab == "🎯 Discipline Hub": # Corrected from elif to if
     }
 
     with discipline_tabs[6]:  # Study Environment
-        st.subheader("🎯 " + t("Study Environment")) # Corrected t(...) syntax
+        st.subheader("🎯 " + ("Study Environment")) # Corrected t(...) syntax
 
         # Ambient sounds
-        st.write("### 🎵 " + t("Ambient Sounds")) # Corrected t(...) syntax
-        selected_sound = st.selectbox(t("Choose ambient sound"), list(SOUND_FILES.keys())) # Corrected t(...) syntax
-        if st.button(t("Play Sound")): # Corrected t(...) syntax
+        st.write("### 🎵 " + ("Ambient Sounds")) # Corrected t(...) syntax
+        selected_sound = st.selectbox(("Choose ambient sound"), list(SOUND_FILES.keys())) # Corrected t(...) syntax
+        if st.button(("Play Sound")): # Corrected t(...) syntax
             file_path = SOUND_FILES.get(selected_sound)
             if file_path:
                 play_sound(file_path)
 
     with discipline_tabs[0]:  # Study Streak
-        st.subheader("📊 " + t("Study Streak")) # Corrected t(...) syntax
+        st.subheader("📊 " + ("Study Streak")) # Corrected t(...) syntax
         col1, col2, col3 = st.columns(3)
         with col1:
-            st.metric(t("Current Streak"), f"{st.session_state.study_streak['current_streak']} days") # Corrected t(...) syntax
+            st.metric(("Current Streak"), f"{st.session_state.study_streak['current_streak']} days") # Corrected t(...) syntax
         with col2:
-            st.metric(t("Longest Streak"), f"{st.session_state.study_streak['longest_streak']} days") # Corrected t(...) syntax
+            st.metric(("Longest Streak"), f"{st.session_state.study_streak['longest_streak']} days") # Corrected t(...) syntax
         with col3:
-            st.metric(t("Total Study Time"), f"{st.session_state.study_streak['total_study_time']} hours") # Corrected t(...) syntax
+            st.metric(("Total Study Time"), f"{st.session_state.study_streak['total_study_time']} hours") # Corrected t(...) syntax
 
-        if st.button(t("Save Streak Data")): # Corrected t(...) syntax
+        if st.button(("Save Streak Data")): # Corrected t(...) syntax
             save_streak_data()
-            st.success(t("Streak data saved!")) # Corrected t(...) syntax
+            st.success(("Streak data saved!")) # Corrected t(...) syntax
 
     with discipline_tabs[4]:  # Study Analytics
-        st.subheader("📈 " + t("Study Analytics")) # Corrected t(...) syntax
-        if st.button(t("Save Analytics Data")): # Corrected t(...) syntax
+        st.subheader("📈 " + ("Study Analytics")) # Corrected t(...) syntax
+        if st.button(("Save Analytics Data")): # Corrected t(...) syntax
             save_analytics_data()
-            st.success(t("Analytics data saved!")) # Corrected t(...) syntax
+            st.success(("Analytics data saved!")) # Corrected t(...) syntax
 
 # --- Footer: Product Hunt Upvote Button & Live Stats ---
 ph_stats = get_ph_stats()
 
 # Keep only this section in the sidebar:
 st.sidebar.markdown("---")
-st.sidebar.markdown("### 🚀 " + t("Support Vekkam")) # Corrected t(...) syntax
+st.sidebar.markdown("### 🚀 " + ("Support Vekkam")) # Corrected t(...) syntax
 st.sidebar.markdown(
     f'''
     <div style="text-align:center;">
         <a href="https://www.producthunt.com/products/vekkam" target="_blank" id="ph-upvote-link">
-            <img src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=456789&theme=light" alt="{t("Upvote Vekkam on Product Hunt")}" style="width: 150px; margin-bottom: 8px;"/>
+            <img src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=456789&theme=light" alt="{("Upvote Vekkam on Product Hunt")}" style="width: 150px; margin-bottom: 8px;"/>
         </a><br>
-        <span style="font-size:1em; font-weight:bold; color:#da552f;">🔥 {ph_stats['votes']} {t("upvotes")}</span><br>
-        <a href="https://www.producthunt.com/products/vekkam" target="_blank" style="font-size:0.9em; font-weight:bold; color:#da552f; text-decoration:none;">👉 {t("Upvote & Comment!")}</a>
+        <span style="font-size:1em; font-weight:bold; color:#da552f;">🔥 {ph_stats['votes']} {("upvotes")}</span><br>
+        <a href="https://www.producthunt.com/products/vekkam" target="_blank" style="font-size:0.9em; font-weight:bold; color:#da552f; text-decoration:none;">👉 {("Upvote & Comment!")}</a>
     </div>
     ''', unsafe_allow_html=True
 )
@@ -2322,15 +2321,15 @@ st.sidebar.markdown(
 if 'ph_upvoted' not in st.session_state:
     st.session_state['ph_upvoted'] = False
 if not st.session_state['ph_upvoted']:
-    if st.sidebar.button("👍 " + t("I upvoted Vekkam!")): # Corrected t(...) syntax
+    if st.sidebar.button("👍 " + ("I upvoted Vekkam!")): # Corrected t(...) syntax
         st.session_state['ph_upvoted'] = True
-        st.sidebar.success(t("Thank you for supporting us! 🎉")) # Corrected t(...) syntax
+        st.sidebar.success(("Thank you for supporting us! 🎉")) # Corrected t(...) syntax
 else:
-    st.sidebar.info(t("Thanks for your upvote! 🧡")) # Corrected t(...) syntax
+    st.sidebar.info(("Thanks for your upvote! 🧡")) # Corrected t(...) syntax
 
 # Add recent comments to sidebar if available
 if ph_stats['comments']:
-    st.sidebar.markdown("### 💬 " + t("Recent Comments")) # Corrected t(...) syntax
+    st.sidebar.markdown("### 💬 " + ("Recent Comments")) # Corrected t(...) syntax
     for c in ph_stats['comments']:
         st.sidebar.markdown(
             f'<div style="margin-bottom:0.5em; font-size:0.9em;"><img src="{c["avatar"]}" width="24" style="vertical-align:middle;border-radius:50%;margin-right:4px;"/> <b>{c["user"]}</b><br><span style="font-size:0.85em;">{c["body"]}</span></div>',
