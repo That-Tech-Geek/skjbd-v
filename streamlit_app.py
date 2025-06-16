@@ -1422,7 +1422,7 @@ elif tab == t("Whiteboard Explainer"): # New tab for Whiteboard Explainer
 
     uploaded_images_wb = st.file_uploader( # Renamed variable to avoid conflict
         t("Upload images for your explainer (optional):"),
-        type=["png", "jpg", "jpeg"],
+        type=["png", "jpg", "jpeg", "pdf"],
         accept_multiple_files=True,
         key="wb_image_uploader" # Added key for uniqueness
     )
