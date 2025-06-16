@@ -2,7 +2,7 @@ import streamlit as st
 import requests
 import tempfile
 from urllib.parse import urlencode
-from PyPDF2 import PdfReader
+# from PyPDF2 import PdfReader # Removed: Consolidating PDF handling to fitz
 from io import StringIO
 from PIL import Image, ImageFilter, ImageOps
 import pytesseract
@@ -18,7 +18,7 @@ import contextlib
 import csv
 from fpdf import FPDF
 import webbrowser
-import fitz
+import fitz # Retained: Primary PDF handling library
 import docx
 from pptx import Presentation
 import streamlit.components.v1 as components
@@ -656,7 +656,7 @@ def ensure_logged_in():
                 "description": "Study on any device, anytime, with seamless synchronization"
             },
             {
-                "icon": "🌐",
+                "icon": "�",
                 "title": "Multi-Language Support",
                 "description": "Learn in your preferred language with accurate translations"
             },
@@ -861,15 +861,15 @@ if st.sidebar.button(("Logout")):
 def extract_pages_from_url(pdf_url):
     with show_lottie_loading(("Extracting PDF from URL...")):
         r = requests.get(pdf_url)
-        tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
-        tmp.write(r.content); tmp.flush()
-        reader = PdfReader(tmp.name)
-        return {i+1: reader.pages[i].extract_text() for i in range(len(reader.pages))}
+        # Use fitz for URL PDF handling
+        with fitz.open(stream=r.content, filetype="pdf") as doc:
+            return {i+1: doc[i].get_text() for i in range(len(doc))}
 
 def extract_pages_from_file(file):
     with show_lottie_loading(("Extracting PDF from file...")):
-        reader = PdfReader(file)
-        return {i+1: reader.pages[i].extract_text() for i in range(len(reader.pages))}
+        # Use fitz for uploaded file PDF handling
+        with fitz.open(stream=file.read(), filetype="pdf") as doc:
+            return {i+1: doc[i].get_text() for i in range(len(doc))}
 
 # The original extract_text function, now properly named to avoid conflict with the one above
 def extract_text_from_uploaded_file(file): 
@@ -892,7 +892,7 @@ def fetch_pdf_url(title, author, edition):
 
 def find_concept_pages(pages, concept):
     cl = concept.lower()
-    return {p: t for p, p, t in pages.items() if cl in (t or "").lower()}
+    return {p: t for p, t in pages.items() if cl in (t or "").lower()}
 
 def ask_concept(pages, concept):
     found = find_concept_pages(pages, concept)
@@ -1329,8 +1329,9 @@ elif tab == t("Document Q&A"):
             ext = uploaded.name.lower().split('.')[-1]
             if ext == "pdf":
                 with show_lottie_loading(("Extracting PDF from file...")):
-                    reader = PdfReader(uploaded)
-                    text = "\n".join([page.extract_text() for page in reader.pages])
+                    # Using fitz directly
+                    with fitz.open(stream=uploaded.read(), filetype="pdf") as doc:
+                        text = "\n".join([page.get_text() for page in doc])
             elif ext in ("jpg", "jpeg", "png"):
                 with show_lottie_loading(("Extracting text from image...")):
                     text = pytesseract.image_to_string(Image.open(uploaded))
@@ -1405,10 +1406,20 @@ elif tab == t("Document Q&A"):
         # --- Batch Export ---
         if all_flashcards:
             st.info("Export all generated flashcards as an Anki-compatible CSV file.")
-            if st.button("Export All Flashcards to Anki CSV"):
-                fname = export_flashcards_to_anki(all_flashcards)
-                st.success(f"Flashcards exported: {fname}")
-                st.toast("Flashcards exported!")
+            # Dummy function for export_flashcards_to_anki - implement if needed
+            def export_flashcards_to_anki(flashcards_data):
+                csv_file = io.StringIO()
+                writer = csv.writer(csv_file)
+                for q, a in flashcards_data:
+                    writer.writerow([q, a])
+                csv_file.seek(0)
+                return csv_file.getvalue()
+
+            fname = export_flashcards_to_anki(all_flashcards)
+            st.download_button("Download Anki CSV", data=fname, file_name="flashcards.csv", mime="text/csv")
+            st.success(f"Flashcards exported to Anki CSV!")
+            st.toast("Flashcards exported!")
+
 
 elif tab == t("Whiteboard Explainer"): # New tab for Whiteboard Explainer
     st.header("✨ " + t("Whiteboard Explainer"))
@@ -1422,7 +1433,7 @@ elif tab == t("Whiteboard Explainer"): # New tab for Whiteboard Explainer
 
     uploaded_images_wb = st.file_uploader( # Renamed variable to avoid conflict
         t("Upload images for your explainer (optional):"),
-        type=["png", "jpg", "jpeg", "pdf"],
+        type=["png", "jpg", "jpeg"],
         accept_multiple_files=True,
         key="wb_image_uploader" # Added key for uniqueness
     )
@@ -1690,7 +1701,7 @@ elif tab == t("Paper Solver/Exam Guide"):
                 st.stop()
 
             st.session_state['extracted_questions'] = questions_list
-            st.subheader(("Found {n} questions:", n == len(questions_list)))
+            st.subheader(("Found {n} questions:", n=len(questions_list)))
 
             # Step 2: Allow selection of questions
             selected_questions_indices = []
@@ -1706,8 +1717,8 @@ elif tab == t("Paper Solver/Exam Guide"):
                 else:
                     st.subheader(("Model Answers & Exam Tips"))
                     for i in selected_questions_indices:
-                        question_text == questions_list[i]
-                        with show_lottie_loading(("Solving Q{n}...", n==i+1)):
+                        question_text = questions_list[i]
+                        with show_lottie_loading(("Solving Q{n}...", n=i+1)):
                             answer_prompt = (
                                 f"You are an expert examiner. Provide a comprehensive model answer for the following exam question "
                                 f"to achieve full marks. Also, include specific exam tips and common pitfalls to avoid for this type of question.\n\n"
