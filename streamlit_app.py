@@ -1690,7 +1690,7 @@ elif tab == t("Paper Solver/Exam Guide"):
                 st.stop()
 
             st.session_state['extracted_questions'] = questions_list
-            st.subheader(("Found {n} questions:", n = len(questions_list)))
+            st.subheader(("Found {n} questions:", n == len(questions_list)))
 
             # Step 2: Allow selection of questions
             selected_questions_indices = []
