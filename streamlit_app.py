@@ -1701,7 +1701,7 @@ elif tab == t("Paper Solver/Exam Guide"):
                 st.stop()
 
             st.session_state['extracted_questions'] = questions_list
-            st.subheader(("Found {n} questions:", n=len(questions_list)))
+            st.subheader(("Found {n} questions:", n==len(questions_list)))
 
             # Step 2: Allow selection of questions
             selected_questions_indices = []
@@ -1718,7 +1718,7 @@ elif tab == t("Paper Solver/Exam Guide"):
                     st.subheader(("Model Answers & Exam Tips"))
                     for i in selected_questions_indices:
                         question_text = questions_list[i]
-                        with show_lottie_loading(("Solving Q{n}...", n=i+1)):
+                        with show_lottie_loading(("Solving Q{n}...", n==i+1)):
                             answer_prompt = (
                                 f"You are an expert examiner. Provide a comprehensive model answer for the following exam question "
                                 f"to achieve full marks. Also, include specific exam tips and common pitfalls to avoid for this type of question.\n\n"
