@@ -70,7 +70,7 @@ def call_gemini(prompt, temperature=0.7, max_tokens=2048):
     prompt = f"Please answer in {lang_name}.\n" + prompt
     
     # Ensure GEMINI_API_KEY is properly loaded from secrets
-    GEMINI_API_KEY = st.secrets.ge("gemini", {}).ge("api_key", "")
+    GEMINI_API_KEY = st.secrets[gemini][api_key]
 
     if not GEMINI_API_KEY:
         st.write("There is an error, we've notified the support team.")
@@ -186,19 +186,19 @@ def show_lottie_loading(message="Loading..."):
         
 
 # --- Configuration from st.secrets ---
-raw_uri       = st.secrets.ge("google", {}).ge("redirect_uri", "")
+    raw_uri       = st.secrets[google][redirect_uri]
 REDIRECT_URI  = raw_uri.rstrip("/") + "/" if raw_uri else ""
-CLIENT_ID     = st.secrets.ge("google", {}).ge("client_id", "")
-CLIENT_SECRET = st.secrets.ge("google", {}).ge("client_secret", "")
+CLIENT_ID     = st.secrets[google][client_id]
+CLIENT_SECRET = st.secrets[google][client_secret]
 SCOPES        = ["openid", "email", "profile"]
 # GEMINI_API_KEY is now loaded directly in call_gemini for robustness
-CSE_API_KEY    = st.secrets.ge("google_search", {}).ge("api_key", "")
-CSE_ID         = st.secrets.ge("google_search", {}).ge("cse_id", "")
+CSE_API_KEY    = st.secrets[google_search][api_key]
+CSE_ID         = st.secrets[google_search][cse_id]
 CACHE_TTL      = 3600
 
 # --- Product Hunt API Integration (Moved to top) ---
-PRODUCT_HUNT_TOKEN = st.secrets.ge("producthunt", {}).ge("api_token", "")
-PRODUCT_HUNT_ID = st.secrets.ge("producthunt", {}).ge("product_id", "")  # e.g., "vekkam"
+PRODUCT_HUNT_TOKEN = st.secrets[producthunt][api_key]
+PRODUCT_HUNT_ID = st.secrets[producthunt][ID]
 
 @st.cache_data(ttl=300)
 def get_ph_stats():
