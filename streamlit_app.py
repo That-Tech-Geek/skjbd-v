@@ -1768,7 +1768,7 @@ elif tab == ("Whiteboard Explainer"): # New tab for Whiteboard Explainer
                     # Add a 3 second delay for each image
                     new_frames.append({'type': 'image', 'content': doodle_image_bytes, 'duration': 3000}) 
                 else:
-                    st.session_state['wb_message'] = ("Skipping image {name} due to processing error.", name=image_file.name)
+                    st.session_state['wb_message'] = ("Skipping image {name} due to processing error.", name==image_file.name)
 
         st.session_state['wb_frames'] = new_frames
         
