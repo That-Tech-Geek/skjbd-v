@@ -1227,7 +1227,7 @@ ui_translations = {
         "I prefer practical solutions over theoretical ideas.": "I prefer practical solutions over theoretical ideas.",
         "I am drawn to abstract concepts and patterns.": "I am drawn to abstract concepts and patterns.",
         "I notice details that others might miss.": "I notice details that others might miss.",
-        "I like to imagine possibilities and what could be.", "I like to imagine possibilities and what could be.",
+        "I like to imagine possibilities and what could be.": "I like to imagine possibilities and what could be.",
         "I rely on past experiences to guide me.": "I rely on past experiences to guide me.",
         "I am energized by exploring new ideas.": "I am energized by exploring new ideas.",
         "I remember best what I see (pictures, diagrams, charts).": "I remember best what I see (pictures, diagrams, charts).",
