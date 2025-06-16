@@ -15,10 +15,12 @@ networkx
 gtts
 fpdf
 genanki
+opencv-python
 scikit-learn
 pandas
 SpeechRecognition
 deep-translator
+python-vlc
 youtube-transcript-api
 reportlab
 streamlit-authenticator
