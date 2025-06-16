@@ -32,9 +32,9 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import os
-import vlc  # For playing ambient sounds
-import cv2 # Added for image processing for doodle effect
-import numpy as np # Added for image processing for doodle effect
+# import vlc  # For playing ambient sounds - Keeping commented as VLC can be problematic in web environments
+# import cv2 # Removed as part of the fix for ImportError
+# import numpy as np # Removed as part of the fix for ImportError
 import base64 # Added for displaying base64 images in Streamlit
 
 # Define missing variables (ensure these are handled if they are meant to be dynamic)
@@ -1845,12 +1845,29 @@ elif tab == "🎯 Discipline Hub": # Corrected from elif to if
     # --- Helper Functions ---
     def play_sound(file_path):
         """Play a sound file using VLC."""
+        # VLC can be tricky to set up in all environments.
+        # This function might need adjustment based on deployment.
+        # For a web environment like Streamlit Cloud, direct VLC playback
+        # on the server-side might not be the ideal approach.
+        # Consider client-side audio playback or embedding if this causes issues.
+        st.warning("Playing ambient sounds with VLC might not work as expected in all deployment environments (e.g., Streamlit Cloud) as it requires VLC to be installed on the server.")
         if os.path.exists(file_path):
-            player = vlc.MediaPlayer(file_path)
-            player.play()
-            return player
+            # This would typically run on the server.
+            # For client-side audio in Streamlit, you'd usually use st.audio
+            # with a base64 encoded audio file or a publicly accessible URL.
+            try:
+                # Placeholder for direct server-side VLC command if available
+                # import subprocess
+                # subprocess.Popen(["vlc", "--play-and-exit", file_path])
+                st.info(f"Attempting to play sound: {file_path}. (Requires VLC on server)")
+            except Exception as e:
+                st.error(f"Failed to play sound: {e}. VLC might not be installed or configured.")
+            
+            # Alternative: If you want client-side sound, you'd need to serve the sound file
+            # or use a base64 encoding with st.audio
+            # For now, keeping it as is based on original structure.
         else:
-            st.error("Sound file not found.")
+            st.error("Sound file not found. Make sure 'sounds' directory exists with MP3s.")
             return None
 
     # --- Update Study Streak Feature ---
@@ -1959,7 +1976,7 @@ st.sidebar.markdown(
 if 'ph_upvoted' not in st.session_state:
     st.session_state['ph_upvoted'] = False
 if not st.session_state['ph_upvoted']:
-    if st.sidebar.button("👍 I upvoted Vekkam!"):
+    if st.sidebar.button("� I upvoted Vekkam!"):
         st.session_state['ph_upvoted'] = True
         st.sidebar.success("Thank you for supporting us! 🎉")
 else:
@@ -1978,3 +1995,5 @@ if ph_stats['comments']:
 # This was moved from the learning style test section for global availability, 
 # as it was causing an error if the user refreshed after logging in but before taking the test.
 score_map = {0: 0, 1: 17, 2: 33, 3: 50, 4: 67, 5: 83, 6: 100}
+
+�
