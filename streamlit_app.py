@@ -2204,7 +2204,7 @@ elif tab == "🎯 Discipline Hub": # Corrected from elif to if
                 # Placeholder for direct server-side VLC command if available
                 # import subprocess
                 # subprocess.Popen(["vlc", "--play-and-exit", file_path])
-                st.info(("Attempting to play sound: {file_path}. (Requires VLC on server)", file_path=file_path)) # Corrected t(...) syntax
+                st.info(("Attempting to play sound: {file_path}. (Requires VLC on server)", file_path==file_path)) # Corrected t(...) syntax
             except Exception as e:
                 st.error(("Failed to play sound: {e}. VLC might not be installed or configured.", e=e)) # Corrected t(...) syntax
             
