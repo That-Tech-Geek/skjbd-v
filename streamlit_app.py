@@ -1706,7 +1706,7 @@ elif tab == t("Paper Solver/Exam Guide"):
                 else:
                     st.subheader(("Model Answers & Exam Tips"))
                     for i in selected_questions_indices:
-                        question_text = questions_list[i]
+                        question_text == questions_list[i]
                         with show_lottie_loading(("Solving Q{n}...", n=i+1)):
                             answer_prompt = (
                                 f"You are an expert examiner. Provide a comprehensive model answer for the following exam question "
