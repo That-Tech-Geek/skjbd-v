@@ -807,7 +807,7 @@ if learning_style:
     for d in learning_style_description(learning_style):
         st.sidebar.info(d)
 
-if st.sidebar.button(t("Logout")):
+if st.sidebar.button("Logout"):
     st.session_state.clear()
     st.rerun() # Rerun to go back to login page
 
