@@ -1995,5 +1995,3 @@ if ph_stats['comments']:
 # This was moved from the learning style test section for global availability, 
 # as it was causing an error if the user refreshed after logging in but before taking the test.
 score_map = {0: 0, 1: 17, 2: 33, 3: 50, 4: 67, 5: 83, 6: 100}
-
-�
