@@ -892,7 +892,7 @@ def fetch_pdf_url(title, author, edition):
 
 def find_concept_pages(pages, concept):
     cl = concept.lower()
-    return {p: t for p p, t in pages.items() if cl in (t or "").lower()}
+    return {p: t for p, p, t in pages.items() if cl in (t or "").lower()}
 
 def ask_concept(pages, concept):
     found = find_concept_pages(pages, concept)
