@@ -87,7 +87,7 @@ def call_gemini(prompt, temperature=0.7, max_tokens=2048):
         "generationConfig": {"temperature": temperature, "maxOutputTokens": max_tokens}
     }
     try:
-        with show_lottie_loading(t("Thinking with Gemini AI...")):
+        with show_lottie_loading(("Thinking with Gemini AI...")):
             response = requests.post(url, json=payload)
             response.raise_for_status()
             data = response.json()
@@ -810,7 +810,7 @@ if learning_style is None:
                     score = score_map[6 - idx] # score_map needs to be defined
                 total += score
             scores[dichotomy] = int(total / len(qs))
-        with show_lottie_loading(t("Saving your learning style and personalizing your experience...")):
+        with show_lottie_loading(("Saving your learning style and personalizing your experience...")):
             save_learning_style(user.get("email", ""), scores)
             st.session_state.learning_style_answers = {}
         st.success("Learning style saved! Reloading...")
@@ -847,19 +847,19 @@ def learning_style_description(scores):
 
 if learning_style:
     st.sidebar.markdown("---")
-    st.sidebar.subheader(t("Personalized for you"))
+    st.sidebar.subheader(("Personalized for you"))
     st.sidebar.write({k: f"{v}/100" for k, v in learning_style.items()})
     for d in learning_style_description(learning_style):
         st.sidebar.info(d)
 
-if st.sidebar.button(t("Logout")):
+if st.sidebar.button(("Logout")):
     st.session_state.clear()
     st.rerun() # Rerun to go back to login page
 
 
 # --- PDF/Text Extraction ---
 def extract_pages_from_url(pdf_url):
-    with show_lottie_loading(t("Extracting PDF from URL...")):
+    with show_lottie_loading(("Extracting PDF from URL...")):
         r = requests.get(pdf_url)
         tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
         tmp.write(r.content); tmp.flush()
@@ -867,7 +867,7 @@ def extract_pages_from_url(pdf_url):
         return {i+1: reader.pages[i].extract_text() for i in range(len(reader.pages))}
 
 def extract_pages_from_file(file):
-    with show_lottie_loading(t("Extracting PDF from file...")):
+    with show_lottie_loading(("Extracting PDF from file...")):
         reader = PdfReader(file)
         return {i+1: reader.pages[i].extract_text() for i in range(len(reader.pages))}
 
@@ -877,16 +877,16 @@ def extract_text_from_uploaded_file(file):
     if ext == "pdf":
         return "\n".join(extract_pages_from_file(file).values())
     if ext in ("jpg","jpeg","png"):
-        with show_lottie_loading(t("Extracting text from image...")):
+        with show_lottie_loading(("Extracting text from image...")):
             return pytesseract.image_to_string(Image.open(file))
-    with show_lottie_loading(t("Extracting text from file...")):
+    with show_lottie_loading(("Extracting text from file...")):
         return StringIO(file.getvalue().decode()).read()
 
 # --- Guide Book Search & Concept Q&A ---
 def fetch_pdf_url(title, author, edition):
     q = " ".join(filter(None, [title, author, edition]))
     params = {"key": CSE_API_KEY, "cx": CSE_ID, "q": q, "fileType": "pdf", "num": 1}
-    with show_lottie_loading(t("Searching for PDF guide book...")):
+    with show_lottie_loading(("Searching for PDF guide book...")):
         items = requests.get("https://www.googleapis.com/customsearch/v1", params=params).json().get("items", [])
     return items[0]["link"] if items else None
 
@@ -1170,7 +1170,7 @@ with st.sidebar.expander("❓ How to use this app", expanded=False):
 # --- Main UI ---
 # Added "Whiteboard Explainer" to the list of tabs
 quiz_tabs = [t("Guide Book Chat"), t("Document Q&A"), t("Whiteboard Explainer"), t("Learning Style Test"), t("Paper Solver/Exam Guide"), "⚡ 6-Hour Battle Plan", "🎯 Discipline Hub"]
-tab = st.sidebar.selectbox(t("Feature"), quiz_tabs)
+tab = st.sidebar.selectbox(("Feature"), quiz_tabs)
 
 # Add this after the existing imports
 def search_educational_resources(query, num_results=5):
@@ -1231,7 +1231,7 @@ if tab == t("Guide Book Chat"):
 
     # Process the question (either from text or image)
     if st.button("Get Answer"):
-        with show_lottie_loading(t("Analyzing your question...")):
+        with show_lottie_loading(("Analyzing your question...")):
             if uploaded_image:
                 # Extract text from image
                 image_text = pytesseract.image_to_string(Image.open(uploaded_image))
@@ -1245,7 +1245,7 @@ if tab == t("Guide Book Chat"):
                 st.stop()
 
             # Search for relevant resources
-            with show_lottie_loading(t("Searching for relevant resources...")):
+            with show_lottie_loading(("Searching for relevant resources...")):
                 search_results = search_educational_resources(question)
             
             # Generate a comprehensive answer
@@ -1328,14 +1328,14 @@ elif tab == t("Document Q&A"):
             # Extract text from file
             ext = uploaded.name.lower().split('.')[-1]
             if ext == "pdf":
-                with show_lottie_loading(t("Extracting PDF from file...")):
+                with show_lottie_loading(("Extracting PDF from file...")):
                     reader = PdfReader(uploaded)
                     text = "\n".join([page.extract_text() for page in reader.pages])
             elif ext in ("jpg", "jpeg", "png"):
-                with show_lottie_loading(t("Extracting text from image...")):
+                with show_lottie_loading(("Extracting text from image...")):
                     text = pytesseract.image_to_string(Image.open(uploaded))
             else:
-                with show_lottie_loading(t("Extracting text from file...")):
+                with show_lottie_loading(("Extracting text from file...")):
                     text = StringIO(uploaded.getvalue().decode()).read()
             texts.append(text)
             file_names.append(uploaded.name)
@@ -1412,7 +1412,7 @@ elif tab == t("Document Q&A"):
 
 elif tab == t("Whiteboard Explainer"): # New tab for Whiteboard Explainer
     st.header("✨ " + t("Whiteboard Explainer"))
-    st.info(t("Note: This application simulates the whiteboard video in your browser and does not generate an MP4 file."))
+    st.info(("Note: This application simulates the whiteboard video in your browser and does not generate an MP4 file."))
 
     script_text = st.text_area(
         t("Enter your script for the explainer video:"),
@@ -1430,10 +1430,10 @@ elif tab == t("Whiteboard Explainer"): # New tab for Whiteboard Explainer
     col1_wb, col2_wb = st.columns([1,1]) # Renamed columns to avoid conflict
 
     with col1_wb:
-        generate_button_wb = st.button(t("Generate Whiteboard Video"), disabled=st.session_state['wb_processing'] or (not script_text and not uploaded_images_wb), key="generate_wb_button") # Added key
+        generate_button_wb = st.button(("Generate Whiteboard Video"), disabled=st.session_state['wb_processing'] or (not script_text and not uploaded_images_wb), key="generate_wb_button") # Added key
 
     with col2_wb:
-        play_button_wb = st.button(t("Play Video"), disabled=st.session_state['wb_video_playing'] or st.session_state['wb_processing'] or not st.session_state['wb_frames'], key="play_wb_button") # Added key
+        play_button_wb = st.button(("Play Video"), disabled=st.session_state['wb_video_playing'] or st.session_state['wb_processing'] or not st.session_state['wb_frames'], key="play_wb_button") # Added key
 
     if generate_button_wb:
         if not script_text and not uploaded_images_wb:
@@ -1551,7 +1551,7 @@ elif tab == t("Whiteboard Explainer"): # New tab for Whiteboard Explainer
 
 elif tab == t("Learning Style Test"):
     st.header("🧠 " + t("Learning Style Test"))
-    st.write(t("Answer the following questions to determine your learning style."))
+    st.write(("Answer the following questions to determine your learning style."))
     
     likert_labels = [
         "Strongly Disagree", "Disagree", "Somewhat Disagree", "Neutral", "Somewhat Agree", "Agree", "Strongly Agree"
@@ -1625,7 +1625,7 @@ elif tab == t("Learning Style Test"):
                 key=key
             )
     
-    if st.button(t("Submit Learning Style Test")):
+    if st.button(("Submit Learning Style Test")):
         scores = {}
         for dichotomy, qs in questions.items():
             total = 0
@@ -1654,18 +1654,18 @@ elif tab == t("Learning Style Test"):
                 total += adjusted_score
             scores[dichotomy] = int(total / len(qs))
 
-        with show_lottie_loading(t("Saving your learning style and personalizing your experience...")):
+        with show_lottie_loading(("Saving your learning style and personalizing your experience...")):
             save_learning_style(user.get("email", ""), scores)
             st.session_state.learning_style_answers = {}
-        st.success(t("Learning style saved! Reloading..."))
+        st.success(("Learning style saved! Reloading..."))
         st.balloons()
         st.rerun()
 
 elif tab == t("Paper Solver/Exam Guide"):
     st.header("📝 " + t("Paper Solver/Exam Guide"))
-    st.info(t("Upload your exam paper (PDF or image). The AI will extract questions and show you how to answer for full marks!"))
+    st.info(("Upload your exam paper (PDF or image). The AI will extract questions and show you how to answer for full marks!"))
 
-    exam_paper_file = st.file_uploader(t("Upload Exam Paper (PDF/Image)"), type=["pdf", "jpg", "jpeg", "png"])
+    exam_paper_file = st.file_uploader(("Upload Exam Paper (PDF/Image)"), type=["pdf", "jpg", "jpeg", "png"])
 
     if exam_paper_file:
         raw_text = extract_text_from_file(exam_paper_file) # Use the correct extraction function
@@ -1675,7 +1675,7 @@ elif tab == t("Paper Solver/Exam Guide"):
             st.stop()
 
         # Step 1: Extract questions
-        with show_lottie_loading(t("Extracting questions from PDF..." if exam_paper_file.type == "application/pdf" else "Extracting questions from image...")):
+        with show_lottie_loading(("Extracting questions from PDF..." if exam_paper_file.type == "application/pdf" else "Extracting questions from image...")):
             question_extraction_prompt = (
                 "From the following exam paper text, extract each question. "
                 "List them numerically, starting with Q1., Q2., etc.\n\n"
@@ -1690,24 +1690,24 @@ elif tab == t("Paper Solver/Exam Guide"):
                 st.stop()
 
             st.session_state['extracted_questions'] = questions_list
-            st.subheader(t("Found {n} questions:", n=len(questions_list)))
+            st.subheader(("Found {n} questions:", n=len(questions_list)))
 
             # Step 2: Allow selection of questions
             selected_questions_indices = []
             if questions_list:
-                st.write(t("Select questions to solve (default: all)"))
+                st.write(("Select questions to solve (default: all)"))
                 for i, q in enumerate(questions_list):
                     if st.checkbox(f"Q{i+1}: {q}", value=True, key=f"q_checkbox_{i}"):
                         selected_questions_indices.append(i)
             
-            if st.button(t("Solve Selected Questions")):
+            if st.button(("Solve Selected Questions")):
                 if not selected_questions_indices:
                     st.warning("Please select at least one question to solve.")
                 else:
-                    st.subheader(t("Model Answers & Exam Tips"))
+                    st.subheader(("Model Answers & Exam Tips"))
                     for i in selected_questions_indices:
                         question_text = questions_list[i]
-                        with show_lottie_loading(t("Solving Q{n}...", n=i+1)):
+                        with show_lottie_loading(("Solving Q{n}...", n=i+1)):
                             answer_prompt = (
                                 f"You are an expert examiner. Provide a comprehensive model answer for the following exam question "
                                 f"to achieve full marks. Also, include specific exam tips and common pitfalls to avoid for this type of question.\n\n"
