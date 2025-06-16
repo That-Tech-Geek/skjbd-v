@@ -4,7 +4,7 @@ import tempfile
 from urllib.parse import urlencode
 from PyPDF2 import PdfReader
 from io import StringIO
-from PIL import Image, ImageFilter, ImageOps # Added ImageFilter, ImageOps for doodle effect
+from PIL import Image, ImageFilter, ImageOps
 import pytesseract
 import json
 import igraph as ig
@@ -27,15 +27,13 @@ import networkx as nx
 import matplotlib.pyplot as plt
 import datetime
 import pandas as pd
-from gtts import gTTS  # Import Google Text-to-Speech library
+from gtts import gTTS
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import os
-# import vlc  # For playing ambient sounds - Keeping commented as VLC can be problematic in web environments
-# import cv2 # Removed as part of the fix for ImportError
-# import numpy as np # Removed as part of the fix for ImportError
-import base64 # Added for displaying base64 images in Streamlit
+# import vlc
+import base64
 
 # Define missing variables (ensure these are handled if they are meant to be dynamic)
 all_summaries = []
@@ -198,6 +196,53 @@ SCOPES        = ["openid", "email", "profile"]
 CSE_API_KEY    = st.secrets.get("google_search", {}).get("api_key", "")
 CSE_ID         = st.secrets.get("google_search", {}).get("cse_id", "")
 CACHE_TTL      = 3600
+
+# --- Product Hunt API Integration (Moved to top) ---
+PRODUCT_HUNT_TOKEN = st.secrets.get("producthunt", {}).get("api_token", "")
+PRODUCT_HUNT_ID = st.secrets.get("producthunt", {}).get("product_id", "")  # e.g., "vekkam"
+
+@st.cache_data(ttl=300)
+def get_ph_stats():
+    if not PRODUCT_HUNT_TOKEN or not PRODUCT_HUNT_ID:
+        return {"votes": 0, "comments": []}
+    headers = {"Authorization": f"Bearer {PRODUCT_HUNT_TOKEN}"}
+    # Get upvotes
+    votes_url = f"https://api.producthunt.com/v2/api/graphql"
+    votes_query = {
+        "query": f"""
+        query {{
+          post(slug: \"{PRODUCT_HUNT_ID}\") {{
+            votesCount
+            comments(first: 5) {{
+              edges {{
+                node {{
+                  id
+                  body
+                  user {{ name profileImage }}
+                }}
+              }}
+            }}
+          }}
+        }}
+        """
+    }
+    try:
+        r = requests.post(votes_url, headers=headers, json=votes_query)
+        data = r.json()
+        post = data['data']['post']
+        votes = post['votesCount']
+        comments = [
+            {
+                "body": edge['node']['body'],
+                "user": edge['node']['user']['name'],
+                "avatar": edge['node']['user']['profileImage']
+            }
+            for edge in post['comments']['edges']
+        ]
+        return {"votes": votes, "comments": comments}
+    except Exception:
+        return {"votes": 0, "comments": []}
+
 
 # --- Session State ---
 for key in ("token", "user"):
@@ -802,12 +847,12 @@ def learning_style_description(scores):
 
 if learning_style:
     st.sidebar.markdown("---")
-    st.sidebar.subheader("Personalized for you")
+    st.sidebar.subheader(t("Personalized for you"))
     st.sidebar.write({k: f"{v}/100" for k, v in learning_style.items()})
     for d in learning_style_description(learning_style):
         st.sidebar.info(d)
 
-if st.sidebar.button("Logout"):
+if st.sidebar.button(t("Logout")):
     st.session_state.clear()
     st.rerun() # Rerun to go back to login page
 
@@ -847,7 +892,7 @@ def fetch_pdf_url(title, author, edition):
 
 def find_concept_pages(pages, concept):
     cl = concept.lower()
-    return {p: t for p, t in pages.items() if cl in (t or "").lower()}
+    return {p: t for p p, t in pages.items() if cl in (t or "").lower()}
 
 def ask_concept(pages, concept):
     found = find_concept_pages(pages, concept)
@@ -1976,7 +2021,7 @@ st.sidebar.markdown(
 if 'ph_upvoted' not in st.session_state:
     st.session_state['ph_upvoted'] = False
 if not st.session_state['ph_upvoted']:
-    if st.sidebar.button("� I upvoted Vekkam!"):
+    if st.sidebar.button("👍 I upvoted Vekkam!"):
         st.session_state['ph_upvoted'] = True
         st.sidebar.success("Thank you for supporting us! 🎉")
 else:
