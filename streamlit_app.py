@@ -186,7 +186,7 @@ def show_lottie_loading(message="Loading..."):
         
 
 # --- Configuration from st.secrets ---
-    raw_uri       = st.secrets[google][redirect_uri]
+raw_uri       = st.secrets[google][redirect_uri]
 REDIRECT_URI  = raw_uri.rstrip("/") + "/" if raw_uri else ""
 CLIENT_ID     = st.secrets[google][client_id]
 CLIENT_SECRET = st.secrets[google][client_secret]
