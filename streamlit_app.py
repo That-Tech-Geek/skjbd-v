@@ -65,12 +65,12 @@ def send_error_report(error_message):
 
 # --- Gemini Call ---
 def call_gemini(prompt, temperature=0.7, max_tokens=2048):
-    lang = st.session_state.ge("language", "en") # Corrected from .ge to .get
+    lang = st.session_state.get("language", "en") # Corrected from .ge to .get
     lang_name = [k for k, v in languages.items() if v == lang][0]
     prompt = f"Please answer in {lang_name}.\n" + prompt
     
     # Ensure GEMINI_API_KEY is properly loaded from secrets
-    GEMINI_API_KEY = st.secrets.ge("gemini", {}).ge("api_key", "") # Corrected secrets access
+    GEMINI_API_KEY = st.secrets.get("gemini", {}).get("api_key", "") # Corrected secrets access
 
     if not GEMINI_API_KEY:
         st.write("There is an error, we've notified the support team.")
@@ -186,19 +186,19 @@ def show_lottie_loading(message="Loading..."):
         
 
 # --- Configuration from st.secrets ---
-raw_uri       = st.secrets.ge("google", {}).ge("redirect_uri", "") # Corrected secrets access
+raw_uri       = st.secrets.get("google", {}).get("redirect_uri", "") # Corrected secrets access
 REDIRECT_URI  = raw_uri.rstrip("/") + "/" if raw_uri else ""
-CLIENT_ID     = st.secrets.ge("google", {}).ge("client_id", "") # Corrected secrets access
-CLIENT_SECRET = st.secrets.ge("google", {}).ge("client_secret", "") # Corrected secrets access
+CLIENT_ID     = st.secrets.get("google", {}).get("client_id", "") # Corrected secrets access
+CLIENT_SECRET = st.secrets.get("google", {}).get("client_secret", "") # Corrected secrets access
 SCOPES        = ["openid", "email", "profile"]
 # GEMINI_API_KEY is now loaded directly in call_gemini for robustness
-CSE_API_KEY    = st.secrets.ge("google_search", {}).ge("api_key", "") # Corrected secrets access
-CSE_ID         = st.secrets.ge("google_search", {}).ge("cse_id", "") # Corrected secrets access
+CSE_API_KEY    = st.secrets.get("google_search", {}).get("api_key", "") # Corrected secrets access
+CSE_ID         = st.secrets.get("google_search", {}).get("cse_id", "") # Corrected secrets access
 CACHE_TTL      = 3600
 
 # --- Product Hunt API Integration (Moved to top) ---
-PRODUCT_HUNT_TOKEN = st.secrets.ge("producthunt", {}).ge("api_token", "") # Corrected secrets access
-PRODUCT_HUNT_ID = st.secrets.ge("producthunt", {}).ge("product_id", "") # Corrected secrets access
+PRODUCT_HUNT_TOKEN = st.secrets.get("producthunt", {}).get("api_token", "") # Corrected secrets access
+PRODUCT_HUNT_ID = st.secrets.get("producthunt", {}).get("product_id", "") # Corrected secrets access
 
 @st.cache_data(ttl=300)
 def get_ph_stats():
@@ -281,7 +281,7 @@ def process_image_for_doodle(uploaded_file):
 # --- Audio Generation for Whiteboard Explainer ---
 def generate_audio_from_text(text, filename="temp_explainer_audio.mp3"):
     try:
-        tts = gTTS(text=text, lang=st.session_state.ge("language", "en")) # Corrected from .ge to .get
+        tts = gTTS(text=text, lang=st.session_state.get("language", "en")) # Corrected from .ge to .get
         temp_audio_path = os.path.join(tempfile.gettempdir(), filename)
         tts.save(temp_audio_path)
         return temp_audio_path
@@ -449,7 +449,7 @@ init_structure_db()
 # --- OAuth Flow using st.query_params ---
 def ensure_logged_in():
     params = st.query_params
-    code = params.ge("code")  # Corrected from .ge to .get
+    code = params.get("code")  # Corrected from .ge to .get
 
     # Exchange code for token
     if code and not st.session_state.token:
@@ -770,7 +770,7 @@ ensure_logged_in()
 user = st.session_state.user
 
 # Ensure the learning style test only appears when the learning style is not already stored
-learning_style = get_learning_style(user.ge("email", "")) # Corrected from .ge to .get
+learning_style = get_learning_style(user.get("email", "")) # Corrected from .ge to .get
 if learning_style is None:
     st.title(("Welcome, {name}!", name==user.get('name', ''))) # Corrected t(...) syntax
     st.header(("Learning Style Test")) # Corrected t(...) syntax
@@ -856,7 +856,7 @@ if learning_style is None:
                 total += score
             scores[dichotomy] = int(total / len(qs))
         with show_lottie_loading(("Saving your learning style and personalizing your experience...")): # Corrected t(...) syntax
-            save_learning_style(user.ge("email", ""), scores) # Corrected from .ge to .get
+            save_learning_style(user.get("email", ""), scores) # Corrected from .ge to .get
             st.session_state.learning_style_answers = {}
         st.success(("Learning style saved! Reloading...")) # Corrected t(...) syntax
         st.balloons()
@@ -866,8 +866,8 @@ if learning_style is None:
 else:
     st.sidebar.write(("Your learning style has been saved.")) # Corrected t(...) syntax
 
-st.sidebar.image(user.ge("picture", ""), width=48) # Corrected from .ge to .get
-st.sidebar.write(user.ge("email", "")) # Corrected from .ge to .get
+st.sidebar.image(user.get("picture", ""), width=48) # Corrected from .ge to .get
+st.sidebar.write(user.get("email", "")) # Corrected from .ge to .get
 
 # --- Personalized for you box ---
 def learning_style_description(scores):
@@ -932,7 +932,7 @@ def fetch_pdf_url(title, author, edition):
     q = " ".join(filter(None, [title, author, edition]))
     params = {"key": CSE_API_KEY, "cx": CSE_ID, "q": q, "fileType": "pdf", "num": 1}
     with show_lottie_loading(("Searching for PDF guide book...")): # Corrected t(...) syntax
-        items = requests.ge("https://www.googleapis.com/customsearch/v1", params=params).json().ge("items", []) # Corrected .ge to .get
+        items = requests.get("https://www.googleapis.com/customsearch/v1", params=params).json().get("items", []) # Corrected .ge to .get
     return items[0]["link"] if items else None
 
 def find_concept_pages(pages, concept):
@@ -1045,11 +1045,11 @@ def plot_mind_map(json_text):
     def add_node(node, parent=None):
         nonlocal counter
         nid = counter; counter += 1
-        label = node.ge("title") or node.ge("label") or "Node" # Corrected from .ge to .get
+        label = node.get("title") or node.get("label") or "Node" # Corrected from .ge to .get
         nodes.append((nid, label))
         if parent is not None:
             edges.append((parent, nid))
-        for child in node.ge("children", []): # Corrected from .ge to .get
+        for child in node.get("children", []): # Corrected from .ge to .get
             add_node(child, nid)
     add_node(mind_map)
     g = ig.Graph(directed=True)
@@ -1418,7 +1418,7 @@ ui_translations = {
 }
 
 def t(key, **kwargs):
-    lang = st.session_state.ge("language", "en") # Corrected from .ge to .get
+    lang = st.session_state.get("language", "en") # Corrected from .ge to .get
     txt = ui_translations.get(lang, ui_translations["en"]).get(key, key)
     return txt.format(**kwargs)
 
@@ -1482,17 +1482,17 @@ def search_educational_resources(query, num_results=5):
         
         response = requests.get(search_url, params=params)
         response.raise_for_status()
-        results = response.json().ge("items", []) # Corrected .ge to .get
+        results = response.json().get("items", []) # Corrected .ge to .get
         
         # Format the results
         formatted_results = []
         for item in results:
             formatted_results.append({
-                "title": item.ge("title", ""), # Corrected .ge to .get
-                "link": item.ge("link", ""), # Corrected .ge to .get
-                "snippet": item.ge("snippet", ""), # Corrected .ge to .get
-                "file_type": item.ge("fileFormat", ""), # Corrected .ge to .get
-                "source": item.ge("displayLink", "") # Corrected .ge to .get
+                "title": item.get("title", ""), # Corrected .ge to .get
+                "link": item.get("link", ""), # Corrected .ge to .get
+                "snippet": item.get("snippet", ""), # Corrected .ge to .get
+                "file_type": item.get("fileFormat", ""), # Corrected .ge to .get
+                "source": item.get("displayLink", "") # Corrected .ge to .get
             })
         
         return formatted_results
@@ -1954,7 +1954,7 @@ elif tab == ("Learning Style Test"): # Corrected t(...) syntax
             scores[dichotomy] = int(total / len(qs))
 
         with show_lottie_loading(("Saving your learning style and personalizing your experience...")): # Corrected t(...) syntax
-            save_learning_style(user.ge("email", ""), scores) # Corrected from .ge to .get
+            save_learning_style(user.get("email", ""), scores) # Corrected from .ge to .get
             st.session_state.learning_style_answers = {}
         st.success(("Learning style saved! Reloading...")) # Corrected t(...) syntax
         st.balloons()
