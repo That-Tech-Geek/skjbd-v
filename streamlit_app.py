@@ -2,8 +2,7 @@ import streamlit as st
 import requests
 import tempfile
 from urllib.parse import urlencode
-# from PyPDF2 import PdfReader # Removed: Consolidating PDF handling to fitz
-from io import StringIO
+from io import StringIO, BytesIO # Added BytesIO for image processing
 from PIL import Image, ImageFilter, ImageOps
 import pytesseract
 import json
@@ -18,7 +17,7 @@ import contextlib
 import csv
 from fpdf import FPDF
 import webbrowser
-import fitz # Retained: Primary PDF handling library
+import fitz
 import docx
 from pptx import Presentation
 import streamlit.components.v1 as components
@@ -32,7 +31,7 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import os
-# import vlc
+# import vlc # Keeping commented as VLC can be problematic in web environments
 import base64
 
 # Define missing variables (ensure these are handled if they are meant to be dynamic)
@@ -87,7 +86,7 @@ def call_gemini(prompt, temperature=0.7, max_tokens=2048):
         "generationConfig": {"temperature": temperature, "maxOutputTokens": max_tokens}
     }
     try:
-        with show_lottie_loading(("Thinking with Gemini AI...")):
+        with show_lottie_loading(t("Thinking with Gemini AI...")):
             response = requests.post(url, json=payload)
             response.raise_for_status()
             data = response.json()
@@ -243,6 +242,52 @@ def get_ph_stats():
     except Exception:
         return {"votes": 0, "comments": []}
 
+# --- Image Processing for Whiteboard Doodle Effect ---
+def process_image_for_doodle(uploaded_file):
+    try:
+        if uploaded_file.type == "application/pdf":
+            # Read PDF and get the first page as an image
+            doc = fitz.open(stream=uploaded_file.read(), filetype="pdf")
+            page = doc.load_page(0)  # Load the first page
+            pix = page.get_pixmap()
+            img_bytes = pix.tobytes("png")
+            img = Image.open(BytesIO(img_bytes))
+        else:
+            # It's a regular image file
+            img = Image.open(uploaded_file)
+        
+        # Convert to grayscale
+        img_gray = img.convert("L")
+        
+        # Apply an edge detection filter (e.g., FIND_EDGES or CONTOUR)
+        # Using a combination of filters can achieve a good sketch effect.
+        # Here's a simple edge enhancement:
+        img_edges = img_gray.filter(ImageFilter.FIND_EDGES)
+        
+        # Invert colors for a black outline on white background (like a whiteboard)
+        img_doodle = ImageOps.invert(img_edges)
+        
+        # Convert back to RGB for display in Streamlit if it was grayscale
+        img_doodle = img_doodle.convert("RGB")
+
+        # Save to bytes buffer
+        buf = BytesIO()
+        img_doodle.save(buf, format="PNG")
+        return buf.getvalue()
+    except Exception as e:
+        st.error(f"Error processing image for doodle effect: {e}")
+        return None
+
+# --- Audio Generation for Whiteboard Explainer ---
+def generate_audio_from_text(text, filename="temp_explainer_audio.mp3"):
+    try:
+        tts = gTTS(text=text, lang='en') # You might want to use st.session_state.get("language", "en") here too
+        temp_audio_path = os.path.join(tempfile.gettempdir(), filename)
+        tts.save(temp_audio_path)
+        return temp_audio_path
+    except Exception as e:
+        st.error(f"Error generating audio: {e}")
+        return None
 
 # --- Session State ---
 for key in ("token", "user"):
@@ -616,7 +661,7 @@ def ensure_logged_in():
                 ]
             },
             {
-                "icon": "🧠",
+                "icon": "�",
                 "title": "Personalized Learning",
                 "description": "AI-powered learning style assessment and personalized study recommendations.",
                 "details": [
@@ -656,7 +701,7 @@ def ensure_logged_in():
                 "description": "Study on any device, anytime, with seamless synchronization"
             },
             {
-                "icon": "�",
+                "icon": "🌐",
                 "title": "Multi-Language Support",
                 "description": "Learn in your preferred language with accurate translations"
             },
@@ -713,7 +758,7 @@ def ensure_logged_in():
             f'<a href="{auth_url}" class="cta-button">'
             f'<img src="https://www.google.com/favicon.ico" class="google-icon" alt="Google icon">'
             f'Start Learning Now</a>',
-            unsafe_allow_html=True
+                unsafe_allow_html=True
         )
         
         st.stop()
@@ -727,60 +772,60 @@ user = st.session_state.user
 # Ensure the learning style test only appears when the learning style is not already stored
 learning_style = get_learning_style(user.get("email", ""))
 if learning_style is None:
-    st.title(f"Welcome, {user.get('name', '')}!")
-    st.header("Learning Style Test")
-    st.write("Answer the following questions to determine your learning style. This will help us personalize your experience.")
+    st.title(t("Welcome, {name}!", name=user.get('name', ''))) # Fixed to use t()
+    st.header(t("Learning Style Test")) # Fixed to use t()
+    st.write(t("Answer the following questions to determine your learning style. This will help us personalize your experience.")) # Fixed to use t()
     likert = [
-        "Strongly Disagree", "Disagree", "Somewhat Disagree", "Neutral", "Somewhat Agree", "Agree", "Strongly Agree"
+        t("Strongly Disagree"), t("Disagree"), t("Somewhat Disagree"), t("Neutral"), t("Somewhat Agree"), t("Agree"), t("Strongly Agree")
     ]
     questions = {
         "Sensing/Intuitive": [
-            ("I am more interested in what is actual than what is possible.", "Sensing"),
-            ("I often focus on the big picture rather than the details.", "Intuitive"),
-            ("I trust my gut feelings over concrete evidence.", "Intuitive"),
-            ("I enjoy tasks that require attention to detail.", "Sensing"),
-            ("I prefer practical solutions over theoretical ideas.", "Sensing"),
-            ("I am drawn to abstract concepts and patterns.", "Intuitive"),
-            ("I notice details that others might miss.", "Sensing"),
-            ("I like to imagine possibilities and what could be.", "Intuitive"),
-            ("I rely on past experiences to guide me.", "Sensing"),
-            ("I am energized by exploring new ideas.", "Intuitive"),
+            (t("I am more interested in what is actual than what is possible."), "Sensing"),
+            (t("I often focus on the big picture rather than the details."), "Intuitive"),
+            (t("I trust my gut feelings over concrete evidence."), "Intuitive"),
+            (t("I enjoy tasks that require attention to detail."), "Sensing"),
+            (t("I prefer practical solutions over theoretical ideas."), "Sensing"),
+            (t("I am drawn to abstract concepts and patterns."), "Intuitive"),
+            (t("I notice details that others might miss."), "Sensing"),
+            (t("I like to imagine possibilities and what could be."), "Intuitive"),
+            (t("I rely on past experiences to guide me."), "Sensing"),
+            (t("I am energized by exploring new ideas."), "Intuitive"),
         ],
         "Visual/Verbal": [
-            ("I remember best what I see (pictures, diagrams, charts).", "Visual"),
-            ("I find it easier to follow spoken instructions than written ones.", "Verbal"),
-            ("I prefer to learn through images and spatial understanding.", "Visual"),
-            ("I often take notes to help me remember.", "Verbal"),
-            ("I visualize information in my mind.", "Visual"),
-            ("I prefer reading to watching videos.", "Verbal"),
-            ("I use color and layout to organize my notes.", "Visual"),
-            ("I find it easier to express myself in writing.", "Verbal"),
-            ("I am drawn to infographics and visual summaries.", "Visual"),
-            ("I enjoy listening to lectures or podcasts.", "Verbal"),
+            (t("I remember best what I see (pictures, diagrams, charts)."), "Visual"),
+            (t("I find it easier to follow spoken instructions than written ones."), "Verbal"),
+            (t("I prefer to learn through images and spatial understanding."), "Visual"),
+            (t("I often take notes to help me remember."), "Verbal"),
+            (t("I visualize information in my mind."), "Visual"),
+            (t("I prefer reading to watching videos."), "Verbal"),
+            (t("I use color and layout to organize my notes."), "Visual"),
+            (t("I find it easier to express myself in writing."), "Verbal"),
+            (t("I am drawn to infographics and visual summaries."), "Visual"),
+            (t("I enjoy listening to lectures or podcasts."), "Verbal"),
         ],
         "Active/Reflective": [
-            ("I learn best by doing and trying things out.", "Active"),
-            ("I prefer to think things through before acting.", "Reflective"),
-            ("I enjoy group work and discussions.", "Active"),
-            ("I need time alone to process new information.", "Reflective"),
-            ("I like to experiment and take risks in learning.", "Active"),
-            ("I often review my notes quietly after class.", "Reflective"),
-            ("I am energized by interacting with others.", "Active"),
-            ("I prefer to observe before participating.", "Reflective"),
-            ("I learn by teaching others or explaining concepts aloud.", "Active"),
-            ("I keep a journal or log to reflect on my learning.", "Reflective"),
+            (t("I learn best by doing and trying things out."), "Active"),
+            (t("I prefer to think things through before acting."), "Reflective"),
+            (t("I enjoy group work and discussions."), "Active"),
+            (t("I need time alone to process new information."), "Reflective"),
+            (t("I like to experiment and take risks in learning."), "Active"),
+            (t("I often review my notes quietly after class."), "Reflective"),
+            (t("I am energized by interacting with others."), "Active"),
+            (t("I prefer to observe before participating."), "Reflective"),
+            (t("I learn by teaching others or explaining concepts aloud."), "Active"),
+            (t("I keep a journal or log to reflect on my learning."), "Reflective"),
         ],
         "Sequential/Global": [
-            ("I learn best in a step-by-step, logical order.", "Sequential"),
-            ("I like to see the big picture before the details.", "Global"),
-            ("I prefer to follow clear, linear instructions.", "Sequential"),
-            ("I often make connections between ideas in a holistic way.", "Global"),
-            ("I am comfortable breaking tasks into smaller parts.", "Sequential"),
-            ("I sometimes jump to conclusions without all the steps.", "Global"),
-            ("I like outlines and structured notes.", "Sequential"),
-            ("I understand concepts better when I see how they fit together.", "Global"),
-            ("I prefer to finish one thing before starting another.", "Sequential"),
-            ("I enjoy brainstorming and exploring many ideas at once.", "Global"),
+            (t("I learn best in a step-by-step, logical order."), "Sequential"),
+            (t("I like to see the big picture before the details."), "Global"),
+            (t("I prefer to follow clear, linear instructions."), "Sequential"),
+            (t("I often make connections between ideas in a holistic way."), "Global"),
+            (t("I am comfortable breaking tasks into smaller parts."), "Sequential"),
+            (t("I sometimes jump to conclusions without all the steps."), "Global"),
+            (t("I like outlines and structured notes."), "Sequential"),
+            (t("I understand concepts better when I see how they fit together."), "Global"),
+            (t("I prefer to finish one thing before starting another."), "Sequential"),
+            (t("I enjoy brainstorming and exploring many ideas at once."), "Global"),
         ],
     }
     if "learning_style_answers" not in st.session_state:
@@ -791,10 +836,10 @@ if learning_style is None:
             key = f"{dichotomy}_{i}"
             st.session_state.learning_style_answers[key] = st.radio(
                 q,
-                ["Strongly Disagree", "Disagree", "Somewhat Disagree", "Neutral", "Somewhat Agree", "Agree", "Strongly Agree"],
+                likert, # Use translated likert labels
                 key=key
             )
-    if st.button("Submit Learning Style Test"): # Changed button text
+    if st.button(t("Submit Learning Style Test")): # Fixed to use t()
         # Scoring: Strongly Disagree=0, ..., Neutral=50, ..., Strongly Agree=100 (for positive phrasing)
         scores = {}
         for dichotomy, qs in questions.items():
@@ -810,16 +855,16 @@ if learning_style is None:
                     score = score_map[6 - idx] # score_map needs to be defined
                 total += score
             scores[dichotomy] = int(total / len(qs))
-        with show_lottie_loading(("Saving your learning style and personalizing your experience...")):
+        with show_lottie_loading(t("Saving your learning style and personalizing your experience...")):
             save_learning_style(user.get("email", ""), scores)
             st.session_state.learning_style_answers = {}
-        st.success("Learning style saved! Reloading...")
+        st.success(t("Learning style saved! Reloading..."))
         st.balloons()
         st.rerun() # Rerun to apply learning style and proceed
         
     st.stop()
 else:
-    st.sidebar.write("Your learning style has been saved.")
+    st.sidebar.write(t("Your learning style has been saved.")) # Fixed to use t()
 
 st.sidebar.image(user.get("picture", ""), width=48)
 st.sidebar.write(user.get("email", ""))
@@ -828,45 +873,45 @@ st.sidebar.write(user.get("email", ""))
 def learning_style_description(scores):
     desc = []
     if scores['Sensing/Intuitive'] >= 60:
-        desc.append("Prefers concepts, patterns, and big-picture thinking.")
+        desc.append(t("Prefers concepts, patterns, and big-picture thinking."))
     elif scores['Sensing/Intuitive'] <= 40:
-        desc.append("Prefers facts, details, and practical examples.")
+        desc.append(t("Prefers facts, details, and practical examples."))
     if scores['Visual/Verbal'] >= 60:
-        desc.append("Learns best with visuals, diagrams, and mind maps.")
+        desc.append(t("Learns best with visuals, diagrams, and mind maps."))
     elif scores['Visual/Verbal'] <= 40:
-        desc.append("Learns best with text, explanations, and reading.")
+        desc.append(t("Learns best with text, explanations, and reading."))
     if scores['Active/Reflective'] >= 60:
-        desc.append("Enjoys interactive, hands-on, and group activities.")
+        desc.append(t("Enjoys interactive, hands-on, and group activities."))
     elif scores['Active/Reflective'] <= 40:
-        desc.append("Prefers reflection, summaries, and solo study.")
+        desc.append(t("Prefers reflection, summaries, and solo study."))
     if scores['Sequential/Global'] >= 60:
-        desc.append("Prefers holistic overviews and big-picture connections.")
+        desc.append(t("Prefers holistic overviews and big-picture connections."))
     elif scores['Sequential/Global'] <= 40:
-        desc.append("Prefers step-by-step, structured learning.")
+        desc.append(t("Prefers step-by-step, structured learning."))
     return desc
 
 if learning_style:
     st.sidebar.markdown("---")
-    st.sidebar.subheader(("Personalized for you"))
+    st.sidebar.subheader(t("Personalized for you"))
     st.sidebar.write({k: f"{v}/100" for k, v in learning_style.items()})
     for d in learning_style_description(learning_style):
         st.sidebar.info(d)
 
-if st.sidebar.button(("Logout")):
+if st.sidebar.button(t("Logout")):
     st.session_state.clear()
     st.rerun() # Rerun to go back to login page
 
 
 # --- PDF/Text Extraction ---
 def extract_pages_from_url(pdf_url):
-    with show_lottie_loading(("Extracting PDF from URL...")):
+    with show_lottie_loading(t("Extracting PDF from URL...")):
         r = requests.get(pdf_url)
         # Use fitz for URL PDF handling
         with fitz.open(stream=r.content, filetype="pdf") as doc:
             return {i+1: doc[i].get_text() for i in range(len(doc))}
 
 def extract_pages_from_file(file):
-    with show_lottie_loading(("Extracting PDF from file...")):
+    with show_lottie_loading(t("Extracting PDF from file...")):
         # Use fitz for uploaded file PDF handling
         with fitz.open(stream=file.read(), filetype="pdf") as doc:
             return {i+1: doc[i].get_text() for i in range(len(doc))}
@@ -877,16 +922,16 @@ def extract_text_from_uploaded_file(file):
     if ext == "pdf":
         return "\n".join(extract_pages_from_file(file).values())
     if ext in ("jpg","jpeg","png"):
-        with show_lottie_loading(("Extracting text from image...")):
+        with show_lottie_loading(t("Extracting text from image...")):
             return pytesseract.image_to_string(Image.open(file))
-    with show_lottie_loading(("Extracting text from file...")):
+    with show_lottie_loading(t("Extracting text from file...")):
         return StringIO(file.getvalue().decode()).read()
 
 # --- Guide Book Search & Concept Q&A ---
 def fetch_pdf_url(title, author, edition):
     q = " ".join(filter(None, [title, author, edition]))
     params = {"key": CSE_API_KEY, "cx": CSE_ID, "q": q, "fileType": "pdf", "num": 1}
-    with show_lottie_loading(("Searching for PDF guide book...")):
+    with show_lottie_loading(t("Searching for PDF guide book...")):
         items = requests.get("https://www.googleapis.com/customsearch/v1", params=params).json().get("items", [])
     return items[0]["link"] if items else None
 
@@ -1078,7 +1123,155 @@ ui_translations = {
         "Video content prepared. Click 'Play Video' to start.": "Video content prepared. Click 'Play Video' to start.", # Added for new feature
         "Playing video...": "Playing video...", # Added for new feature
         "Video playback complete!": "Video playback complete!", # Added for new feature
-        "Note: This application simulates the whiteboard video in your browser and does not generate an MP4 file.": "Note: This application simulates the whiteboard video in your browser and does not generate an MP4 file." # Added for new feature
+        "Note: This application simulates the whiteboard video in your browser and does not generate an MP4 file.": "Note: This application simulates the whiteboard video in your browser and does not generate an MP4 file.", # Added for new feature
+        "Type your question here:": "Type your question here:",
+        "Example: Can you explain how photosynthesis works?": "Example: Can you explain how photosynthesis works?",
+        "Or upload an image of your question:": "Or upload an image of your question:",
+        "Upload a clear image of your question or problem": "Upload a clear image of your question or problem",
+        "Get Answer": "Get Answer",
+        "Analyzing your question...": "Analyzing your question...",
+        "Could not read text from the image. Please try uploading a clearer image.": "Could not read text from the image. Please try uploading a clearer image.",
+        "Please either type a question or upload an image.": "Please either type a question or upload an image.",
+        "Searching for relevant resources...": "Searching for relevant resources...",
+        "Answer": "Answer",
+        "Relevant Resources": "Relevant Resources",
+        "Source:": "Source:",
+        "Description:": "Description:",
+        "Open Resource": "Open Resource",
+        "Type:": "Type:",
+        "Follow-up Questions": "Follow-up Questions",
+        "Practice Problems": "Practice Problems",
+        "Additional Resources": "Additional Resources",
+        "Upload PDF/Image/TXT (multiple allowed)": "Upload PDF/Image/TXT (multiple allowed)",
+        "Upload your notes, textbook, or image.": "Upload your notes, textbook, or image.",
+        "Generate Explainer Podcast": "Generate Explainer Podcast",
+        "Create Podcast": "Create Podcast",
+        "Generating podcast...": "Generating podcast...",
+        "Podcast generated successfully!": "Podcast generated successfully!",
+        "Download Podcast": "Download Podcast",
+        "Learning Aids for ": "Learning Aids for ",
+        "Generating summary...": "Generating summary...",
+        "Summary": "Summary",
+        "Generating quiz questions...": "Generating quiz questions...",
+        "Quiz Questions": "Quiz Questions",
+        "Flashcards": "Flashcards",
+        "Generating flashcards...": "Generating flashcards...",
+        "Mnemonics": "Mnemonics",
+        "Generating mnemonics...": "Generating mnemonics...",
+        "Key Terms": "Key Terms",
+        "Generating key terms...": "Generating key terms...",
+        "Cheat Sheet": "Cheat Sheet",
+        "Generating cheat sheet...": "Generating cheat sheet...",
+        "Highlights": "Highlights",
+        "Generating highlights...": "Generating highlights...",
+        "Critical Points": "Critical Points",
+        "Generating critical points...": "Generating critical points...",
+        "Export all generated flashcards as an Anki-compatible CSV file.": "Export all generated flashcards as an Anki-compatible CSV file.",
+        "Export All Flashcards to Anki CSV": "Export All Flashcards to Anki CSV",
+        "Flashcards exported: ": "Flashcards exported: ",
+        "Flashcards exported!": "Flashcards exported!",
+        "Download Anki CSV": "Download Anki CSV",
+        "Flashcards exported to Anki CSV!": "Flashcards exported to Anki CSV!",
+        "Enter your script for the explainer video:": "Enter your script for the explainer video:",
+        "e.g., 'Welcome to our explainer video. Today, we'll talk about innovative solutions. Here's a diagram...'": "e.g., 'Welcome to our explainer video. Today, we'll talk about innovative solutions. Here's a diagram...'",
+        "Upload images for your explainer (optional):": "Upload images for your explainer (optional):",
+        "Generate Whiteboard Video": "Generate Whiteboard Video",
+        "Play Video": "Play Video",
+        "Processing script...": "Processing script...",
+        "Processing images for doodle effect...": "Processing images for doodle effect...",
+        "Skipping image {name} due to processing error.": "Skipping image {name} due to processing error.",
+        "Generating audio for script...": "Generating audio for script...",
+        "Video content prepared. Click 'Play Video' to start.": "Video content prepared. Click 'Play Video' to start.",
+        "Playing video...": "Playing video...",
+        "Audio file not found. Please regenerate video.": "Audio file not found. Please regenerate video.",
+        "Video playback complete!": "Video playback complete!",
+        "Your learning style has been saved.": "Your learning style has been saved.",
+        "Could not extract text from the uploaded file. Please ensure it's a clear document or image.": "Could not extract text from the uploaded file. Please ensure it's a clear document or image.",
+        "Could not extract any questions from the document. Please ensure the format is clear.": "Could not extract any questions from the document. Please ensure the format is clear.",
+        "Select questions to solve (default: all)": "Select questions to solve (default: all)",
+        "Please select at least one question to solve.": "Please select at least one question to solve.",
+        "Analyzing your materials and creating a battle plan...": "Analyzing your materials and creating a battle plan...",
+        "Please upload at least one study material.": "Please upload at least one study material.",
+        "Your 6-Hour Battle Plan": "Your 6-Hour Battle Plan",
+        "Topic-Specific Resources": "Topic-Specific Resources",
+        "Quick Reference Guide": "Quick Reference Guide",
+        "Mental Preparation": "Mental Preparation",
+        "Export Options": "Export Options",
+        "Battle plan is ready. You can copy it manually if needed.": "Battle plan is ready. You can copy it manually if needed.",
+        "Add to Calendar": "Add to Calendar",
+        "Added to your calendar!": "Added to your calendar!",
+        "Build strong study habits and stay accountable with our discipline features!": "Build strong study habits and stay accountable with our discipline features!",
+        "Study Streak": "Study Streak",
+        "Accountability": "Accountability",
+        "Focus Mode": "Focus Mode",
+        "Smart Schedule": "Smart Schedule",
+        "Study Analytics": "Study Analytics",
+        "Rewards": "Rewards",
+        "Study Environment": "Study Environment",
+        "Distraction Blocker": "Distraction Blocker",
+        "Save Streak Data": "Save Streak Data",
+        "Streak data saved!": "Streak data saved!",
+        "Save Analytics Data": "Save Analytics Data",
+        "Analytics data saved!": "Analytics data saved!",
+        "Choose ambient sound": "Choose ambient sound",
+        "Play Sound": "Play Sound",
+        "Sound file not found. Make sure 'sounds' directory exists with MP3s.": "Sound file not found. Make sure 'sounds' directory exists with MP3s.",
+        "Attempting to play sound: {file_path}. (Requires VLC on server)": "Attempting to play sound: {file_path}. (Requires VLC on server)",
+        "Failed to play sound: {e}. VLC might not be installed or configured.": "Failed to play sound: {e}. VLC might not be installed or configured.",
+        "Playing ambient sounds with VLC might not work as expected in all deployment environments (e.g., Streamlit Cloud) as it requires VLC to be installed on the server.": "Playing ambient sounds with VLC might not work as expected in all deployment environments (e.g., Streamlit Cloud) as it requires VLC to be installed on the server.",
+        "Welcome to our explainer video. Today, we'll talk about innovative solutions. Here's a diagram...": "Welcome to our explainer video. Today, we'll talk about innovative solutions. Here's a diagram...",
+        "I am more interested in what is actual than what is possible.": "I am more interested in what is actual than what is possible.",
+        "I often focus on the big picture rather than the details.": "I often focus on the big picture rather than the details.",
+        "I trust my gut feelings over concrete evidence.": "I trust my gut feelings over concrete evidence.",
+        "I enjoy tasks that require attention to detail.": "I enjoy tasks that require attention to detail.",
+        "I prefer practical solutions over theoretical ideas.": "I prefer practical solutions over theoretical ideas.",
+        "I am drawn to abstract concepts and patterns.": "I am drawn to abstract concepts and patterns.",
+        "I notice details that others might miss.": "I notice details that others might miss.",
+        "I like to imagine possibilities and what could be.": "I like to imagine possibilities and what could be.",
+        "I rely on past experiences to guide me.": "I rely on past experiences to guide me.",
+        "I am energized by exploring new ideas.": "I am energized by exploring new ideas.",
+        "I remember best what I see (pictures, diagrams, charts).": "I remember best what I see (pictures, diagrams, charts).",
+        "I find it easier to follow spoken instructions than written ones.": "I find it easier to follow spoken instructions than written ones.",
+        "I prefer to learn through images and spatial understanding.": "I prefer to learn through images and spatial understanding.",
+        "I often take notes to help me remember.": "I often take notes to help me remember.",
+        "I visualize information in my mind.": "I visualize information in my mind.",
+        "I prefer reading to watching videos.": "I prefer reading to watching videos.",
+        "I use color and layout to organize my notes.": "I use color and layout to organize my notes.",
+        "I find it easier to express myself in writing.": "I find it easier to express myself in writing.",
+        "I am drawn to infographics and visual summaries.": "I am drawn to infographics and visual summaries.",
+        "I enjoy listening to lectures or podcasts.": "I enjoy listening to lectures or podcasts.",
+        "I learn best by doing and trying things out.": "I learn best by doing and trying things out.",
+        "I prefer to think things through before acting.": "I prefer to think things through before acting.",
+        "I enjoy group work and discussions.": "I enjoy group work and discussions.",
+        "I need time alone to process new information.": "I need time alone to process new information.",
+        "I like to experiment and take risks in learning.": "I like to experiment and take risks in learning.",
+        "I often review my notes quietly after class.": "I often review my notes quietly after class.",
+        "I am energized by interacting with others.": "I am energized by interacting with others.",
+        "I prefer to observe before participating.": "I prefer to observe before participating.",
+        "I learn by teaching others or explaining concepts aloud.": "I learn by teaching others or explaining concepts aloud.",
+        "I keep a journal or log to reflect on my learning.": "I keep a journal or log to reflect on my learning.",
+        "I learn best in a step-by-step, logical order.": "I learn best in a step-by-step, logical order.",
+        "I like to see the big picture before the details.": "I like to see the big picture before the details.",
+        "I prefer to follow clear, linear instructions.": "I prefer to follow clear, linear instructions.",
+        "I often make connections between ideas in a holistic way.": "I often make connections between ideas in a holistic way.",
+        "I am comfortable breaking tasks into smaller parts.": "I am comfortable breaking tasks into smaller parts.",
+        "I sometimes jump to conclusions without all the steps.": "I sometimes jump to conclusions without all the steps.",
+        "I like outlines and structured notes.": "I like outlines and structured notes.",
+        "I understand concepts better when I see how they fit together.": "I understand concepts better when I see how they fit together.",
+        "I prefer to finish one thing before starting another.": "I prefer to finish one thing before starting another.",
+        "I enjoy brainstorming and exploring many ideas at once.": "I enjoy brainstorming and exploring many ideas at once.",
+        "Prefers concepts, patterns, and big-picture thinking.": "Prefers concepts, patterns, and big-picture thinking.",
+        "Prefers facts, details, and practical examples.": "Prefers facts, details, and practical examples.",
+        "Learns best with visuals, diagrams, and mind maps.": "Learns best with visuals, diagrams, and mind maps.",
+        "Learns best with text, explanations, and reading.": "Learns best with text, explanations, and reading.",
+        "Enjoys interactive, hands-on, and group activities.": "Enjoys interactive, hands-on, and group activities.",
+        "Prefers reflection, summaries, and solo study.": "Prefers reflection, summaries, and solo study.",
+        "Prefers holistic overviews and big-picture connections.": "Prefers holistic overviews and big-picture connections.",
+        "Prefers step-by-step, structured learning.": "Prefers step-by-step, structured learning.",
+        "Current Streak": "Current Streak",
+        "Longest Streak": "Longest Streak",
+        "Total Study Time": "Total Study Time",
+        "Choose ambient sound": "Choose ambient sound"
     },
     "hi": {
         "Guide Book Chat": "गाइड बुक चैट",
@@ -1124,7 +1317,102 @@ ui_translations = {
         "Video content prepared. Click 'Play Video' to start.": "वीडियो सामग्री तैयार है। 'वीडियो चलाएं' पर क्लिक करें।", # Added for new feature
         "Playing video...": "वीडियो चल रहा है...", # Added for new feature
         "Video playback complete!": "वीडियो प्लेबैक पूरा हुआ!", # Added for new feature
-        "Note: This application simulates the whiteboard video in your browser and does not generate an MP4 file.": "ध्यान दें: यह एप्लिकेशन आपके ब्राउज़र में व्हाइटबोर्ड वीडियो का अनुकरण करता है और MP4 फ़ाइल उत्पन्न नहीं करता है।" # Added for new feature
+        "Note: This application simulates the whiteboard video in your browser and does not generate an MP4 file.": "ध्यान दें: यह एप्लिकेशन आपके ब्राउज़र में व्हाइटबोर्ड वीडियो का अनुकरण करता है और MP4 फ़ाइल उत्पन्न नहीं करता है।", # Added for new feature
+        "Type your question here:": "अपना प्रश्न यहां टाइप करें:",
+        "Example: Can you explain how photosynthesis works?": "उदाहरण: प्रकाश संश्लेषण कैसे काम करता है?",
+        "Or upload an image of your question:": "या अपने प्रश्न की एक छवि अपलोड करें:",
+        "Upload a clear image of your question or problem": "अपने प्रश्न या समस्या की एक स्पष्ट छवि अपलोड करें",
+        "Get Answer": "उत्तर प्राप्त करें",
+        "Analyzing your question...": "आपके प्रश्न का विश्लेषण हो रहा है...",
+        "Could not read text from the image. Please try uploading a clearer image.": "छवि से पाठ नहीं पढ़ा जा सका। कृपया एक स्पष्ट छवि अपलोड करने का प्रयास करें।",
+        "Please either type a question or upload an image.": "कृपया या तो एक प्रश्न टाइप करें या एक छवि अपलोड करें।",
+        "Searching for relevant resources...": "प्रासंगिक संसाधनों की खोज हो रही है...",
+        "Answer": "उत्तर",
+        "Relevant Resources": "प्रासंगिक संसाधन",
+        "Source:": "स्रोत:",
+        "Description:": "विवरण:",
+        "Open Resource": "संसाधन खोलें",
+        "Type:": "प्रकार:",
+        "Follow-up Questions": "अनुवर्ती प्रश्न",
+        "Practice Problems": "अभ्यास प्रश्न",
+        "Additional Resources": "अतिरिक्त संसाधन",
+        "Upload PDF/Image/TXT (multiple allowed)": "पीडीएफ/छवि/टीएक्सटी अपलोड करें (कई अनुमत हैं)",
+        "Upload your notes, textbook, or image.": "अपने नोट्स, पाठ्यपुस्तक, या छवि अपलोड करें।",
+        "Generate Explainer Podcast": "व्याख्याता पॉडकास्ट बनाएं",
+        "Create Podcast": "पॉडकास्ट बनाएं",
+        "Generating podcast...": "पॉडकास्ट उत्पन्न हो रहा है...",
+        "Podcast generated successfully!": "पॉडकास्ट सफलतापूर्वक उत्पन्न हुआ!",
+        "Download Podcast": "पॉडकास्ट डाउनलोड करें",
+        "Learning Aids for ": "के लिए शिक्षण सहायक सामग्री",
+        "Generating summary...": "सारांश उत्पन्न हो रहा है...",
+        "Summary": "सारांश",
+        "Generating quiz questions...": "क्विज़ प्रश्न उत्पन्न हो रहे हैं...",
+        "Quiz Questions": "क्विज़ प्रश्न",
+        "Flashcards": "फ्लैशकार्ड",
+        "Generating flashcards...": "फ्लैशकार्ड उत्पन्न हो रहे हैं...",
+        "Mnemonics": "स्मृति सहायक",
+        "Generating mnemonics...": "स्मृति सहायक उत्पन्न हो रहे हैं...",
+        "Key Terms": "मुख्य शर्तें",
+        "Generating key terms...": "मुख्य शर्तें उत्पन्न हो रही हैं...",
+        "Cheat Sheet": "चीट शीट",
+        "Generating cheat sheet...": "चीट शीट उत्पन्न हो रही है...",
+        "Highlights": "मुख्य बातें",
+        "Generating highlights...": "मुख्य बातें उत्पन्न हो रही हैं...",
+        "Critical Points": "महत्वपूर्ण बिंदु",
+        "Generating critical points...": "महत्वपूर्ण बिंदु उत्पन्न हो रहे हैं...",
+        "Export all generated flashcards as an Anki-compatible CSV file.": "सभी उत्पन्न फ्लैशकार्ड को अंकी-संगत CSV फ़ाइल के रूप में निर्यात करें।",
+        "Export All Flashcards to Anki CSV": "सभी फ्लैशकार्ड को अंकी CSV में निर्यात करें",
+        "Flashcards exported: ": "फ्लैशकार्ड निर्यात किए गए:",
+        "Flashcards exported!": "फ्लैशकार्ड निर्यात किए गए!",
+        "Download Anki CSV": "अंकी CSV डाउनलोड करें",
+        "Flashcards exported to Anki CSV!": "फ्लैशकार्ड अंकी CSV में निर्यात किए गए!",
+        "Enter your script for the explainer video:": "व्याख्याता वीडियो के लिए अपनी स्क्रिप्ट दर्ज करें:",
+        "e.g., 'Welcome to our explainer video. Today, we'll talk about innovative solutions. Here's a diagram...'": "उदाहरण: 'हमारे व्याख्याता वीडियो में आपका स्वागत है। आज, हम अभिनव समाधानों के बारे में बात करेंगे। यहाँ एक आरेख है...'",
+        "Upload images for your explainer (optional):": "अपने व्याख्याता के लिए छवियां अपलोड करें (वैकल्पिक):",
+        "Generate Whiteboard Video": "व्हाइटबोर्ड वीडियो बनाएं",
+        "Play Video": "वीडियो चलाएं",
+        "Processing script...": "स्क्रिप्ट संसाधित हो रही है...",
+        "Processing images for doodle effect...": "डूडल प्रभाव के लिए छवियां संसाधित हो रही हैं...",
+        "Skipping image {name} due to processing error.": "संसाधन त्रुटि के कारण छवि {name} को छोड़ दिया जा रहा है।",
+        "Generating audio for script...": "स्क्रिप्ट के लिए ऑडियो उत्पन्न किया जा रहा है...",
+        "Video content prepared. Click 'Play Video' to start.": "वीडियो सामग्री तैयार है। 'वीडियो चलाएं' पर क्लिक करें।",
+        "Playing video...": "वीडियो चल रहा है...",
+        "Audio file not found. Please regenerate video.": "ऑडियो फ़ाइल नहीं मिली। कृपया वीडियो को फिर से उत्पन्न करें।",
+        "Video playback complete!": "वीडियो प्लेबैक पूरा हुआ!",
+        "Your learning style has been saved.": "आपकी अधिगम शैली सहेजी गई है।",
+        "Could not extract text from the uploaded file. Please ensure it's a clear document or image.": "अपलोड की गई फ़ाइल से पाठ नहीं निकाला जा सका। कृपया सुनिश्चित करें कि यह एक स्पष्ट दस्तावेज़ या छवि है।",
+        "Could not extract any questions from the document. Please ensure the format is clear.": "दस्तावेज़ से कोई प्रश्न नहीं निकाला जा सका। कृपया सुनिश्चित करें कि प्रारूप स्पष्ट है।",
+        "Select questions to solve (default: all)": "हल करने के लिए प्रश्न चुनें (डिफ़ॉल्ट: सभी)",
+        "Please select at least one question to solve.": "कृपया हल करने के लिए कम से कम एक प्रश्न चुनें।",
+        "Analyzing your materials and creating a battle plan...": "आपकी सामग्री का विश्लेषण किया जा रहा है और एक युद्ध योजना बनाई जा रही है...",
+        "Please upload at least one study material.": "कृपया कम से कम एक अध्ययन सामग्री अपलोड करें।",
+        "Your 6-Hour Battle Plan": "आपकी 6 घंटे की युद्ध योजना",
+        "Topic-Specific Resources": "विषय-विशिष्ट संसाधन",
+        "Quick Reference Guide": "त्वरित संदर्भ मार्गदर्शिका",
+        "Mental Preparation": "मानसिक तैयारी",
+        "Export Options": "निर्यात विकल्प",
+        "Battle plan is ready. You can copy it manually if needed.": "युद्ध योजना तैयार है। यदि आवश्यक हो तो आप इसे मैन्युअल रूप से कॉपी कर सकते हैं।",
+        "Add to Calendar": "कैलेंडर में जोड़ें",
+        "Added to your calendar!": "आपके कैलेंडर में जोड़ा गया!",
+        "Build strong study habits and stay accountable with our discipline features!": "हमारी अनुशासन सुविधाओं के साथ मजबूत अध्ययन की आदतें बनाएं और जवाबदेह रहें!",
+        "Study Streak": "अध्ययन स्ट्रीक",
+        "Accountability": "जवाबदेही",
+        "Focus Mode": "फोकस मोड",
+        "Smart Schedule": "स्मार्ट शेड्यूल",
+        "Study Analytics": "अध्ययन विश्लेषण",
+        "Rewards": "पुरस्कार",
+        "Study Environment": "अध्ययन वातावरण",
+        "Distraction Blocker": "ध्यान भटकाने वाला अवरोधक",
+        "Save Streak Data": "स्ट्रीक डेटा सहेजें",
+        "Streak data saved!": "स्ट्रीक डेटा सहेजा गया!",
+        "Save Analytics Data": "विश्लेषण डेटा सहेजें",
+        "Analytics data saved!": "विश्लेषण डेटा सहेजा गया!",
+        "Choose ambient sound": "परिवेश ध्वनि चुनें",
+        "Play Sound": "ध्वनि चलाएं",
+        "Sound file not found. Make sure 'sounds' directory exists with MP3s.": "ध्वनि फ़ाइल नहीं मिली। सुनिश्चित करें कि 'ध्वनि' निर्देशिका MP3s के साथ मौजूद है।",
+        "Attempting to play sound: {file_path}. (Requires VLC on server)": "ध्वनि चलाने का प्रयास हो रहा है: {file_path}। (सर्वर पर VLC की आवश्यकता है)",
+        "Failed to play sound: {e}. VLC might not be स्थापित या कॉन्फ़िगर किया गया।": "ध्वनि चलाने में विफल: {e}। VLC स्थापित या कॉन्फ़िगर नहीं हो सकता है।",
+        "Playing ambient sounds with VLC might not work as expected in all deployment environments (e.g., Streamlit Cloud) as it requires VLC to be installed on the server.": "Streamlit Cloud जैसे सभी परिनियोजन वातावरणों में VLC के साथ परिवेश ध्वनियाँ अपेक्षित रूप से काम नहीं कर सकती हैं क्योंकि इसके लिए सर्वर पर VLC स्थापित होना आवश्यक है।"
     },
     # Add more languages as needed
 }
@@ -1137,7 +1425,7 @@ def t(key, **kwargs):
 # Language selector in sidebar
 if "language" not in st.session_state:
     st.session_state["language"] = "en"
-lang_choice = st.sidebar.selectbox("🌐 Language", list(languages.keys()), index=0)
+lang_choice = st.sidebar.selectbox("🌐 " + t("Language"), list(languages.keys()), index=0)
 st.session_state["language"] = languages[lang_choice]
 
 # --- App Branding ---
@@ -1156,8 +1444,8 @@ with col2:
 
 # --- Sidebar Onboarding/Help ---
 st.sidebar.markdown("---")
-with st.sidebar.expander("❓ How to use this app", expanded=False):
-    st.markdown("""
+with st.sidebar.expander("❓ " + t("How to use this app"), expanded=False):
+    st.markdown(t("""
     - **Choose your language** from the sidebar.
     - **Take the Learning Style Test** (first login) for personalized recommendations.
     - **Guide Book Chat**: Search and chat with textbooks.
@@ -1165,12 +1453,12 @@ with st.sidebar.expander("❓ How to use this app", expanded=False):
     - **Paper Solver/Exam Guide**: Upload an exam paper and get model answers.
     - **Whiteboard Explainer**: Create a simulated whiteboard video from text and images.
     - All features are personalized for you!
-    """)
+    """))
 
 # --- Main UI ---
 # Added "Whiteboard Explainer" to the list of tabs
 quiz_tabs = [t("Guide Book Chat"), t("Document Q&A"), t("Whiteboard Explainer"), t("Learning Style Test"), t("Paper Solver/Exam Guide"), "⚡ 6-Hour Battle Plan", "🎯 Discipline Hub"]
-tab = st.sidebar.selectbox(("Feature"), quiz_tabs)
+tab = st.sidebar.selectbox(t("Feature"), quiz_tabs)
 
 # Add this after the existing imports
 def search_educational_resources(query, num_results=5):
@@ -1214,38 +1502,38 @@ def search_educational_resources(query, num_results=5):
 
 # Main tab selection
 if tab == t("Guide Book Chat"):
-    st.header("❓ Ask Your Questions")
-    st.info("Ask any question or upload an image of your question. Our AI will help you understand and solve it!")
+    st.header("❓ " + t("Ask Your Questions"))
+    st.info(t("Ask any question or upload an image of your question. Our AI will help you understand and solve it!"))
 
     # Create two columns for text input and image upload
     col1, col2 = st.columns(2)
     
     with col1:
-        question = st.text_area("Type your question here:", height=150, 
-            placeholder="Example: Can you explain how photosynthesis works?")
+        question = st.text_area(t("Type your question here:"), height=150, 
+            placeholder=t("Example: Can you explain how photosynthesis works?"))
     
     with col2:
-        uploaded_image = st.file_uploader("Or upload an image of your question:", 
+        uploaded_image = st.file_uploader(t("Or upload an image of your question:"), 
             type=["jpg", "jpeg", "png"],
-            help="Upload a clear image of your question or problem")
+            help=t("Upload a clear image of your question or problem"))
 
     # Process the question (either from text or image)
-    if st.button("Get Answer"):
-        with show_lottie_loading(("Analyzing your question...")):
+    if st.button(t("Get Answer")):
+        with show_lottie_loading(t("Analyzing your question...")):
             if uploaded_image:
                 # Extract text from image
                 image_text = pytesseract.image_to_string(Image.open(uploaded_image))
                 if not image_text.strip():
-                    st.error("Could not read text from the image. Please try uploading a clearer image.")
+                    st.error(t("Could not read text from the image. Please try uploading a clearer image."))
                     st.stop()
                 question = image_text
 
             if not question.strip():
-                st.warning("Please either type a question or upload an image.")
+                st.warning(t("Please either type a question or upload an image."))
                 st.stop()
 
             # Search for relevant resources
-            with show_lottie_loading(("Searching for relevant resources...")):
+            with show_lottie_loading(t("Searching for relevant resources...")):
                 search_results = search_educational_resources(question)
             
             # Generate a comprehensive answer
@@ -1263,24 +1551,24 @@ if tab == t("Guide Book Chat"):
             answer = call_gemini(prompt)
             
             # Display the answer in a nicely formatted way
-            st.markdown("### 📝 Answer")
+            st.markdown("### 📝 " + t("Answer"))
             st.markdown(answer)
             
             # Display relevant resources if found
             if search_results:
                 st.markdown("---")
-                st.markdown("### 📚 Relevant Resources")
+                st.markdown("### 📚 " + t("Relevant Resources"))
                 for i, result in enumerate(search_results, 1):
                     with st.expander(f"{i}. {result['title']}"):
-                        st.markdown(f"**Source:** {result['source']}")
-                        st.markdown(f"**Description:** {result['snippet']}")
-                        st.markdown(f"[Open Resource]({result['link']})")
+                        st.markdown(f"**{t('Source:')}** {result['source']}")
+                        st.markdown(f"**{t('Description:')}** {result['snippet']}")
+                        st.markdown(f"[{t('Open Resource')}]({result['link']})")
                         if result['file_type']:
-                            st.markdown(f"**Type:** {result['file_type']}")
+                            st.markdown(f"**{t('Type:')}** {result['file_type']}")
             
             # Add a section for follow-up questions
             st.markdown("---")
-            st.markdown("### 💭 Follow-up Questions")
+            st.markdown("### 💭 " + t("Follow-up Questions"))
             follow_up_prompt = (
                 f"Based on the student's question and the answer provided, suggest 3 follow-up questions "
                 f"that would help deepen their understanding of the topic. Make them specific and thought-provoking.\n\n"
@@ -1292,7 +1580,7 @@ if tab == t("Guide Book Chat"):
 
             # Add a section for practice problems
             st.markdown("---")
-            st.markdown("### 📚 Practice Problems")
+            st.markdown("### 📚 " + t("Practice Problems"))
             practice_prompt = (
                 f"Create 2 practice problems related to the concepts in the question. "
                 f"For each problem, provide:\n"
@@ -1307,7 +1595,7 @@ if tab == t("Guide Book Chat"):
 
             # Add a section for additional resources
             st.markdown("---")
-            st.markdown("### 🔍 Additional Resources")
+            st.markdown("### 🔍 " + t("Additional Resources"))
             resources_prompt = (
                 f"Suggest 3-4 additional resources (videos, articles, interactive tools) that would help "
                 f"the student better understand the topic. Include brief descriptions of each resource.\n\n"
@@ -1319,8 +1607,8 @@ if tab == t("Guide Book Chat"):
 
 elif tab == t("Document Q&A"):
     st.header("\U0001F4A1 " + t("Document Q&A"))
-    st.info("Upload one or more documents and get instant learning aids, personalized for your style. The AI can now synthesize across multiple files!")
-    uploaded_files = st.file_uploader("Upload PDF/Image/TXT (multiple allowed)", type=["pdf","jpg","png","txt"], help="Upload your notes, textbook, or image.", accept_multiple_files=True)
+    st.info(t("Upload one or more documents and get instant learning aids, personalized for your style. The AI can now synthesize across multiple files!"))
+    uploaded_files = st.file_uploader(t("Upload PDF/Image/TXT (multiple allowed)"), type=["pdf","jpg","png","txt"], help=t("Upload your notes, textbook, or image."), accept_multiple_files=True)
     texts = []
     file_names = []
     if uploaded_files:
@@ -1328,15 +1616,15 @@ elif tab == t("Document Q&A"):
             # Extract text from file
             ext = uploaded.name.lower().split('.')[-1]
             if ext == "pdf":
-                with show_lottie_loading(("Extracting PDF from file...")):
+                with show_lottie_loading(t("Extracting PDF from file...")):
                     # Using fitz directly
                     with fitz.open(stream=uploaded.read(), filetype="pdf") as doc:
                         text = "\n".join([page.get_text() for page in doc])
             elif ext in ("jpg", "jpeg", "png"):
-                with show_lottie_loading(("Extracting text from image...")):
+                with show_lottie_loading(t("Extracting text from image...")):
                     text = pytesseract.image_to_string(Image.open(uploaded))
             else:
-                with show_lottie_loading(("Extracting text from file...")):
+                with show_lottie_loading(t("Extracting text from file...")):
                     text = StringIO(uploaded.getvalue().decode()).read()
             texts.append(text)
             file_names.append(uploaded.name)
@@ -1345,48 +1633,48 @@ elif tab == t("Document Q&A"):
         combined_text = "\n".join(texts)
 
         # Generate Podcast
-        st.subheader("🎙️ Generate Explainer Podcast")
-        if st.button("Create Podcast"):
-            with show_lottie_loading("Generating podcast..."):
+        st.subheader("🎙️ " + t("Generate Explainer Podcast"))
+        if st.button(t("Create Podcast")):
+            with show_lottie_loading(t("Generating podcast...")):
                 podcast_file = generate_podcast(combined_text)
                 if podcast_file:
-                    st.success("Podcast generated successfully!")
+                    st.success(t("Podcast generated successfully!"))
                     st.audio(podcast_file, format="audio/mp3")
-                    st.download_button("Download Podcast", data=open(podcast_file, "rb"), file_name="explainer_podcast.mp3", mime="audio/mp3")
+                    st.download_button(t("Download Podcast"), data=open(podcast_file, "rb"), file_name="explainer_podcast.mp3", mime="audio/mp3")
 
         # --- Generate learning aids for each file ---
         for idx, (text, fname) in enumerate(zip(texts, file_names)):
-            st.subheader(f"Learning Aids for {fname}")
+            st.subheader(f"{t('Learning Aids for ')}{fname}")
             
             # Generate and display all learning aids
-            with show_lottie_loading("Generating summary..."):
-                render_section("📌 Summary", generate_summary(text))
-            with show_lottie_loading("Generating quiz questions..."):
-                render_section("📝 Quiz Questions", generate_questions(text))
+            with show_lottie_loading(t("Generating summary...")):
+                render_section(t("Summary"), generate_summary(text))
+            with show_lottie_loading(t("Generating quiz questions...")):
+                render_section(t("Quiz Questions"), generate_questions(text))
 
-            with st.expander("📚 Flashcards"):
-                with show_lottie_loading("Generating flashcards..."):
-                    render_section("Flashcards", generate_flashcards(text))
+            with st.expander(t("Flashcards")):
+                with show_lottie_loading(t("Generating flashcards...")):
+                    render_section(t("Flashcards"), generate_flashcards(text))
 
-            with st.expander("🧠 Mnemonics"):
-                with show_lottie_loading("Generating mnemonics..."):
-                    render_section("Mnemonics", generate_mnemonics(text))
+            with st.expander(t("Mnemonics")):
+                with show_lottie_loading(t("Generating mnemonics...")):
+                    render_section(t("Mnemonics"), generate_mnemonics(text))
 
-            with st.expander("🔑 Key Terms"):
-                with show_lottie_loading("Generating key terms..."):
-                    render_section("Key Terms", generate_key_terms(text))
+            with st.expander(t("Key Terms")):
+                with show_lottie_loading(t("Generating key terms...")):
+                    render_section(t("Key Terms"), generate_key_terms(text))
 
-            with st.expander("📋 Cheat Sheet"):
-                with show_lottie_loading("Generating cheat sheet..."):
-                    render_section("Cheat Sheet", generate_cheatsheet(text))
+            with st.expander(t("Cheat Sheet")):
+                with show_lottie_loading(t("Generating cheat sheet...")):
+                    render_section(t("Cheat Sheet"), generate_cheatsheet(text))
 
-            with st.expander("⭐ Highlights"):
-                with show_lottie_loading("Generating highlights..."):
-                    render_section("Highlights", generate_highlights(text))
+            with st.expander(t("Highlights")):
+                with show_lottie_loading(t("Generating highlights...")):
+                    render_section(t("Highlights"), generate_highlights(text))
 
-            with st.expander("📌 Critical Points"):
-                with show_lottie_loading("Generating critical points..."):
-                    render_section("Critical Points", generate_critical_points(text))
+            with st.expander(t("Critical Points")):
+                with show_lottie_loading(t("Generating critical points...")):
+                    render_section(t("Critical Points"), generate_critical_points(text))
 
             # Store for batch export
             all_summaries.append(generate_summary(text))
@@ -1405,10 +1693,10 @@ elif tab == t("Document Q&A"):
 
         # --- Batch Export ---
         if all_flashcards:
-            st.info("Export all generated flashcards as an Anki-compatible CSV file.")
+            st.info(t("Export all generated flashcards as an Anki-compatible CSV file."))
             # Dummy function for export_flashcards_to_anki - implement if needed
             def export_flashcards_to_anki(flashcards_data):
-                csv_file = io.StringIO()
+                csv_file = StringIO()
                 writer = csv.writer(csv_file)
                 for q, a in flashcards_data:
                     writer.writerow([q, a])
@@ -1416,24 +1704,24 @@ elif tab == t("Document Q&A"):
                 return csv_file.getvalue()
 
             fname = export_flashcards_to_anki(all_flashcards)
-            st.download_button("Download Anki CSV", data=fname, file_name="flashcards.csv", mime="text/csv")
-            st.success(f"Flashcards exported to Anki CSV!")
-            st.toast("Flashcards exported!")
+            st.download_button(t("Download Anki CSV"), data=fname, file_name="flashcards.csv", mime="text/csv")
+            st.success(t("Flashcards exported to Anki CSV!"))
+            st.toast(t("Flashcards exported!"))
 
 
 elif tab == t("Whiteboard Explainer"): # New tab for Whiteboard Explainer
     st.header("✨ " + t("Whiteboard Explainer"))
-    st.info(("Note: This application simulates the whiteboard video in your browser and does not generate an MP4 file."))
+    st.info(t("Note: This application simulates the whiteboard video in your browser and does not generate an MP4 file."))
 
     script_text = st.text_area(
         t("Enter your script for the explainer video:"),
         height=200,
-        placeholder=t("e.g., 'Welcome to our explainer video. Today, we'll talk about innovative solutions. Here's a diagram...'",)
+        placeholder=t("e.g., 'Welcome to our explainer video. Today, we'll talk about innovative solutions. Here's a diagram...'") # Fixed to use t()
     )
 
     uploaded_images_wb = st.file_uploader( # Renamed variable to avoid conflict
-        t("Upload images for your explainer (optional):"),
-        type=["png", "jpg", "jpeg"],
+        t("Upload images for your explainer (optional):"), # Fixed to use t()
+        type=["png", "jpg", "jpeg", "pdf"], # Added PDF
         accept_multiple_files=True,
         key="wb_image_uploader" # Added key for uniqueness
     )
@@ -1441,10 +1729,10 @@ elif tab == t("Whiteboard Explainer"): # New tab for Whiteboard Explainer
     col1_wb, col2_wb = st.columns([1,1]) # Renamed columns to avoid conflict
 
     with col1_wb:
-        generate_button_wb = st.button(("Generate Whiteboard Video"), disabled=st.session_state['wb_processing'] or (not script_text and not uploaded_images_wb), key="generate_wb_button") # Added key
+        generate_button_wb = st.button(t("Generate Whiteboard Video"), disabled=st.session_state['wb_processing'] or (not script_text and not uploaded_images_wb), key="generate_wb_button") # Fixed to use t(), Added key
 
     with col2_wb:
-        play_button_wb = st.button(("Play Video"), disabled=st.session_state['wb_video_playing'] or st.session_state['wb_processing'] or not st.session_state['wb_frames'], key="play_wb_button") # Added key
+        play_button_wb = st.button(t("Play Video"), disabled=st.session_state['wb_video_playing'] or st.session_state['wb_processing'] or not st.session_state['wb_frames'], key="play_wb_button") # Fixed to use t(), Added key
 
     if generate_button_wb:
         if not script_text and not uploaded_images_wb:
@@ -1511,7 +1799,7 @@ elif tab == t("Whiteboard Explainer"): # New tab for Whiteboard Explainer
                 st.audio(audio_bytes, format='audio/mp3', start_time=0, key="wb_audio_player") # Added key
                 audio_file.close()
             except FileNotFoundError:
-                st.session_state['wb_message'] = "Audio file not found. Please regenerate video."
+                st.session_state['wb_message'] = t("Audio file not found. Please regenerate video.") # Fixed to use t()
                 st.session_state['wb_video_playing'] = False
                 st.rerun()
                 
@@ -1552,7 +1840,7 @@ elif tab == t("Whiteboard Explainer"): # New tab for Whiteboard Explainer
                 time.sleep(0.2) # Short pause between frames
         
         st.session_state['wb_video_playing'] = False
-        st.session_state['wb_message'] = t("Video playback complete!")
+        st.session_state['wb_message'] = t("Video playback complete!") # Fixed to use t()
         # Clean up temporary audio file after playback
         if st.session_state['wb_generated_audio_path'] and os.path.exists(st.session_state['wb_generated_audio_path']):
             os.remove(st.session_state['wb_generated_audio_path'])
@@ -1562,10 +1850,10 @@ elif tab == t("Whiteboard Explainer"): # New tab for Whiteboard Explainer
 
 elif tab == t("Learning Style Test"):
     st.header("🧠 " + t("Learning Style Test"))
-    st.write(("Answer the following questions to determine your learning style."))
+    st.write(t("Answer the following questions to determine your learning style."))
     
     likert_labels = [
-        "Strongly Disagree", "Disagree", "Somewhat Disagree", "Neutral", "Somewhat Agree", "Agree", "Strongly Agree"
+        t("Strongly Disagree"), t("Disagree"), t("Somewhat Disagree"), t("Neutral"), t("Somewhat Agree"), t("Agree"), t("Strongly Agree")
     ]
     # Re-define score_map here for the learning style test to be self-contained
     score_map = {
@@ -1574,52 +1862,52 @@ elif tab == t("Learning Style Test"):
 
     questions = {
         "Sensing/Intuitive": [
-            ("I am more interested in what is actual than what is possible.", "Sensing"),
-            ("I often focus on the big picture rather than the details.", "Intuitive"),
-            ("I trust my gut feelings over concrete evidence.", "Intuitive"),
-            ("I enjoy tasks that require attention to detail.", "Sensing"),
-            ("I prefer practical solutions over theoretical ideas.", "Sensing"),
-            ("I am drawn to abstract concepts and patterns.", "Intuitive"),
-            ("I notice details that others might miss.", "Sensing"),
-            ("I like to imagine possibilities and what could be.", "Intuitive"),
-            ("I rely on past experiences to guide me.", "Sensing"),
-            ("I am energized by exploring new ideas.", "Intuitive"),
+            (t("I am more interested in what is actual than what is possible."), "Sensing"),
+            (t("I often focus on the big picture rather than the details."), "Intuitive"),
+            (t("I trust my gut feelings over concrete evidence."), "Intuitive"),
+            (t("I enjoy tasks that require attention to detail."), "Sensing"),
+            (t("I prefer practical solutions over theoretical ideas."), "Sensing"),
+            (t("I am drawn to abstract concepts and patterns."), "Intuitive"),
+            (t("I notice details that others might miss."), "Sensing"),
+            (t("I like to imagine possibilities and what could be."), "Intuitive"),
+            (t("I rely on past experiences to guide me."), "Sensing"),
+            (t("I am energized by exploring new ideas."), "Intuitive"),
         ],
         "Visual/Verbal": [
-            ("I remember best what I see (pictures, diagrams, charts).", "Visual"),
-            ("I find it easier to follow spoken instructions than written ones.", "Verbal"),
-            ("I prefer to learn through images and spatial understanding.", "Visual"),
-            ("I often take notes to help me remember.", "Verbal"),
-            ("I visualize information in my mind.", "Visual"),
-            ("I prefer reading to watching videos.", "Verbal"),
-            ("I use color and layout to organize my notes.", "Visual"),
-            ("I find it easier to express myself in writing.", "Verbal"),
-            ("I am drawn to infographics and visual summaries.", "Visual"),
-            ("I enjoy listening to lectures or podcasts.", "Verbal"),
+            (t("I remember best what I see (pictures, diagrams, charts)."), "Visual"),
+            (t("I find it easier to follow spoken instructions than written ones."), "Verbal"),
+            (t("I prefer to learn through images and spatial understanding."), "Visual"),
+            (t("I often take notes to help me remember."), "Verbal"),
+            (t("I visualize information in my mind."), "Visual"),
+            (t("I prefer reading to watching videos."), "Verbal"),
+            (t("I use color and layout to organize my notes."), "Visual"),
+            (t("I find it easier to express myself in writing."), "Verbal"),
+            (t("I am drawn to infographics and visual summaries."), "Visual"),
+            (t("I enjoy listening to lectures or podcasts."), "Verbal"),
         ],
         "Active/Reflective": [
-            ("I learn best by doing and trying things out.", "Active"),
-            ("I prefer to think things through before acting.", "Reflective"),
-            ("I enjoy group work and discussions.", "Active"),
-            ("I need time alone to process new information.", "Reflective"),
-            ("I like to experiment and take risks in learning.", "Active"),
-            ("I often review my notes quietly after class.", "Reflective"),
-            ("I am energized by interacting with others.", "Active"),
-            ("I prefer to observe before participating.", "Reflective"),
-            ("I learn by teaching others or explaining concepts aloud.", "Active"),
-            ("I keep a journal or log to reflect on my learning.", "Reflective"),
+            (t("I learn best by doing and trying things out."), "Active"),
+            (t("I prefer to think things through before acting."), "Reflective"),
+            (t("I enjoy group work and discussions."), "Active"),
+            (t("I need time alone to process new information."), "Reflective"),
+            (t("I like to experiment and take risks in learning."), "Active"),
+            (t("I often review my notes quietly after class."), "Reflective"),
+            (t("I am energized by interacting with others."), "Active"),
+            (t("I prefer to observe before participating."), "Reflective"),
+            (t("I learn by teaching others or explaining concepts aloud."), "Active"),
+            (t("I keep a journal or log to reflect on my learning."), "Reflective"),
         ],
         "Sequential/Global": [
-            ("I learn best in a step-by-step, logical order.", "Sequential"),
-            ("I like to see the big picture before the details.", "Global"),
-            ("I prefer to follow clear, linear instructions.", "Sequential"),
-            ("I often make connections between ideas in a holistic way.", "Global"),
-            ("I am comfortable breaking tasks into smaller parts.", "Sequential"),
-            ("I sometimes jump to conclusions without all the steps.", "Global"),
-            ("I like outlines and structured notes.", "Sequential"),
-            ("I understand concepts better when I see how they fit together.", "Global"),
-            ("I prefer to finish one thing before starting another.", "Sequential"),
-            ("I enjoy brainstorming and exploring many ideas at once.", "Global"),
+            (t("I learn best in a step-by-step, logical order."), "Sequential"),
+            (t("I like to see the big picture before the details."), "Global"),
+            (t("I prefer to follow clear, linear instructions."), "Sequential"),
+            (t("I often make connections between ideas in a holistic way."), "Global"),
+            (t("I am comfortable breaking tasks into smaller parts."), "Sequential"),
+            (t("I sometimes jump to conclusions without all the steps."), "Global"),
+            (t("I like outlines and structured notes."), "Sequential"),
+            (t("I understand concepts better when I see how they fit together."), "Global"),
+            (t("I prefer to finish one thing before starting another."), "Sequential"),
+            (t("I enjoy brainstorming and exploring many ideas at once."), "Global"),
         ],
     }
 
@@ -1636,7 +1924,7 @@ elif tab == t("Learning Style Test"):
                 key=key
             )
     
-    if st.button(("Submit Learning Style Test")):
+    if st.button(t("Submit Learning Style Test")):
         scores = {}
         for dichotomy, qs in questions.items():
             total = 0
@@ -1665,28 +1953,28 @@ elif tab == t("Learning Style Test"):
                 total += adjusted_score
             scores[dichotomy] = int(total / len(qs))
 
-        with show_lottie_loading(("Saving your learning style and personalizing your experience...")):
+        with show_lottie_loading(t("Saving your learning style and personalizing your experience...")):
             save_learning_style(user.get("email", ""), scores)
             st.session_state.learning_style_answers = {}
-        st.success(("Learning style saved! Reloading..."))
+        st.success(t("Learning style saved! Reloading..."))
         st.balloons()
         st.rerun()
 
 elif tab == t("Paper Solver/Exam Guide"):
     st.header("📝 " + t("Paper Solver/Exam Guide"))
-    st.info(("Upload your exam paper (PDF or image). The AI will extract questions and show you how to answer for full marks!"))
+    st.info(t("Upload your exam paper (PDF or image). The AI will extract questions and show you how to answer for full marks!"))
 
-    exam_paper_file = st.file_uploader(("Upload Exam Paper (PDF/Image)"), type=["pdf", "jpg", "jpeg", "png"])
+    exam_paper_file = st.file_uploader(t("Upload Exam Paper (PDF/Image)"), type=["pdf", "jpg", "jpeg", "png"])
 
     if exam_paper_file:
         raw_text = extract_text_from_file(exam_paper_file) # Use the correct extraction function
 
         if not raw_text.strip():
-            st.error("Could not extract text from the uploaded file. Please ensure it's a clear document or image.")
+            st.error(t("Could not extract text from the uploaded file. Please ensure it's a clear document or image."))
             st.stop()
 
         # Step 1: Extract questions
-        with show_lottie_loading(("Extracting questions from PDF..." if exam_paper_file.type == "application/pdf" else "Extracting questions from image...")):
+        with show_lottie_loading(t("Extracting questions from PDF..." if exam_paper_file.type == "application/pdf" else "Extracting questions from image...")):
             question_extraction_prompt = (
                 "From the following exam paper text, extract each question. "
                 "List them numerically, starting with Q1., Q2., etc.\n\n"
@@ -1697,28 +1985,28 @@ elif tab == t("Paper Solver/Exam Guide"):
             # Parse extracted questions
             questions_list = re.findall(r'Q\d+\.\s*(.*)', extracted_questions_raw)
             if not questions_list:
-                st.warning("Could not extract any questions from the document. Please ensure the format is clear.")
+                st.warning(t("Could not extract any questions from the document. Please ensure the format is clear."))
                 st.stop()
 
             st.session_state['extracted_questions'] = questions_list
-            st.subheader(("Found {n} questions:", n==len(questions_list)))
+            st.subheader(t("Found {n} questions:", n=len(questions_list)))
 
             # Step 2: Allow selection of questions
             selected_questions_indices = []
             if questions_list:
-                st.write(("Select questions to solve (default: all)"))
+                st.write(t("Select questions to solve (default: all)"))
                 for i, q in enumerate(questions_list):
                     if st.checkbox(f"Q{i+1}: {q}", value=True, key=f"q_checkbox_{i}"):
                         selected_questions_indices.append(i)
             
-            if st.button(("Solve Selected Questions")):
+            if st.button(t("Solve Selected Questions")):
                 if not selected_questions_indices:
-                    st.warning("Please select at least one question to solve.")
+                    st.warning(t("Please select at least one question to solve."))
                 else:
-                    st.subheader(("Model Answers & Exam Tips"))
+                    st.subheader(t("Model Answers & Exam Tips"))
                     for i in selected_questions_indices:
                         question_text = questions_list[i]
-                        with show_lottie_loading(("Solving Q{n}...", n==i+1)):
+                        with show_lottie_loading(t("Solving Q{n}...", n=i+1)):
                             answer_prompt = (
                                 f"You are an expert examiner. Provide a comprehensive model answer for the following exam question "
                                 f"to achieve full marks. Also, include specific exam tips and common pitfalls to avoid for this type of question.\n\n"
@@ -1732,37 +2020,38 @@ elif tab == t("Paper Solver/Exam Guide"):
 
 elif tab == "⚡ 6-Hour Battle Plan":
     st.header("⚡ 6-Hour Battle Plan")
-    st.info("Upload your syllabus, guide books, and study materials. We'll create a focused 6-hour study plan using Vekkam's features to help you ace your exam!")
+    st.info(t("Upload your syllabus, guide books, and study materials. We'll create a focused 6-hour study plan using Vekkam's features to help you ace your exam!"))
 
     # File upload section
-    st.subheader("📚 Upload Your Materials")
+    st.subheader("📚 " + t("Upload Your Materials"))
     uploaded_files = st.file_uploader(
-        "Upload your syllabus, guide books, and study materials (PDF/Image/TXT)",
+        t("Upload your syllabus, guide books, and study materials (PDF/Image/TXT)"),
         type=["pdf", "jpg", "jpeg", "png", "txt"],
         accept_multiple_files=True,
-        help="Upload all relevant study materials. The more you provide, the better the plan will be!"
+        help=t("Upload all relevant study materials. The more you provide, the better the plan will be!")
     )
 
     # Additional information
-    st.subheader("📝 Additional Information")
-    exam_date = st.date_input("When is your exam?", help="This helps us prioritize topics")
-    exam_duration = st.number_input("Exam duration (in hours)", min_value=1, max_value=6, value=3, help="How long is your exam?")
-    weak_topics = st.text_area("Topics you find challenging (optional)", help="List topics you find difficult, separated by commas")
-    strong_topics = st.text_area("Topics you're confident in (optional)", help="List topics you're good at, separated by commas")
+    st.subheader("📝 " + t("Additional Information"))
+    exam_date = st.date_input(t("When is your exam?"), help=t("This helps us prioritize topics"))
+    exam_duration = st.number_input(t("Exam duration (in hours)"), min_value=1, max_value=6, value=3, help=t("How long is your exam?"))
+    weak_topics = st.text_area(t("Topics you find challenging (optional)"), help=t("List topics you find difficult, separated by commas"))
+    strong_topics = st.text_area(t("Topics you're confident in (optional)"), help=t("List topics you're good at, separated by commas"))
 
-    if st.button("Generate Battle Plan"):
+    if st.button(t("Generate Battle Plan")):
         if not uploaded_files:
-            st.warning("Please upload at least one study material.")
+            st.warning(t("Please upload at least one study material."))
             st.stop()
 
-        with show_lottie_loading("Analyzing your materials and creating a battle plan..."):
+        with show_lottie_loading(t("Analyzing your materials and creating a battle plan...")):
             # Extract text from all files
             all_text = []
             for file in uploaded_files:
                 ext = file.name.lower().split('.')[-1]
                 if ext == "pdf":
-                    reader = PdfReader(file)
-                    text = "\n".join([page.extract_text() for page in reader.pages])
+                    # Using fitz directly
+                    with fitz.open(stream=file.read(), filetype="pdf") as doc:
+                        text = "\n".join([page.get_text() for page in doc])
                 elif ext in ("jpg", "jpeg", "png"):
                     text = pytesseract.image_to_string(Image.open(file))
                 else:
@@ -1811,12 +2100,12 @@ elif tab == "⚡ 6-Hour Battle Plan":
             battle_plan = call_gemini(battle_plan_prompt)
 
             # Display the battle plan in a structured way
-            st.markdown("## 📋 Your 6-Hour Battle Plan")
+            st.markdown("## 📋 " + t("Your 6-Hour Battle Plan"))
             st.markdown(battle_plan)
 
             # Generate topic-specific resources
             st.markdown("---")
-            st.markdown("## 📚 Topic-Specific Resources")
+            st.markdown("## 📚 " + t("Topic-Specific Resources"))
             resources_prompt = (
                 f"Based on the content analysis and battle plan, create a list of resources for each topic:\n"
                 f"1. Key formulas to memorize\n"
@@ -1831,7 +2120,7 @@ elif tab == "⚡ 6-Hour Battle Plan":
 
             # Generate a quick reference guide
             st.markdown("---")
-            st.markdown("## 📝 Quick Reference Guide")
+            st.markdown("## 📝 " + t("Quick Reference Guide"))
             reference_prompt = (
                 f"Create a quick reference guide that includes:\n"
                 f"1. All key formulas and concepts\n"
@@ -1846,7 +2135,7 @@ elif tab == "⚡ 6-Hour Battle Plan":
 
             # Add a section for mental preparation
             st.markdown("---")
-            st.markdown("## 🧠 Mental Preparation")
+            st.markdown("## 🧠 " + t("Mental Preparation"))
             mental_prompt = (
                 f"Provide advice on:\n"
                 f"1. How to stay calm during the exam\n"
@@ -1860,13 +2149,13 @@ elif tab == "⚡ 6-Hour Battle Plan":
 
             # Add export options
             st.markdown("---")
-            st.markdown("## 📤 Export Options")
+            st.markdown("## 📤 " + t("Export Options"))
             col1, col2 = st.columns(2)
             with col1:
-                st.info("Battle plan is ready. You can copy it manually if needed.")
+                st.info(t("Battle plan is ready. You can copy it manually if needed."))
             
             with col2:
-                if st.button("📅 Add to Calendar"):
+                if st.button(t("Add to Calendar")):
                     # Create calendar event for study session
                     event_title = "6-Hour Study Battle Plan"
                     event_desc = f"""
@@ -1880,22 +2169,22 @@ elif tab == "⚡ 6-Hour Battle Plan":
                         "date": exam_date.strftime("%Y-%m-%d"),
                         "description": event_title
                     })
-                    st.success("Added to your calendar!")
+                    st.success(t("Added to your calendar!"))
 
 elif tab == "🎯 Discipline Hub": # Corrected from elif to if
-    st.header("🎯 Discipline Hub")
-    st.info("Build strong study habits and stay accountable with our discipline features!")
+    st.header("🎯 " + t("Discipline Hub"))
+    st.info(t("Build strong study habits and stay accountable with our discipline features!"))
 
     # Create tabs for different discipline features
     discipline_tabs = st.tabs([
-        "📊 Study Streak", 
-        "👥 Accountability", 
-        "⏱️ Focus Mode", 
-        "📅 Smart Schedule",
-        "📈 Study Analytics",
-        "🏆 Rewards",
-        "🎯 Study Environment",
-        "🚫 Distraction Blocker"
+        "📊 " + t("Study Streak"), # Fixed to use t()
+        "👥 " + t("Accountability"), # Fixed to use t()
+        "⏱️ " + t("Focus Mode"), # Fixed to use t()
+        "📅 " + t("Smart Schedule"), # Fixed to use t()
+        "📈 " + t("Study Analytics"), # Fixed to use t()
+        "🏆 " + t("Rewards"), # Fixed to use t()
+        "🎯 " + t("Study Environment"), # Fixed to use t()
+        "🚫 " + t("Distraction Blocker") # Fixed to use t()
     ])
     
     # --- Helper Functions ---
@@ -1906,7 +2195,7 @@ elif tab == "🎯 Discipline Hub": # Corrected from elif to if
         # For a web environment like Streamlit Cloud, direct VLC playback
         # on the server-side might not be the ideal approach.
         # Consider client-side audio playback or embedding if this causes issues.
-        st.warning("Playing ambient sounds with VLC might not work as expected in all deployment environments (e.g., Streamlit Cloud) as it requires VLC to be installed on the server.")
+        st.warning(t("Playing ambient sounds with VLC might not work as expected in all deployment environments (e.g., Streamlit Cloud) as it requires VLC to be installed on the server."))
         if os.path.exists(file_path):
             # This would typically run on the server.
             # For client-side audio in Streamlit, you'd usually use st.audio
@@ -1915,15 +2204,15 @@ elif tab == "🎯 Discipline Hub": # Corrected from elif to if
                 # Placeholder for direct server-side VLC command if available
                 # import subprocess
                 # subprocess.Popen(["vlc", "--play-and-exit", file_path])
-                st.info(f"Attempting to play sound: {file_path}. (Requires VLC on server)")
+                st.info(t("Attempting to play sound: {file_path}. (Requires VLC on server)", file_path=file_path))
             except Exception as e:
-                st.error(f"Failed to play sound: {e}. VLC might not be installed or configured.")
+                st.error(t("Failed to play sound: {e}. VLC might not be installed or configured.", e=e))
             
             # Alternative: If you want client-side sound, you'd need to serve the sound file
             # or use a base64 encoding with st.audio
             # For now, keeping it as is based on original structure.
         else:
-            st.error("Sound file not found. Make sure 'sounds' directory exists with MP3s.")
+            st.error(t("Sound file not found. Make sure 'sounds' directory exists with MP3s."))
             return None
 
     # --- Update Study Streak Feature ---
@@ -1980,50 +2269,50 @@ elif tab == "🎯 Discipline Hub": # Corrected from elif to if
     }
 
     with discipline_tabs[6]:  # Study Environment
-        st.subheader("🎯 Study Environment")
+        st.subheader("🎯 " + t("Study Environment")) # Fixed to use t()
 
         # Ambient sounds
-        st.write("### 🎵 Ambient Sounds")
-        selected_sound = st.selectbox("Choose ambient sound", list(SOUND_FILES.keys()))
-        if st.button("Play Sound"):
+        st.write("### 🎵 " + t("Ambient Sounds")) # Fixed to use t()
+        selected_sound = st.selectbox(t("Choose ambient sound"), list(SOUND_FILES.keys())) # Fixed to use t()
+        if st.button(t("Play Sound")): # Fixed to use t()
             file_path = SOUND_FILES.get(selected_sound)
             if file_path:
                 play_sound(file_path)
 
     with discipline_tabs[0]:  # Study Streak
-        st.subheader("📊 Study Streak")
+        st.subheader("📊 " + t("Study Streak")) # Fixed to use t()
         col1, col2, col3 = st.columns(3)
         with col1:
-            st.metric("Current Streak", f"{st.session_state.study_streak['current_streak']} days")
+            st.metric(t("Current Streak"), f"{st.session_state.study_streak['current_streak']} days") # Fixed to use t()
         with col2:
-            st.metric("Longest Streak", f"{st.session_state.study_streak['longest_streak']} days")
+            st.metric(t("Longest Streak"), f"{st.session_state.study_streak['longest_streak']} days") # Fixed to use t()
         with col3:
-            st.metric("Total Study Time", f"{st.session_state.study_streak['total_study_time']} hours")
+            st.metric(t("Total Study Time"), f"{st.session_state.study_streak['total_study_time']} hours") # Fixed to use t()
 
-        if st.button("Save Streak Data"):
+        if st.button(t("Save Streak Data")): # Fixed to use t()
             save_streak_data()
-            st.success("Streak data saved!")
+            st.success(t("Streak data saved!")) # Fixed to use t()
 
     with discipline_tabs[4]:  # Study Analytics
-        st.subheader("📈 Study Analytics")
-        if st.button("Save Analytics Data"):
+        st.subheader("📈 " + t("Study Analytics")) # Fixed to use t()
+        if st.button(t("Save Analytics Data")): # Fixed to use t()
             save_analytics_data()
-            st.success("Analytics data saved!")
+            st.success(t("Analytics data saved!")) # Fixed to use t()
 
 # --- Footer: Product Hunt Upvote Button & Live Stats ---
 ph_stats = get_ph_stats()
 
 # Keep only this section in the sidebar:
 st.sidebar.markdown("---")
-st.sidebar.markdown("### 🚀 Support Vekkam")
+st.sidebar.markdown("### 🚀 " + t("Support Vekkam")) # Fixed to use t()
 st.sidebar.markdown(
     f'''
     <div style="text-align:center;">
         <a href="https://www.producthunt.com/products/vekkam" target="_blank" id="ph-upvote-link">
-            <img src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=456789&theme=light" alt="Upvote Vekkam on Product Hunt" style="width: 150px; margin-bottom: 8px;"/>
+            <img src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=456789&theme=light" alt="{t("Upvote Vekkam on Product Hunt")}" style="width: 150px; margin-bottom: 8px;"/>
         </a><br>
-        <span style="font-size:1em; font-weight:bold; color:#da552f;">🔥 {ph_stats['votes']} upvotes</span><br>
-        <a href="https://www.producthunt.com/products/vekkam" target="_blank" style="font-size:0.9em; font-weight:bold; color:#da552f; text-decoration:none;">👉 Upvote & Comment!</a>
+        <span style="font-size:1em; font-weight:bold; color:#da552f;">🔥 {ph_stats['votes']} {t("upvotes")}</span><br>
+        <a href="https://www.producthunt.com/products/vekkam" target="_blank" style="font-size:0.9em; font-weight:bold; color:#da552f; text-decoration:none;">👉 {t("Upvote & Comment!")}</a>
     </div>
     ''', unsafe_allow_html=True
 )
@@ -2032,15 +2321,15 @@ st.sidebar.markdown(
 if 'ph_upvoted' not in st.session_state:
     st.session_state['ph_upvoted'] = False
 if not st.session_state['ph_upvoted']:
-    if st.sidebar.button("👍 I upvoted Vekkam!"):
+    if st.sidebar.button("👍 " + t("I upvoted Vekkam!")): # Fixed to use t()
         st.session_state['ph_upvoted'] = True
-        st.sidebar.success("Thank you for supporting us! 🎉")
+        st.sidebar.success(t("Thank you for supporting us! 🎉")) # Fixed to use t()
 else:
-    st.sidebar.info("Thanks for your upvote! 🧡")
+    st.sidebar.info(t("Thanks for your upvote! 🧡")) # Fixed to use t()
 
 # Add recent comments to sidebar if available
 if ph_stats['comments']:
-    st.sidebar.markdown("### 💬 Recent Comments")
+    st.sidebar.markdown("### 💬 " + t("Recent Comments")) # Fixed to use t()
     for c in ph_stats['comments']:
         st.sidebar.markdown(
             f'<div style="margin-bottom:0.5em; font-size:0.9em;"><img src="{c["avatar"]}" width="24" style="vertical-align:middle;border-radius:50%;margin-right:4px;"/> <b>{c["user"]}</b><br><span style="font-size:0.85em;">{c["body"]}</span></div>',
