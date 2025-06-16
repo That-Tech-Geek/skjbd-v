@@ -257,7 +257,7 @@ def process_image_for_doodle(uploaded_file):
             img = Image.open(uploaded_file)
         
         # Convert to grayscale
-        img_gray = img.conver("L") # Corrected from .conver to .convert
+        img_gray = img.convert("L") # Corrected from .conver to .convert
         
         # Apply an edge detection filter (e.g., FIND_EDGES or CONTOUR)
         # Using a combination of filters can achieve a good sketch effect.
@@ -268,7 +268,7 @@ def process_image_for_doodle(uploaded_file):
         img_doodle = ImageOps.invert(img_edges)
         
         # Convert back to RGB for display in Streamlit if it was grayscale
-        img_doodle = img_doodle.conver("RGB") # Corrected from .conver to .convert
+        img_doodle = img_doodle.convert("RGB") # Corrected from .conver to .convert
 
         # Save to bytes buffer
         buf = BytesIO()
