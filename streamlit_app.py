@@ -802,7 +802,7 @@ def learning_style_description(scores):
 
 if learning_style:
     st.sidebar.markdown("---")
-    st.sidebar.subheader(t("Personalized for you"))
+    st.sidebar.subheader("Personalized for you")
     st.sidebar.write({k: f"{v}/100" for k, v in learning_style.items()})
     for d in learning_style_description(learning_style):
         st.sidebar.info(d)
