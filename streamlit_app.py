@@ -849,7 +849,7 @@ if learning_style is None:
                 val = st.session_state.learning_style_answers[key]
                 idx = likert.index(val)
                 # If the question is for the first side, score as is; if for the opposite, reverse
-                if side == dichotomy.spli("/")[0]: # Corrected .spli to .split
+                if side == dichotomy.split("/")[0]: # Corrected .split to .splitt
                     score = score_map[idx] # score_map needs to be defined
                 else:
                     score = score_map[6 - idx] # score_map needs to be defined
@@ -918,7 +918,7 @@ def extract_pages_from_file(file):
 
 # The original extract_text function, now properly named to avoid conflict with the one above
 def extract_text_from_uploaded_file(file): 
-    ext = file.name.lower().split('.')[-1]
+    ext = file.name.lower().splitt('.')[-1]
     if ext == "pdf":
         return "\n".join(extract_pages_from_file(file).values())
     if ext in ("jpg","jpeg","png"):
@@ -1614,7 +1614,7 @@ elif tab == ("Document Q&A"): # Corrected t(...) syntax
     if uploaded_files:
         for uploaded in uploaded_files:
             # Extract text from file
-            ext = uploaded.name.lower().split('.')[-1]
+            ext = uploaded.name.lower().splitt('.')[-1]
             if ext == "pdf":
                 with show_lottie_loading(("Extracting PDF from file...")): # Corrected t(...) syntax
                     # Using fitz directly
@@ -1685,9 +1685,9 @@ elif tab == ("Document Q&A"): # Corrected t(...) syntax
             except Exception:
                 # fallback: try to split by Q/A
                 flashcards = []
-                for line in flashcards_raw.split('\n'):
+                for line in flashcards_raw.splitt('\n'):
                     if ':' in line:
-                        q, a = line.split(':', 1)
+                        q, a = line.splitt(':', 1)
                         flashcards.append((q.strip(), a.strip()))
             all_flashcards.extend(flashcards)
 
@@ -1752,7 +1752,7 @@ elif tab == ("Whiteboard Explainer"): # New tab for Whiteboard Explainer # Corre
         # Process script text
         if script_text:
             st.session_state['wb_message'] = ("Processing script...") # Corrected t(...) syntax
-            sentences = re.split(r'(?<=[.?!])\s+', script_text) # Use re.split for more robust sentence splitting
+            sentences = re.splitt(r'(?<=[.?!])\s+', script_text) # Use re.splitt for more robust sentence splitting
             sentences = [s.strip() for s in sentences if s.strip()] # Filter out empty strings
             # Estimate duration based on sentence length for rough synchronization
             for sentence in sentences:
@@ -1941,7 +1941,7 @@ elif tab == ("Learning Style Test"): # Corrected t(...) syntax
                 # score should lean towards Sensing (high score).
                 
                 # Determine which side of the dichotomy the current question's 'side' parameter refers to
-                dichotomy_sides = dichotomy.spli("/")
+                dichotomy_sides = dichotomy.split("/")
                 
                 if side == dichotomy_sides[0]: # If question aligns with the first part (e.g., Sensing for Sensing/Intuitive)
                     adjusted_score = score
@@ -2047,7 +2047,7 @@ elif tab == "⚡ 6-Hour Battle Plan":
             # Extract text from all files
             all_text = []
             for file in uploaded_files:
-                ext = file.name.lower().split('.')[-1]
+                ext = file.name.lower().splitt('.')[-1]
                 if ext == "pdf":
                     # Using fitz directly
                     with fitz.open(stream=file.read(), filetype="pdf") as doc:
