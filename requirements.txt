@@ -2,6 +2,7 @@ streamlit
 cohere
 PyMuPDF
 python-docx
+google.generativeai
 python-igraph
 matplotlib
 plotly
