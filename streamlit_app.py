@@ -74,7 +74,7 @@ def chunk_text(text, source_id, chunk_size=CHUNK_SIZE, overlap=CHUNK_OVERLAP):
 def process_source(file, source_type):
     try:
         source_id = f"{source_type}:{file.name}"
-        model = genai.GenerativeModel('models/gemini-1.5-pro-latest')
+        model = genai.GenerativeModel('models/gemini-2.5-flash-lite-latest')
 
         if source_type == 'transcript':
             with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(file.name)[1]) as tmp:
@@ -107,7 +107,7 @@ def process_source(file, source_type):
 
 def generate_content_outline(all_chunks, existing_outline=None):
     try:
-        model = genai.GenerativeModel('models/gemini-1.5-pro-latest')
+        model = genai.GenerativeModel('models/gemini-2.5-flash-lite-latest')
         prompt_chunks = [{"chunk_id": c['chunk_id'], "text_snippet": c['text'][:200] + "..."} for c in all_chunks]
         instruction = "Analyze the content chunks and create a structured outline."
         if existing_outline:
@@ -129,7 +129,7 @@ def generate_content_outline(all_chunks, existing_outline=None):
 
 def synthesize_note_block(topic, relevant_chunks_text, instructions):
     try:
-        model = genai.GenerativeModel('models/gemini-1.5-pro-latest')
+        model = genai.GenerativeModel('models/gemini-2.5-flash-lite-latest')
         prompt = f"""
         Write the notes for a single topic: "{topic}".
         Use ONLY the provided source text. Adhere to the user's instructions. Format in Markdown.
