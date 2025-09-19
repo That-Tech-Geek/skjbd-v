@@ -11,12 +11,24 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import hashlib
 import asyncio
 
-# --- A THIRD-PARTY LIBRARY FOR GOOGLE OAUTH IN STREAMLIT ---
-# You may need to install this: pip install streamlit-google-oauth
+# --- GOOGLE OAUTH LIBRARY ---
+# This app requires a third-party library for Google authentication.
+# If you see an error below, please install it from your terminal using the EXACT command:
+# pip install streamlit-google-oauth
 try:
     from streamlit_google_oauth import StGoogleOauth
 except ImportError:
-    st.error("Please install the required Google OAuth library: pip install streamlit-google-oauth")
+    st.error("""
+        **Required library not found!**
+
+        The Google OAuth library is not installed. Please install it using the correct package name:
+        
+        ```bash
+        pip install streamlit-google-oauth
+        ```
+
+        The app cannot continue without this dependency. Please install it and refresh the page.
+    """)
     st.stop()
 
 # --- CONFIGURATION & CONSTANTS ---
@@ -345,5 +357,4 @@ def show_results_state(gemini_api_key):
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
-
+    asyncio.run(main()
