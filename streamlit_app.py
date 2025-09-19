@@ -320,4 +320,4 @@ def show_review_lesson_state():
             final_plan = json.loads(edited_plan)
             st.success("Lesson plan is valid! Triggering playback engine...")
             st.json(final_plan)
-        except json.JSONDecode
+        except json.JSONDecode:
