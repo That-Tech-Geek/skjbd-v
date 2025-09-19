@@ -357,4 +357,4 @@ def show_results_state(gemini_api_key):
 
 
 if __name__ == "__main__":
-    asyncio.run(main()
+    asyncio.run(main())
