@@ -63,6 +63,12 @@ def gemini_api_call_with_retry(func):
     return wrapper
 
 # --- API SELF-DIAGNOSIS & UTILITIES ---
+def check_gemini_api():
+    try: genai.get_model('models/gemini-2.5-flash-lite'); return "Valid"
+    except Exception as e:
+        st.sidebar.error(f"Gemini API Key in secrets is invalid: {e}")
+        return "Invalid"
+
 def resilient_json_parser(json_string):
     try:
         match = re.search(r'\{.*\}', json_string, re.DOTALL)
@@ -191,6 +197,7 @@ def get_google_flow():
         st.error("OAuth credentials are not configured correctly in st.secrets."); st.stop()
 
 def reset_session(tool_choice):
+    # Preserve user info and tool choice, clear everything else
     user_info = st.session_state.get('user_info')
     st.session_state.clear()
     st.session_state.user_info = user_info
@@ -245,22 +252,7 @@ def show_workspace_state():
         with st.expander("Add More Files"):
             new_files = st.file_uploader("Upload more files", accept_multiple_files=True, key=f"uploader_{int(time.time())}")
             if new_files:
-                with st.spinner("Processing new files..."):
-                    results = []
-                    with ThreadPoolExecutor() as executor:
-                        futures = {executor.submit(process_source, f, 'transcript' if f.type.startswith('audio/') else 'image' if f.type.startswith('image/') else 'pdf'): f for f in new_files}
-                        for future in as_completed(futures): results.append(future.result())
-                    
-                    new_chunks = [c for r in results if r and r['status'] == 'success' for c in r['chunks']]
-                    st.session_state.all_chunks.extend(new_chunks)
-                    st.session_state.extraction_failures.extend([r for r in results if r and r['status'] == 'error'])
-
-                with st.spinner("AI is suggesting new topics..."):
-                    update_json = generate_content_outline(new_chunks, existing_outline=st.session_state.get('outline_data', []))
-                    if update_json and "outline" in update_json:
-                        st.session_state.outline_data.extend(update_json["outline"])
-                        st.success(f"Added {len(update_json['outline'])} new topic(s)!")
-                        st.rerun()
+                st.info("File adding logic to be implemented.")
 
 def show_synthesizing_state():
     st.header("Synthesizing Note Blocks...")
@@ -292,12 +284,7 @@ def show_results_state():
         st.subheader(block['topic'])
         st.markdown(block['content'])
         if st.button("Regenerate this block", key=f"regen_{i}"):
-            with st.spinner("Regenerating block..."):
-                chunks_map = {c['chunk_id']: c['text'] for c in st.session_state.all_chunks}
-                text = "\n\n---\n\n".join([chunks_map.get(cid, "") for cid in block['source_chunks']])
-                new_content = synthesize_note_block(block['topic'], text, st.session_state.synthesis_instructions)
-                st.session_state.final_notes[i]['content'] = new_content
-                st.rerun()
+            st.info("Block regeneration logic to be implemented.")
 
 def show_generating_lesson_state():
     st.header("Building Your Lesson...")
@@ -320,4 +307,79 @@ def show_review_lesson_state():
             final_plan = json.loads(edited_plan)
             st.success("Lesson plan is valid! Triggering playback engine...")
             st.json(final_plan)
-        except json.JSONDecode:
+        except json.JSONDecodeError:
+            st.error("Edited text is not valid JSON.")
+
+# --- UI STATE FUNCTIONS for MOCK TEST GENERATOR ---
+def show_mock_test_placeholder():
+    st.header("Mock Test Generator")
+    st.image("https://placehold.co/800x400/1A233A/E0E2E7?text=Coming+Soon", use_column_width=True)
+    st.write("This feature is under construction. The architecture for generating mock tests based on syllabus content, Bloom's Taxonomy, and a professor persona will be built here.")
+    st.info("The planned workflow includes: Syllabus Upload -> Topic Extraction -> Question Bank Generation -> Test Assembly -> CV-based Grading.")
+
+
+# --- MAIN APP ---
+def main():
+    st.sidebar.title("Vekkam Engine")
+    if 'user_info' not in st.session_state: st.session_state.user_info = None
+    try: genai.configure(api_key=st.secrets["gemini"]["api_key"])
+    except (KeyError, FileNotFoundError): st.error("Gemini API key not configured in st.secrets."); st.stop()
+
+    flow = get_google_flow()
+    auth_code = st.query_params.get("code")
+
+    if auth_code and not st.session_state.user_info:
+        try:
+            flow.fetch_token(code=auth_code)
+            user_info = build('oauth2', 'v2', credentials=flow.credentials).userinfo().get().execute()
+            st.session_state.user_info = user_info
+            st.query_params.clear(); st.rerun()
+        except Exception as e:
+            st.error(f"Authentication failed: {e}"); st.session_state.user_info = None
+    
+    if not st.session_state.user_info:
+        st.title("Welcome to Vekkam")
+        auth_url, _ = flow.authorization_url(prompt='consent')
+        st.link_button("Sign in with Google", auth_url)
+        return
+
+    user = st.session_state.user_info
+    st.sidebar.image(user['picture'], width=80)
+    st.sidebar.subheader(f"Welcome, {user['given_name']}")
+    if st.sidebar.button("Logout"): st.session_state.clear(); st.rerun()
+    st.sidebar.divider()
+
+    # --- TOOL SELECTION ---
+    tool_choice = st.sidebar.radio(
+        "Select a Tool",
+        ("Note & Lesson Engine", "Mock Test Generator"),
+        key='tool_choice'
+    )
+    
+    # Reset session if tool is changed
+    if 'last_tool_choice' not in st.session_state:
+        st.session_state.last_tool_choice = tool_choice
+    if st.session_state.last_tool_choice != tool_choice:
+        reset_session(tool_choice)
+        st.session_state.last_tool_choice = tool_choice
+        st.rerun()
+
+
+    st.sidebar.divider()
+    st.sidebar.subheader("API Status")
+    st.sidebar.write(f"Gemini: **{check_gemini_api()}**")
+
+    # --- ROUTE TO THE CORRECT TOOL'S WORKFLOW ---
+    if tool_choice == "Note & Lesson Engine":
+        if 'current_state' not in st.session_state: reset_session(tool_choice)
+        state_map = { 'upload': show_upload_state, 'processing': show_processing_state, 'workspace': show_workspace_state,
+                      'synthesizing': show_synthesizing_state, 'results': show_results_state, 'generating_lesson': show_generating_lesson_state,
+                      'review_lesson': show_review_lesson_state, }
+        state_function = state_map.get(st.session_state.current_state, show_upload_state)
+        state_function()
+    elif tool_choice == "Mock Test Generator":
+        show_mock_test_placeholder()
+
+
+if __name__ == "__main__":
+    main()
