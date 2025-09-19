@@ -1,4 +1,5 @@
 streamlit
+streamlit-google-oauth
 cohere
 PyMuPDF
 python-docx
