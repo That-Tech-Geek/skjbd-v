@@ -196,18 +196,21 @@ def get_google_flow():
     except (KeyError, FileNotFoundError):
         st.error("OAuth credentials are not configured correctly in st.secrets."); st.stop()
 
-def reset_session():
-    for key in list(st.session_state.keys()):
-        if key not in ['user_info']: del st.session_state[key]
+def reset_session(tool_choice):
+    # Preserve user info and tool choice, clear everything else
+    user_info = st.session_state.get('user_info')
+    st.session_state.clear()
+    st.session_state.user_info = user_info
+    st.session_state.tool_choice = tool_choice
     st.session_state.current_state = 'upload'
     st.session_state.all_chunks = []
     st.session_state.extraction_failures = []
     st.session_state.outline_data = []
     st.session_state.final_notes = []
 
-# --- UI STATE FUNCTIONS ---
+# --- UI STATE FUNCTIONS for NOTE & LESSON ENGINE ---
 def show_upload_state():
-    st.header("Upload Your Sources")
+    st.header("Note & Lesson Engine: Upload")
     uploaded_files = st.file_uploader("Select files", accept_multiple_files=True, type=['mp3', 'm4a', 'wav', 'png', 'jpg', 'pdf'])
     if st.button("Process Files", type="primary") and uploaded_files:
         st.session_state.initial_files = uploaded_files
@@ -246,13 +249,10 @@ def show_workspace_state():
                 st.rerun()
     with col2:
         st.subheader("Source Explorer")
-        # Add more files logic, etc.
         with st.expander("Add More Files"):
             new_files = st.file_uploader("Upload more files", accept_multiple_files=True, key=f"uploader_{int(time.time())}")
             if new_files:
-                # This part would need to be implemented to process new files and update the workspace
                 st.info("File adding logic to be implemented.")
-
 
 def show_synthesizing_state():
     st.header("Synthesizing Note Blocks...")
@@ -272,7 +272,7 @@ def show_synthesizing_state():
 
 def show_results_state():
     st.header("Your Unified Notes")
-    if st.button("Start New Session"): reset_session(); st.rerun()
+    if st.button("Start New Note Session"): reset_session(st.session_state.tool_choice); st.rerun()
     if st.button("Back to Workspace"): st.session_state.current_state = 'workspace'; st.rerun()
 
     st.subheader("Next Step: Create a Lesson")
@@ -283,11 +283,8 @@ def show_results_state():
     for i, block in enumerate(st.session_state.final_notes):
         st.subheader(block['topic'])
         st.markdown(block['content'])
-        # Regenerate logic...
         if st.button("Regenerate this block", key=f"regen_{i}"):
-            with st.spinner("Regenerating block..."):
-                # This part would need to be implemented
-                st.info("Block regeneration logic to be implemented.")
+            st.info("Block regeneration logic to be implemented.")
 
 def show_generating_lesson_state():
     st.header("Building Your Lesson...")
@@ -312,6 +309,14 @@ def show_review_lesson_state():
             st.json(final_plan)
         except json.JSONDecodeError:
             st.error("Edited text is not valid JSON.")
+
+# --- UI STATE FUNCTIONS for MOCK TEST GENERATOR ---
+def show_mock_test_placeholder():
+    st.header("Mock Test Generator")
+    st.image("https://placehold.co/800x400/1A233A/E0E2E7?text=Coming+Soon", use_column_width=True)
+    st.write("This feature is under construction. The architecture for generating mock tests based on syllabus content, Bloom's Taxonomy, and a professor persona will be built here.")
+    st.info("The planned workflow includes: Syllabus Upload -> Topic Extraction -> Question Bank Generation -> Test Assembly -> CV-based Grading.")
+
 
 # --- MAIN APP ---
 def main():
@@ -343,17 +348,38 @@ def main():
     st.sidebar.subheader(f"Welcome, {user['given_name']}")
     if st.sidebar.button("Logout"): st.session_state.clear(); st.rerun()
     st.sidebar.divider()
+
+    # --- TOOL SELECTION ---
+    tool_choice = st.sidebar.radio(
+        "Select a Tool",
+        ("Note & Lesson Engine", "Mock Test Generator"),
+        key='tool_choice'
+    )
+    
+    # Reset session if tool is changed
+    if 'last_tool_choice' not in st.session_state:
+        st.session_state.last_tool_choice = tool_choice
+    if st.session_state.last_tool_choice != tool_choice:
+        reset_session(tool_choice)
+        st.session_state.last_tool_choice = tool_choice
+        st.rerun()
+
+
+    st.sidebar.divider()
     st.sidebar.subheader("API Status")
     st.sidebar.write(f"Gemini: **{check_gemini_api()}**")
 
-    if 'current_state' not in st.session_state: reset_session()
+    # --- ROUTE TO THE CORRECT TOOL'S WORKFLOW ---
+    if tool_choice == "Note & Lesson Engine":
+        if 'current_state' not in st.session_state: reset_session(tool_choice)
+        state_map = { 'upload': show_upload_state, 'processing': show_processing_state, 'workspace': show_workspace_state,
+                      'synthesizing': show_synthesizing_state, 'results': show_results_state, 'generating_lesson': show_generating_lesson_state,
+                      'review_lesson': show_review_lesson_state, }
+        state_function = state_map.get(st.session_state.current_state, show_upload_state)
+        state_function()
+    elif tool_choice == "Mock Test Generator":
+        show_mock_test_placeholder()
 
-    state_map = { 'upload': show_upload_state, 'processing': show_processing_state, 'workspace': show_workspace_state,
-                  'synthesizing': show_synthesizing_state, 'results': show_results_state, 'generating_lesson': show_generating_lesson_state,
-                  'review_lesson': show_review_lesson_state, }
-    state_function = state_map.get(st.session_state.current_state, show_upload_state)
-    state_function()
 
 if __name__ == "__main__":
     main()
-
