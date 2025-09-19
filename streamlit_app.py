@@ -116,16 +116,16 @@ def get_google_flow():
     try:
         client_config = {
             "web": {
-                "client_id": st.secrets["google_oauth"]["client_id"],
-                "client_secret": st.secrets["google_oauth"]["client_secret"],
+                "client_id": st.secrets["google"]["client_id"],
+                "client_secret": st.secrets["google"]["client_secret"],
                 "auth_uri": "https://accounts.google.com/o/oauth2/auth",
                 "token_uri": "https://oauth2.googleapis.com/token",
                 "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-                "redirect_uris": [st.secrets["google_oauth"]["redirect_uri"]],
+                "redirect_uris": [st.secrets["google"]["redirect_uri"]],
             }
         }
         scopes = ["https://www.googleapis.com/auth/userinfo.profile", "https://www.googleapis.com/auth/userinfo.email", "openid"]
-        return Flow.from_client_config(client_config, scopes=scopes, redirect_uri=st.secrets["google_oauth"]["redirect_uri"])
+        return Flow.from_client_config(client_config, scopes=scopes, redirect_uri=st.secrets["google"]["redirect_uri"])
     except (KeyError, FileNotFoundError):
         st.error("OAuth credentials are not configured correctly in st.secrets.")
         st.stop()
