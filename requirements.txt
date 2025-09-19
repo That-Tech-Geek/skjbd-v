@@ -5,7 +5,6 @@ python-docx
 google.generativeai
 python-igraph
 matplotlib
-streamlit-gauth
 plotly
 requests
 Pillow
