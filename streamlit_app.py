@@ -44,7 +44,7 @@ st.set_page_config(
 # --- API SELF-DIAGNOSIS & UTILITIES ---
 def check_gemini_api():
     try:
-        genai.get_model('models/gemini-1.5-pro-latest')
+        genai.get_model('models/gemini-2.5-flash-lite')
         return "Valid"
     except Exception as e:
         st.sidebar.error(f"Gemini API Key in secrets is invalid: {e}")
