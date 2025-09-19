@@ -96,12 +96,7 @@ def load_css():
         </style>
     """, unsafe_allow_html=True)
 
-# --- WORKFLOW FUNCTIONS (UNCHANGED FROM PREVIOUS VERSION) ---
-@gemini_api_call_with_retry
-def generate_content_outline(all_chunks, existing_outline=None):
-    # ... (function code is unchanged)
-    pass
-# ... (All other agentic and processing functions are here but omitted for brevity)
+# --- WORKFLOW FUNCTIONS ---
 def gemini_api_call_with_retry(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
@@ -148,7 +143,9 @@ def process_source(file, source_type):
 @gemini_api_call_with_retry
 def generate_content_outline(all_chunks, existing_outline=None):
     model = genai.GenerativeModel('models/gemini-2.5-flash-lite'); prompt_chunks = [{"chunk_id": c['chunk_id'], "text_snippet": c['text'][:200] + "..."} for c in all_chunks]
-    instruction = "Analyze and create a structured outline."; prompt = f"""You are a curriculum designer. {instruction} For each topic, you MUST list the `chunk_id`s that are most relevant. Output ONLY a JSON object with a root key "outline", a list of objects. Each object must have keys "topic" (string) and "relevant_chunks" (list of strings). **Content Chunks:** --- {json.dumps(prompt_chunks, indent=2)}"""; response = model.generate_content(prompt); return resilient_json_parser(response.text)
+    instruction = "Analyze and create a structured outline."; 
+    if existing_outline: instruction = "Analyze the NEW content chunks and suggest topics to ADD to the existing outline."
+    prompt = f"""You are a curriculum designer. {instruction} For each topic, you MUST list the `chunk_id`s that are most relevant. Output ONLY a JSON object with a root key "outline", a list of objects. Each object must have keys "topic" (string) and "relevant_chunks" (list of strings). **Existing Outline:** {json.dumps(existing_outline, indent=2) if existing_outline else "None"} **Content Chunks:** --- {json.dumps(prompt_chunks, indent=2)}"""; response = model.generate_content(prompt); return resilient_json_parser(response.text)
 @gemini_api_call_with_retry
 def synthesize_note_block(topic, relevant_chunks_text, instructions):
     model = genai.GenerativeModel('models/gemini-2.5-flash-lite'); prompt = f"""Write the notes for a single topic: "{topic}". Use ONLY the provided source text. Adhere to the user's instructions. Format in Markdown. **Instructions:** {instructions if instructions else "None"} **Source Text:** {relevant_chunks_text}"""; response = model.generate_content(prompt); return response.text
@@ -167,8 +164,10 @@ def get_google_flow():
 
 def reset_session():
     user_info = st.session_state.get('user_info')
+    is_first_time = st.session_state.get('is_first_time_user', True)
     st.session_state.clear()
     st.session_state.user_info = user_info
+    st.session_state.is_first_time_user = is_first_time
     st.session_state.current_view = 'dashboard'
     st.session_state.all_chunks = []; st.session_state.extraction_failures = []; st.session_state.outline_data = []; st.session_state.final_notes = []
 
@@ -184,6 +183,9 @@ def show_pre_login_view():
             </p>
         </div>
     """, unsafe_allow_html=True)
+    auth_url, _ = get_google_flow().authorization_url(prompt='consent')
+    _, col2, _ = st.columns([1,2,1])
+    with col2: st.link_button("Sign In with Google to Begin", auth_url)
 
 def show_activation_view():
     st.markdown("""
@@ -197,62 +199,79 @@ def show_activation_view():
     
     if st.button("Synthesize Guide", type="primary") and uploaded_files:
         st.session_state.initial_files = uploaded_files
-        st.session_state.is_first_time_user = False # The magic moment has been triggered
+        st.session_state.is_first_time_user = False
         st.session_state.current_view = 'processing'
         st.rerun()
 
 def show_dashboard_view():
     st.header(f"Welcome back, {st.session_state.user_info['given_name']}")
-    
     col1, col2 = st.columns([2, 1])
     with col1:
         st.markdown('<div class="custom-card">', unsafe_allow_html=True)
         st.subheader("Your Workspace")
         if st.button("✨ Start New Synthesis Session"):
-            reset_session()
-            st.session_state.current_view = 'activation' # Reuse activation view for uploads
+            st.session_state.current_view = 'activation'
             st.rerun()
+        # Placeholder for past guides
+        st.write("Your past study guides will appear here.")
         st.markdown("</div>", unsafe_allow_html=True)
-
-        st.markdown('<div class="custom-card" style="margin-top: 2rem;">', unsafe_allow_html=True)
-        st.subheader("Retention Habit: Daily Flashcard")
-        st.info("Your daily quiz will appear here. Stay sharp.")
-        st.markdown("</div>", unsafe_allow_html=True)
-
     with col2:
         st.markdown('<div class="custom-card">', unsafe_allow_html=True)
         st.subheader("Your Duo")
-        
-        c1, c2 = st.columns(2)
-        with c1:
-            st.image(st.session_state.user_info['picture'], width=64)
-        with c2:
-            st.markdown('<div class="ghost-partner">?</div>', unsafe_allow_html=True)
-
-        st.write("Vekkam is 10x better with a friend. Create shared 'Director's Cut' notes.")
-        if st.button("Invite Your Duo"):
-            st.success("Invite feature coming soon!")
+        c1, c2 = st.columns(2); c1.image(st.session_state.user_info['picture'], width=64); c2.markdown('<div class="ghost-partner">?</div>', unsafe_allow_html=True)
+        st.write("Vekkam is 10x better with a friend.")
+        if st.button("Invite Your Duo"): st.success("Invite feature coming soon!")
         st.markdown("</div>", unsafe_allow_html=True)
 
-        st.markdown('<div class="custom-card" style="margin-top: 2rem;">', unsafe_allow_html=True)
-        st.subheader("Your Progress")
-        st.metric("Guides Created", "5")
-        st.metric("Paired Sessions", "2")
-        st.metric("Study Streak", "🔥 12 Days")
-        st.markdown("</div>", unsafe_allow_html=True)
-
-# ... (All the processing, workspace, and results states are needed for the full flow)
-# For brevity, only the main router logic is shown, but these functions would be called.
 def show_processing_state():
-    # ...
-    pass
-def show_workspace_state():
-    # ...
-    pass
-def show_results_state():
-    # ...
-    pass
+    st.header("Synthesizing Your Guide...")
+    with st.spinner("Extracting and analyzing content. This may take a moment..."):
+        results = []
+        with ThreadPoolExecutor() as executor:
+            futures = {executor.submit(process_source, f, 'transcript' if f.type.startswith('audio/') else 'image' if f.type.startswith('image/') else 'pdf'): f for f in st.session_state.initial_files}
+            for future in as_completed(futures): results.append(future.result())
+        st.session_state.all_chunks = [c for r in results if r and r['status'] == 'success' for c in r['chunks']]
+        st.session_state.extraction_failures = [r for r in results if r and r['status'] == 'error']
+    
+    with st.spinner("Generating initial outline..."):
+        outline_json = generate_content_outline(st.session_state.all_chunks)
+        if outline_json and "outline" in outline_json: st.session_state.outline_data = outline_json["outline"]
+        else: st.error("Failed to generate an initial outline.")
+    
+    st.session_state.current_view = 'workspace'
+    st.rerun()
 
+def show_workspace_state():
+    # This is a simplified version of the V7 workspace
+    st.header("Vekkam Workspace")
+    if st.button("Back to Dashboard"): st.session_state.current_view = 'dashboard'; st.rerun()
+    if 'outline_data' in st.session_state and st.session_state.outline_data:
+        initial_text = "\n".join([item.get('topic', '') for item in st.session_state.outline_data])
+        st.session_state.editable_outline = st.text_area("Editable Outline:", value=initial_text, height=300)
+        st.session_state.synthesis_instructions = st.text_area("Synthesis Instructions (Optional):", height=100)
+        if st.button("Synthesize Notes", type="primary"):
+            st.session_state.current_view = 'synthesizing'
+            st.rerun()
+
+def show_synthesizing_state():
+    # This function would be implemented fully as per previous versions
+    st.header("Finalizing your notes...")
+    st.spinner("This will be quick...")
+    # Simulate synthesis
+    time.sleep(2)
+    st.session_state.current_view = 'results'
+    st.rerun()
+
+def show_results_state():
+    st.header("Your First Unified Guide!")
+    st.success("Magic moment achieved! Here is your synthesized study guide.")
+    st.markdown("---")
+    # In a real flow, this would display the synthesized notes.
+    st.write("This is where your notes, generated from the workspace, would appear.")
+    st.markdown("---")
+    if st.button("Return to Dashboard"):
+        st.session_state.current_view = 'dashboard'
+        st.rerun()
 
 # --- MAIN APP ---
 def main():
@@ -264,11 +283,10 @@ def main():
     try: genai.configure(api_key=st.secrets["gemini"]["api_key"])
     except (KeyError, FileNotFoundError): st.error("Gemini API key not configured in st.secrets."); st.stop()
     
-    flow = get_google_flow()
     auth_code = st.query_params.get("code")
-
     if auth_code and not st.session_state.user_info:
         try:
+            flow = get_google_flow()
             flow.fetch_token(code=auth_code)
             user_info = build('oauth2', 'v2', credentials=flow.credentials).userinfo().get().execute()
             st.session_state.user_info = user_info
@@ -278,11 +296,6 @@ def main():
     
     if not st.session_state.user_info:
         show_pre_login_view()
-        auth_url, _ = flow.authorization_url(prompt='consent')
-        # A bit of a hack to center the button in the pre-login view
-        _, col2, _ = st.columns([1,2,1])
-        with col2:
-            st.link_button("Sign In with Google to Begin", auth_url)
         return
 
     # --- Post-Login Sidebar ---
@@ -291,22 +304,22 @@ def main():
     st.sidebar.header(f"{user['given_name']}")
     if st.sidebar.button("Logout"): st.session_state.clear(); st.rerun()
     st.sidebar.divider()
-    # (Sidebar content from previous versions can go here)
 
     # --- Post-Login View Router ---
     if 'current_view' not in st.session_state:
         st.session_state.current_view = 'activation' if st.session_state.is_first_time_user else 'dashboard'
 
-    if st.session_state.current_view == 'dashboard':
-        show_dashboard_view()
-    elif st.session_state.current_view == 'activation':
-        show_activation_view()
-    elif st.session_state.current_view == 'processing':
-        # This state would show a spinner and call the processing functions
-        st.header("Synthesizing your guide...")
-        st.spinner("This may take a moment...")
-        # ... logic to call processing functions
-    # ... other states like workspace, results etc.
+    view_map = {
+        'dashboard': show_dashboard_view,
+        'activation': show_activation_view,
+        'processing': show_processing_state,
+        'workspace': show_workspace_state,
+        'synthesizing': show_synthesizing_state,
+        'results': show_results_state,
+    }
+    render_view = view_map.get(st.session_state.current_view, show_dashboard_view)
+    render_view()
 
 if __name__ == "__main__":
     main()
+
