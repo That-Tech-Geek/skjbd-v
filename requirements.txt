@@ -30,3 +30,4 @@ redis
 PyPDF2
 streamlit-lottie
 streamlit-autorefresh
+openai
