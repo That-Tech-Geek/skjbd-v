@@ -95,7 +95,6 @@ def load_user_preferences(user_id):
 def save_session_data(user_id, session_name, data):
     sessions_dir = get_user_dir(user_id) / "sessions"
     sessions_dir.mkdir(exist_ok=True)
-    # Sanitize session name
     safe_session_name = re.sub(r'[^\w\-_\. ]', '_', session_name)
     with open(sessions_dir / f"{safe_session_name}.json", "w") as f:
         json.dump(data, f, indent=2)
@@ -104,7 +103,6 @@ def list_user_sessions(user_id):
     sessions_dir = get_user_dir(user_id) / "sessions"
     if not sessions_dir.exists():
         return []
-    # Sort by creation time, newest first
     session_files = sorted(sessions_dir.glob("*.json"), key=os.path.getmtime, reverse=True)
     return [f.stem for f in session_files]
 
@@ -114,7 +112,6 @@ def load_session_data(user_id, session_name):
         with open(session_file, "r") as f:
             return json.load(f)
     return None
-
 
 # --- WORKFLOW FUNCTIONS ---
 def gemini_api_call_with_retry(func):
@@ -143,7 +140,7 @@ def chunk_text(text, source_id, chunk_size=CHUNK_SIZE, overlap=CHUNK_OVERLAP):
     return chunks
 def process_source(file, source_type):
     try:
-        source_id = f"{source_type}:{file.name}"; model = genai.GenerativeModel('models/gemini-2.5-flash-lite')
+        source_id = f"{source_type}:{file.name}"; model = genai.GenerativeModel('models/gemini-1.5-pro-latest')
         if source_type == 'transcript':
             with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(file.name)[1]) as tmp: tmp.write(file.getvalue()); tmp_path = tmp.name
             try:
@@ -162,25 +159,60 @@ def process_source(file, source_type):
     except Exception as e: return {"status": "error", "source_id": f"{source_type}:{file.name}", "reason": str(e)}
 @gemini_api_call_with_retry
 def generate_content_outline(all_chunks, existing_outline=None):
-    model = genai.GenerativeModel('models/gemini-2.5-flash-lite'); prompt_chunks = [{"chunk_id": c['chunk_id'], "text_snippet": c['text'][:200] + "..."} for c in all_chunks]
+    model = genai.GenerativeModel('models/gemini-1.5-pro-latest'); prompt_chunks = [{"chunk_id": c['chunk_id'], "text_snippet": c['text'][:200] + "..."} for c in all_chunks]
     instruction = "Analyze and create a structured outline."; 
     if existing_outline: instruction = "Analyze the NEW content chunks and suggest topics to ADD to the existing outline."
     prompt = f"""You are a curriculum designer. {instruction} For each topic, you MUST list the `chunk_id`s that are most relevant. Output ONLY a JSON object with a root key "outline", a list of objects. Each object must have keys "topic" (string) and "relevant_chunks" (list of strings). **Existing Outline:** {json.dumps(existing_outline, indent=2) if existing_outline else "None"} **Content Chunks:** --- {json.dumps(prompt_chunks, indent=2)}"""; response = model.generate_content(prompt); return resilient_json_parser(response.text)
 @gemini_api_call_with_retry
 def synthesize_note_block(topic, relevant_chunks_text, instructions, user_preferences):
-    model = genai.GenerativeModel('models/gemini-2.5-flash-lite')
+    model = genai.GenerativeModel('models/gemini-1.5-pro-latest')
     style_guide = []; detail = user_preferences.get('detail_level', 'Balanced'); tone = user_preferences.get('tone', 'Neutral')
     if detail == 'Concise': style_guide.append("Be extremely concise and use bullet points.")
     elif detail == 'Detailed': style_guide.append("Be highly detailed, explanatory, and thorough.")
     if tone == 'Analogies & Examples': style_guide.append("Use simple analogies and real-world examples frequently.")
     elif tone == 'Formal & Academic': style_guide.append("Use formal, academic language.")
     style_prompt = f"Your writing style should be: {' '.join(style_guide)}" if style_guide else ""
-    prompt = f"""Write the notes for a single topic: "{topic}". Use ONLY the provided source text. Adhere to the user's instructions. {style_prompt} Format in Markdown. **General Instructions:** {instructions if instructions else "None"} **Source Text:** {relevant_chunks_text}"""; response = model.generate_content(prompt); return response.text
+    prompt = f"""
+    Your prime directive is to synthesize notes for a single topic: "{topic}".
+    You MUST ONLY use the provided "Source Text" to write the notes. Do not introduce any outside information, examples, or definitions not present in the source.
+    Adhere to the user's general instructions and stylistic preferences.
+    
+    **Stylistic Preferences:**
+    ---
+    {style_prompt}
+
+    **General Instructions:**
+    ---
+    {instructions if instructions else "None"}
+
+    **Source Text (Your only source of truth):**
+    ---
+    {relevant_chunks_text}
+    """; response = model.generate_content(prompt); return response.text
 @gemini_api_call_with_retry
 def generate_lesson_plan(outline, all_chunks, user_preferences):
-    model = genai.GenerativeModel('models/gemini-2.5-flash-lite'); chunk_context_map = {c['chunk_id']: c['text'][:200] + "..." for c in all_chunks}; 
+    model = genai.GenerativeModel('models/gemini-1.5-pro-latest'); chunk_context_map = {c['chunk_id']: c['text'][:200] + "..." for c in all_chunks}; 
     style_prompt = f"The user prefers a learning style that is {user_preferences.get('detail_level')} and uses {user_preferences.get('tone')}."
-    prompt = f"""You are a world-class educator. {style_prompt}. Design a detailed, step-by-step lesson plan from the outline and source material. Goal is deep understanding. Use analogies. Define terms. For each topic, create "steps". Each step has "narration" and a list of "actions". Available actions: {{ "type": "write_text", "content": "Text", "position": "top_center|etc." }}, {{ "type": "draw_box", "label": "Label", "id": "unique_id" }}, {{ "type": "draw_arrow", "from_id": "id_1", "to_id": "id_2", "label": "Label" }}, {{ "type": "highlight", "target_id": "id_to_highlight" }}, {{ "type": "wipe_board" }}. Output ONLY a valid JSON object with a root key "lesson_plan". **User-Approved Outline:** {json.dumps(outline, indent=2)} **Source Content Context:** {json.dumps(chunk_context_map, indent=2)}"""; response = model.generate_content(prompt); return resilient_json_parser(response.text)
+    prompt = f"""
+    You are a world-class educator. Your prime directive is to design a detailed, step-by-step lesson plan based ONLY on the provided outline and source material.
+    The goal is deep, intuitive understanding. {style_prompt}.
+    When asked to use analogies or define terms, you must find or create them based on the content within the provided text. If an analogy or definition cannot be derived from the source, you must construct a simple one based on the context provided, but explicitly state that it is an interpretation of the source text. Do not introduce external facts.
+
+    For each topic in the outline, create a list of "steps". Each step must have "narration" and a list of "actions".
+    Available actions:
+    - {{ "type": "write_text", "content": "Text", "position": "top_center|etc." }}
+    - {{ "type": "draw_box", "label": "Label", "id": "unique_id" }}
+    - {{ "type": "draw_arrow", "from_id": "id_1", "to_id": "id_2", "label": "Label" }}
+    - {{ "type": "highlight", "target_id": "id_to_highlight" }}
+    - {{ "type": "wipe_board" }}
+    Output ONLY a valid JSON object with a root key "lesson_plan".
+
+    **User-Approved Outline:**
+    {json.dumps(outline, indent=2)}
+
+    **Source Content Context (Your only source of truth):**
+    {json.dumps(chunk_context_map, indent=2)}
+    """; response = model.generate_content(prompt); return resilient_json_parser(response.text)
 
 # --- AUTHENTICATION & SESSION MANAGEMENT ---
 def get_google_flow():
@@ -247,7 +279,6 @@ def show_dashboard_view():
                 if st.button(session_name.replace("_", " ").title()):
                     loaded_data = load_session_data(st.session_state.user_info['id'], session_name)
                     st.session_state.final_notes = loaded_data.get('notes', []); st.session_state.lesson_plan = loaded_data.get('lesson_plan', None)
-                    # Add other necessary state from session data
                     st.session_state.outline_data = loaded_data.get('outline_data', [])
                     st.session_state.all_chunks = loaded_data.get('all_chunks', [])
                     st.session_state.current_view = 'results'; st.rerun()
