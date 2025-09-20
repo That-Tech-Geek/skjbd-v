@@ -37,16 +37,31 @@ st.set_page_config(
 
 # --- CUSTOM UI & CSS ---
 def load_css():
-    """Injects custom CSS for a modern UI."""
+    """Injects custom CSS for a modern UI. Targets Streamlit's native elements for stability."""
     css = """
     <style>
+        /* --- Hide Streamlit's default header and footer --- */
+        #MainMenu, footer {visibility: hidden;}
+        header {visibility: hidden;}
+
         /* --- General & Body --- */
         body {
             background-color: #0E1117;
         }
         .stApp {
-            background: none;
+            background: #0E1117;
         }
+
+        /* --- Main Content Container Styling (Post-Login) --- */
+        /* This targets the main content area of Streamlit */
+        section.main .block-container {
+            padding: 2rem 2.5rem 3rem 2.5rem;
+            background-color: #161b22;
+            border-radius: 15px;
+            border: 1px solid #30363d;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);
+        }
+
         /* --- Sidebar Styling --- */
         [data-testid="stSidebar"] {
             background-color: #1a1a2e;
@@ -67,14 +82,7 @@ def load_css():
             border-color: #7a7ad2;
         }
 
-        /* --- Main Content Styling --- */
-        .main-container {
-            padding: 2rem;
-            background-color: #161b22;
-            border-radius: 15px;
-            border: 1px solid #30363d;
-            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-        }
+        /* --- General Component Styling --- */
         h1, h2, h3 {
             color: #c9d1d9;
         }
@@ -106,6 +114,8 @@ def load_css():
         .landing-container {
             text-align: center;
             padding: 3rem 1rem;
+            max-width: 900px;
+            margin: auto;
         }
         .landing-title {
             font-size: 3.5rem;
@@ -123,7 +133,7 @@ def load_css():
         }
         .feature-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
             gap: 2rem;
             margin-top: 4rem;
             text-align: left;
@@ -147,6 +157,10 @@ def load_css():
         .feature-card p {
             color: #a0a0c0;
         }
+        .google-signin-btn-container {
+            margin-top: 2rem;
+            margin-bottom: 2rem;
+        }
         .google-signin-btn {
             display: inline-block;
             background: white;
@@ -159,49 +173,55 @@ def load_css():
             font-size: 16px;
             font-weight: bold;
             text-decoration: none;
-            margin-top: 2rem;
         }
         .google-signin-btn:hover {
             cursor: pointer;
             box-shadow: 2px 2px 5px grey;
+        }
+        .google-icon {
+            width: 20px;
+            margin-bottom: 3px;
+            margin-right: 8px;
         }
     </style>
     """
     st.markdown(css, unsafe_allow_html=True)
 
 def show_landing_page(auth_url):
-    """Renders the entire pre-login landing page."""
-    st.markdown(
-        f"""
-        <div class="landing-container">
-            <h1 class="landing-title">Stop Taking Notes. Start Understanding.</h1>
-            <p class="landing-subtitle">
-                You dump in your messy lecture recordings, scribbled notes, and chaotic PDFs.
-                Vekkam hands you back a unified, crystal-clear study guide. It’s not magic, it’s just better than ChatGPT for actual studying.
-            </p>
+    """Renders the entire pre-login landing page using st.markdown."""
+    landing_page_html = f"""
+    <div class="landing-container">
+        <h1 class="landing-title">Stop Taking Notes. Start Understanding.</h1>
+        <p class="landing-subtitle">
+            You dump in your messy lecture recordings, scribbled notes, and chaotic PDFs.
+            Vekkam hands you back a unified, crystal-clear study guide. It’s not magic, it’s just better than ChatGPT for actual studying.
+        </p>
+        <div class="google-signin-btn-container">
             <a href="{auth_url}" target="_self" class="google-signin-btn">
-                <img width="20px" style="margin-bottom:3px; margin-right:8px" alt="Google sign-in" src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" />
+                <img class="google-icon" alt="Google sign-in" src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" />
                 Sign In & Get Started
             </a>
-
-            <div class="feature-grid">
-                <div class="feature-card">
-                    <h3>🧠 Ambient Capture</h3>
-                    <p>Record a lecture? Snap a pic of the whiteboard? Got a 100-page PDF? Drop it all in. Vekkam ingests audio, images, and documents without breaking a sweat.</p>
-                </div>
-                <div class="feature-card">
-                    <h3>✨ Instant Unified Notes</h3>
-                    <p>Go from a folder of chaos to a single, structured study guide in seconds. We connect the dots so you don't have to. This is our "magic moment."</p>
-                </div>
-                <div class="feature-card">
-                    <h3>🤝 Vekkam Duo</h3>
-                    <p>Studying is better with a partner. Invite a friend to your session, merge your notes, and create a "Director's Cut" study guide that's better than either of yours alone.</p>
-                </div>
+        </div>
+        <div class="feature-grid">
+            <div class="feature-card">
+                <h3>🧠 Ambient Capture</h3>
+                <p>Record a lecture? Snap a pic of the whiteboard? Got a 100-page PDF? Drop it all in. Vekkam ingests audio, images, and documents without breaking a sweat.</p>
+            </div>
+            <div class="feature-card">
+                <h3>✨ Instant Unified Notes</h3>
+                <p>Go from a folder of chaos to a single, structured study guide in seconds. We connect the dots so you don't have to. This is our "magic moment."</p>
+            </div>
+            <div class="feature-card">
+                <h3>🤝 Vekkam Duo</h3>
+                <p>Studying is better with a partner. Invite a friend to your session, merge your notes, and create a "Director's Cut" study guide that's better than either of yours alone.</p>
             </div>
         </div>
-        """,
-        unsafe_allow_html=True
-    )
+    </div>
+    """
+    # Use a container to ensure the HTML is rendered within Streamlit's main layout
+    with st.container():
+        st.markdown(landing_page_html, unsafe_allow_html=True)
+
 
 # --- CONFIGURATION & CONSTANTS ---
 MAX_FILES = 20
@@ -210,7 +230,7 @@ MAX_AUDIO_SIZE_MB = 1024
 CHUNK_SIZE = 500
 CHUNK_OVERLAP = 50
 
-# --- API SELF-DIAGNOSIS & UTILITIES ---
+# --- API SELF-DIAGNOSIS & UTILITIES (UNCHANGED) ---
 def check_gemini_api():
     try:
         genai.get_model('models/gemini-2.5-flash-lite')
@@ -340,18 +360,15 @@ def reset_session():
     st.session_state.outline_data = []
     st.session_state.final_notes = []
 
-# --- POST-LOGIN UI STATE FUNCTIONS (WRAPPED IN STYLING) ---
+# --- POST-LOGIN UI STATE FUNCTIONS (REFACTORED) ---
 def show_upload_state():
-    with st.container():
-        st.markdown("<div class='main-container'>", unsafe_allow_html=True)
-        st.header("Step 1: Upload Your Sources")
-        uploaded_files = st.file_uploader("Select audio, images, or PDFs", accept_multiple_files=True, type=['mp3', 'm4a', 'wav', 'png', 'jpg', 'pdf'])
-        if st.button("Process Files", type="primary") and uploaded_files:
-            with st.spinner("Processing initial files... This can take a moment."):
-                process_files_and_chunks(uploaded_files)
-            st.session_state.current_state = 'workspace'
-            st.rerun()
-        st.markdown("</div>", unsafe_allow_html=True)
+    st.header("Step 1: Upload Your Sources")
+    uploaded_files = st.file_uploader("Select audio, images, or PDFs", accept_multiple_files=True, type=['mp3', 'm4a', 'wav', 'png', 'jpg', 'pdf'])
+    if st.button("Process Files", type="primary") and uploaded_files:
+        with st.spinner("Processing initial files... This can take a moment."):
+            process_files_and_chunks(uploaded_files)
+        st.session_state.current_state = 'workspace'
+        st.rerun()
 
 def process_files_and_chunks(files_to_process):
     results = []
@@ -360,15 +377,12 @@ def process_files_and_chunks(files_to_process):
         for future in as_completed(futures):
             results.append(future.result())
     
-    new_chunks = []
-    for r in [res for res in results if res and res['status'] == 'success']:
-        new_chunks.extend(r['chunks'])
+    new_chunks = [c for r in results if r and r['status'] == 'success' for c in r['chunks']]
     st.session_state.all_chunks.extend(new_chunks)
     st.session_state.extraction_failures.extend([r for r in results if r and r['status'] == 'error'])
     return new_chunks
 
 def show_workspace_state():
-    st.markdown("<div class='main-container'>", unsafe_allow_html=True)
     st.header("Vekkam Workspace")
     col1, col2 = st.columns([2, 1])
     
@@ -407,11 +421,8 @@ def show_workspace_state():
                 for i, chunk in enumerate(st.session_state.all_chunks):
                     st.markdown(f"**Chunk ID:** `{chunk['chunk_id']}`")
                     st.text_area("", chunk['text'], height=100, key=f"chunk_viewer_{i}")
-    st.markdown("</div>", unsafe_allow_html=True)
-
 
 def show_synthesizing_state():
-    st.markdown("<div class='main-container'>", unsafe_allow_html=True)
     st.header("Synthesizing Note Blocks...")
     st.session_state.final_notes = []
     outline_topics = [line.strip() for line in st.session_state.editable_outline.split('\n') if line.strip()]
@@ -428,11 +439,8 @@ def show_synthesizing_state():
     
     st.session_state.current_state = 'results'
     st.rerun()
-    st.markdown("</div>", unsafe_allow_html=True)
-
 
 def show_results_state():
-    st.markdown("<div class='main-container'>", unsafe_allow_html=True)
     st.header("Your Unified Notes")
     
     col1, col2 = st.columns(2)
@@ -448,25 +456,24 @@ def show_results_state():
     st.divider()
 
     for i, note_block in enumerate(st.session_state.final_notes):
-        st.subheader(note_block['topic'])
-        st.markdown(note_block['content'], unsafe_allow_html=True)
-        if st.button("Regenerate this block", key=f"regen_{i}"):
-            with st.spinner("Regenerating block..."):
-                all_chunks_map = {chunk['chunk_id']: chunk['text'] for chunk in st.session_state.all_chunks}
-                relevant_chunks_text = "\n\n---\n\n".join([all_chunks_map.get(cid, "") for cid in note_block['source_chunks']])
-                new_content = synthesize_note_block(note_block['topic'], relevant_chunks_text, st.session_state.synthesis_instructions)
-                st.session_state.final_notes[i]['content'] = new_content
-                st.rerun()
-        with st.expander("View Source Chunks for this Block"):
-            st.json(note_block['source_chunks'])
-        st.divider()
-    st.markdown("</div>", unsafe_allow_html=True)
+        with st.container():
+            st.subheader(note_block['topic'])
+            st.markdown(note_block['content'], unsafe_allow_html=True)
+            if st.button("Regenerate this block", key=f"regen_{i}"):
+                with st.spinner("Regenerating block..."):
+                    all_chunks_map = {chunk['chunk_id']: chunk['text'] for chunk in st.session_state.all_chunks}
+                    relevant_chunks_text = "\n\n---\n\n".join([all_chunks_map.get(cid, "") for cid in note_block['source_chunks']])
+                    new_content = synthesize_note_block(note_block['topic'], relevant_chunks_text, st.session_state.synthesis_instructions)
+                    st.session_state.final_notes[i]['content'] = new_content
+                    st.rerun()
+            with st.expander("View Source Chunks for this Block"):
+                st.json(note_block['source_chunks'])
+            st.divider()
 
-# --- MAIN APP LOGIC ---
+# --- MAIN APP LOGIC (UNCHANGED) ---
 def main():
     load_css()
     
-    # Initialize session state & configure Gemini
     if 'user_info' not in st.session_state:
         st.session_state.user_info = None
     try:
@@ -476,8 +483,7 @@ def main():
         st.stop()
 
     flow = get_google_flow()
-    query_params = st.query_params
-    auth_code = query_params.get("code")
+    auth_code = st.query_params.get("code")
 
     if auth_code and not st.session_state.user_info:
         try:
@@ -492,14 +498,12 @@ def main():
             st.error(f"Failed to fetch token or user info: {e}")
             st.session_state.user_info = None
             
-    # --- Authentication Gate ---
     if not st.session_state.user_info:
         auth_url, _ = flow.authorization_url(prompt='consent')
         show_landing_page(auth_url)
         return
 
-    # --- Post-Login App ---
-    st.sidebar.title("Vekkam Engine")
+    st.sidebar.title("Vekkam")
     user = st.session_state.user_info
     st.sidebar.image(user['picture'], width=80, caption=user.get('name'))
     st.sidebar.subheader(f"Welcome, {user['given_name']}")
@@ -514,15 +518,14 @@ def main():
     if 'current_state' not in st.session_state:
         reset_session()
     
-    # --- CORE APP VIEWS ROUTER ---
-    if st.session_state.current_state == 'upload':
-        show_upload_state()
-    elif st.session_state.current_state == 'workspace':
-        show_workspace_state()
-    elif st.session_state.current_state == 'synthesizing':
-        show_synthesizing_state()
-    elif st.session_state.current_state == 'results':
-        show_results_state()
+    state_map = {
+        'upload': show_upload_state,
+        'workspace': show_workspace_state,
+        'synthesizing': show_synthesizing_state,
+        'results': show_results_state,
+    }
+    state_function = state_map.get(st.session_state.current_state, show_upload_state)
+    state_function()
 
 if __name__ == "__main__":
     main()
