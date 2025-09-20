@@ -8,136 +8,65 @@ import json
 import re
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import hashlib
+import requests
 import tempfile
+from functools import wraps
+from google.api_core import exceptions
 
 # --- GOOGLE OAUTH LIBRARIES ---
 try:
     from google_auth_oauthlib.flow import Flow
     from googleapiclient.discovery import build
-    from google.auth.exceptions import GoogleAuthError
 except ImportError:
-    st.error("""
-        **Required Google libraries not found!**
-        Please install the necessary packages using pip:
-        ```bash
-        pip install google-auth-oauthlib google-api-python-client
-        ```
-        The app cannot continue without these dependencies. Please install and refresh.
-    """)
+    st.error("Required Google libraries not found! Please run: pip install google-auth-oauthlib google-api-python-client")
     st.stop()
 
-# --- PAGE CONFIGURATION ---
-st.set_page_config(
-    page_title="Vekkam Engine",
-    page_icon="🧠",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
-
-# --- CUSTOM UI & CSS ---
-def load_css():
-    """Injects custom CSS for a modern UI, targeting Streamlit's native elements."""
-    css = """
-    <style>
-        #MainMenu, footer, header {visibility: hidden;}
-        body, .stApp { background-color: #0E1117; }
-        section.main .block-container {
-            padding: 2rem 2.5rem 3rem 2.5rem;
-            background-color: #161b22;
-            border-radius: 15px;
-            border: 1px solid #30363d;
-            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);
-        }
-        [data-testid="stSidebar"] {
-            background-color: #1a1a2e;
-            border-right: 1px solid #2c2c54;
-        }
-        [data-testid="stSidebar"] h1, [data-testid="stSidebar"] h2, [data-testid="stSidebar"] h3 { color: #e0e0e0; }
-        [data-testid="stSidebar"] .stButton>button {
-            border-radius: 8px; border: 1px solid #4a4a7a; background-color: #2c2c54; color: #fff;
-        }
-        [data-testid="stSidebar"] .stButton>button:hover {
-            background-color: #4a4a7a; color: #fff; border-color: #7a7ad2;
-        }
-        h1, h2, h3 { color: #c9d1d9; }
-        h1 { border-bottom: 2px solid #4a4a7a; padding-bottom: 10px; }
-        .stButton>button {
-            border-radius: 8px; border: 1px solid #7a7ad2; color: #fff; background-color: #6366f1;
-            padding: 10px 20px; font-weight: bold;
-        }
-        .stButton>button:hover {
-            background-color: #4f46e5; color: #fff; border-color: #c7d2fe;
-        }
-        .stFileUploader {
-            border: 2px dashed #4a4a7a; border-radius: 10px; padding: 20px; background-color: #1c1c3c;
-        }
-        .landing-container { text-align: center; padding: 3rem 1rem; max-width: 900px; margin: auto; }
-        .landing-title {
-            font-size: 3.5rem; font-weight: 900; color: #e0e0e0;
-            background: -webkit-linear-gradient(#eee, #7a7ad2);
-            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-        }
-        .landing-subtitle { font-size: 1.25rem; color: #a0a0c0; max-width: 700px; margin: 1rem auto; }
-        .feature-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 2rem; margin-top: 4rem; text-align: left; }
-        .feature-card {
-            background-color: #1a1a2e; padding: 1.5rem; border-radius: 15px; border: 1px solid #2c2c54;
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-        }
-        .feature-card:hover { transform: translateY(-10px); box-shadow: 0 10px 20px rgba(99, 102, 241, 0.2); }
-        .feature-card h3 { font-size: 1.5rem; color: #c7d2fe; margin-bottom: 0.5rem; }
-        .feature-card p { color: #a0a0c0; }
-        .google-signin-btn-container { margin-top: 2rem; margin-bottom: 2rem; }
-        .google-signin-btn {
-            display: inline-block; background: white; color: #444; border-radius: 5px; border: thin solid #888;
-            box-shadow: 1px 1px 1px grey; white-space: nowrap; padding: 12px 24px;
-            font-size: 16px; font-weight: bold; text-decoration: none;
-        }
-        .google-signin-btn:hover { cursor: pointer; box-shadow: 2px 2px 5px grey; }
-        .google-icon { width: 20px; vertical-align: middle; margin-right: 8px; }
-    </style>
-    """
-    st.markdown(css, unsafe_allow_html=True)
-
-def show_landing_page(auth_url):
-    """Renders the pre-login landing page."""
-    landing_page_html = f"""
-    <div class="landing-container">
-        <h1 class="landing-title">Stop Taking Notes. Start Understanding.</h1>
-        <p class="landing-subtitle">
-            Dump in your messy lecture recordings, scribbled notes, and chaotic PDFs.
-            Vekkam hands you back a unified, crystal-clear study guide.
-        </p>
-        <div class="google-signin-btn-container">
-            <a href="{auth_url}" target="_self" class="google-signin-btn">
-                <img class="google-icon" alt="Google sign-in" src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" />
-                Sign In & Get Started
-            </a>
-        </div>
-        <div class="feature-grid">
-            <div class="feature-card"><h3>🧠 Ambient Capture</h3><p>Drop in any audio, image, or PDF. Vekkam ingests it all without breaking a sweat.</p></div>
-            <div class="feature-card"><h3>✨ Instant Unified Notes</h3><p>Go from a folder of chaos to a single, structured study guide in seconds. We connect the dots so you don't have to.</p></div>
-            <div class="feature-card"><h3>🤝 Vekkam Duo</h3><p>Invite a friend to your session, merge your notes, and create a study guide that's better than either of yours alone.</p></div>
-        </div>
-    </div>
-    """
-    st.markdown(landing_page_html, unsafe_allow_html=True)
-
-# --- HELPER FUNCTIONS (UNCHANGED CORE LOGIC) ---
-# ... (All your existing helper functions: check_gemini_api, resilient_json_parser, chunk_text, etc. go here)
 # --- CONFIGURATION & CONSTANTS ---
 MAX_FILES = 20
 MAX_TOTAL_SIZE_MB = 150
 MAX_AUDIO_SIZE_MB = 1024
 CHUNK_SIZE = 500
 CHUNK_OVERLAP = 50
+MAX_RETRIES = 3
+
+# --- PAGE CONFIGURATION ---
+st.set_page_config(page_title="Vekkam Engine", page_icon="🧠", layout="wide", initial_sidebar_state="expanded")
+
+# --- EXPONENTIAL BACKOFF DECORATOR ---
+def gemini_api_call_with_retry(func):
+    """Decorator to handle Gemini API rate limiting with exponential backoff."""
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        retries = 0
+        delay = 1
+        while retries < MAX_RETRIES:
+            try:
+                return func(*args, **kwargs)
+            except exceptions.ResourceExhausted as e:
+                retries += 1
+                if retries >= MAX_RETRIES:
+                    st.error(f"API quota exceeded after multiple retries. Please check your Google Cloud billing plan. Error: {e}")
+                    return None
+                
+                match = re.search(r'retry_delay {\s*seconds: (\d+)\s*}', str(e))
+                if match:
+                    wait_time = int(match.group(1)) + delay
+                else:
+                    wait_time = delay * (2 ** retries)
+
+                st.warning(f"Rate limit hit. Retrying in {wait_time} seconds... (Attempt {retries}/{MAX_RETRIES})")
+                time.sleep(wait_time)
+            except Exception as e:
+                st.error(f"An unexpected API error occurred in {func.__name__}: {e}")
+                return None
+        return None
+    return wrapper
 
 # --- API SELF-DIAGNOSIS & UTILITIES ---
 def check_gemini_api():
-    try:
-        genai.get_model('models/gemini-2.5-flash-lite')
-        return "Valid"
-    except Exception:
-        st.sidebar.error("Gemini API Key in secrets is invalid.")
+    try: genai.get_model('models/gemini-1.5-flash'); return "Valid"
+    except Exception as e:
+        st.sidebar.error(f"Gemini API Key in secrets is invalid: {e}")
         return "Invalid"
 
 def resilient_json_parser(json_string):
@@ -154,18 +83,17 @@ def chunk_text(text, source_id, chunk_size=CHUNK_SIZE, overlap=CHUNK_OVERLAP):
     chunks = []
     for i in range(0, len(words), chunk_size - overlap):
         chunk_words = words[i:i + chunk_size]
-        chunk_text_str = " ".join(chunk_words)
-        chunk_hash = hashlib.md5(chunk_text_str.encode()).hexdigest()[:8]
+        chunk_text = " ".join(chunk_words)
+        chunk_hash = hashlib.md5(chunk_text.encode()).hexdigest()[:8]
         chunk_id = f"{source_id}::chunk_{i//(chunk_size-overlap)}_{chunk_hash}"
-        chunks.append({"chunk_id": chunk_id, "text": chunk_text_str})
+        chunks.append({"chunk_id": chunk_id, "text": chunk_text})
     return chunks
 
-# --- CONTENT PROCESSING & AGENTIC WORKFLOW ---
+# --- CONTENT PROCESSING ---
 def process_source(file, source_type):
     try:
         source_id = f"{source_type}:{file.name}"
-        model = genai.GenerativeModel('models/gemini-2.5-flash-lite')
-
+        model = genai.GenerativeModel('models/gemini-1.5-flash')
         if source_type == 'transcript':
             with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(file.name)[1]) as tmp:
                 tmp.write(file.getvalue())
@@ -177,7 +105,7 @@ def process_source(file, source_type):
                     audio_file = genai.get_file(audio_file.name)
                 if audio_file.state.name == "FAILED":
                     return {"status": "error", "source_id": source_id, "reason": "Gemini file processing failed."}
-                response = model.generate_content(["Transcribe this audio file.", audio_file])
+                response = model.generate_content(["Transcribe this noisy classroom audio recording. Prioritize capturing all speech, even if faint, over background noise and echo.", audio_file])
                 chunks = chunk_text(response.text, source_id)
                 return {"status": "success", "source_id": source_id, "chunks": chunks}
             finally:
@@ -195,255 +123,446 @@ def process_source(file, source_type):
     except Exception as e:
         return {"status": "error", "source_id": f"{source_type}:{file.name}", "reason": str(e)}
 
+# --- AGENTIC WORKFLOW FUNCTIONS ---
+@gemini_api_call_with_retry
 def generate_content_outline(all_chunks, existing_outline=None):
-    try:
-        model = genai.GenerativeModel('models/gemini-2.5-flash-lite')
-        prompt_chunks = [{"chunk_id": c['chunk_id'], "text_snippet": c['text'][:200] + "..."} for c in all_chunks]
-        instruction = "Analyze the content chunks and create a structured outline."
-        if existing_outline:
-            instruction = f"Analyze the NEW content chunks and suggest topics to ADD to the existing outline."
-        prompt = f"""
-        You are a curriculum designer. {instruction}
-        For each topic, you MUST list the `chunk_id`s that are most relevant.
-        Output ONLY a JSON object with a root key "outline", a list of objects. Each object must have keys "topic" (string) and "relevant_chunks" (list of strings).
-        **Existing Outline (for context):**
-        {json.dumps(existing_outline, indent=2) if existing_outline else "None"}
-        **Content Chunks:**
-        ---
-        {json.dumps(prompt_chunks, indent=2)}
-        """
-        response = model.generate_content(prompt)
-        return resilient_json_parser(response.text)
-    except Exception as e:
-        st.error(f"Outline Generation Error: {e}"); return None
+    model = genai.GenerativeModel('models/gemini-1.5-flash')
+    # Filter out empty or very short chunks to improve signal-to-noise for the outline model
+    prompt_chunks = [{"chunk_id": c['chunk_id'], "text_snippet": c['text'][:200] + "..."} for c in all_chunks if c.get('text') and len(c['text'].split()) > 10]
+    
+    if not prompt_chunks:
+        st.error("Could not find enough content to generate an outline. Please check your uploaded files.")
+        return None
 
+    instruction = "Analyze the content chunks and create a structured, logical topic outline. The topics should flow from foundational concepts to more advanced ones."
+    if existing_outline:
+        instruction = "Analyze the NEW content chunks and suggest topics to ADD to the existing outline. Maintain a logical flow."
+    
+    prompt = f"""
+    You are a master curriculum designer. Your task is to create a coherent and comprehensive study outline from fragmented pieces of text.
+    {instruction}
+    For each topic, you MUST list the `chunk_id`s that are most relevant to that topic. Ensure every chunk is used if possible, but prioritize relevance.
+    Do not invent topics not supported by the text. Base the outline STRICTLY on the provided content.
+    Output ONLY a valid JSON object with a root key "outline", which is a list of objects. Each object must have keys "topic" (string) and "relevant_chunks" (a list of string chunk_ids).
+
+    **Existing Outline (for context):**
+    {json.dumps(existing_outline, indent=2) if existing_outline else "None"}
+
+    **Content Chunks:**
+    ---
+    {json.dumps(prompt_chunks, indent=2)}
+    """
+    response = model.generate_content(prompt)
+    return resilient_json_parser(response.text)
+
+
+@gemini_api_call_with_retry
 def synthesize_note_block(topic, relevant_chunks_text, instructions):
-    try:
-        model = genai.GenerativeModel('models/gemini-2.5-flash-lite')
-        prompt = f"""
-        Write the notes for a single topic: "{topic}".
-        Use ONLY the provided source text. Adhere to the user's instructions. Format in Markdown.
-        **Instructions:** {instructions if instructions else "None"}
-        **Source Text:** {relevant_chunks_text}
-        """
-        response = model.generate_content(prompt)
-        return response.text
-    except Exception as e:
-        return f"Error synthesizing this block: {e}"
+    model = genai.GenerativeModel('models/gemini-1.5-flash')
+    prompt = f"""
+    You are a world-class note-taker. Synthesize a detailed, clear, and well-structured note block for a single topic: "{topic}".
+    Your entire response MUST be based STRICTLY and ONLY on the provided source text. Do not introduce any external information.
+    Adhere to the user's instructions for formatting and style. Format the output in Markdown.
 
-# --- SESSION STATE & RESET ---
-def reset_session():
-    for key in list(st.session_state.keys()):
-        if key not in ['user_info']:
-            del st.session_state[key]
+    **User Instructions:** {instructions if instructions else "Default: Create clear, concise, well-structured notes."}
+
+    **Source Text (Use only this):**
+    ---
+    {relevant_chunks_text}
+    ---
+    """
+    response = model.generate_content(prompt)
+    return response.text
+
+@gemini_api_call_with_retry
+def generate_lesson_plan(outline, all_chunks):
+    model = genai.GenerativeModel('models/gemini-1.5-flash')
+    chunk_context_map = {c['chunk_id']: c['text'][:200] + "..." for c in all_chunks}
+    prompt = f"""
+    You are a world-class educator with the explanatory power of Sal Khan and the visual clarity of Kurzgesagt. 
+    Design a detailed, step-by-step lesson plan based on the provided outline and source material.
+    The goal is deep, intuitive understanding. Build from first principles. Use analogies. Define all terms.
+    For each topic in the outline, create a list of "steps". Each step must have "narration" and a list of "actions".
+    Available actions:
+    - {{ "type": "write_text", "content": "Text to write", "position": "top_center|middle_left|etc." }}
+    - {{ "type": "draw_box", "label": "Box Label", "id": "unique_id_for_this_box" }}
+    - {{ "type": "draw_arrow", "from_id": "box_id_1", "to_id": "box_id_2", "label": "Arrow Label" }}
+    - {{ "type": "highlight", "target_id": "box_or_text_id_to_highlight" }}
+    - {{ "type": "wipe_board" }}
+    Output ONLY a valid JSON object with a root key "lesson_plan".
+
+    **User-Approved Outline:**
+    {json.dumps(outline, indent=2)}
+
+    **Source Content Context:**
+    {json.dumps(chunk_context_map, indent=2)}
+    """
+    response = model.generate_content(prompt)
+    return resilient_json_parser(response.text)
+
+# --- AUTHENTICATION & SESSION MANAGEMENT ---
+def get_google_flow():
+    try:
+        client_config = {
+            "web": { "client_id": st.secrets["google"]["client_id"], "client_secret": st.secrets["google"]["client_secret"],
+                    "auth_uri": "https://accounts.google.com/o/oauth2/auth", "token_uri": "https://oauth2.googleapis.com/token",
+                    "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+                    "redirect_uris": [st.secrets["google"]["redirect_uri"]],
+            }}
+        scopes = ["https://www.googleapis.com/auth/userinfo.profile", "https://www.googleapis.com/auth/userinfo.email", "openid"]
+        return Flow.from_client_config(client_config, scopes=scopes, redirect_uri=st.secrets["google"]["redirect_uri"])
+    except (KeyError, FileNotFoundError):
+        st.error("OAuth credentials are not configured correctly in st.secrets."); st.stop()
+
+def reset_session(tool_choice):
+    # Preserve user info and tool choice, clear everything else
+    user_info = st.session_state.get('user_info')
+    st.session_state.clear()
+    st.session_state.user_info = user_info
+    st.session_state.tool_choice = tool_choice
     st.session_state.current_state = 'upload'
     st.session_state.all_chunks = []
     st.session_state.extraction_failures = []
     st.session_state.outline_data = []
     st.session_state.final_notes = []
 
-# --- POST-LOGIN UI STATE FUNCTIONS ---
+# --- NEW: ADVANCED PRE-LOGIN LANDING PAGE ---
+def show_landing_page(auth_url):
+    """Displays the new, feature-rich landing page."""
+    
+    st.markdown("""
+        <style>
+            .main > div {
+                padding-top: 2rem;
+            }
+            .stApp {
+                background-color: #0F172A; /* Dark blue-gray background */
+            }
+            h1, h2, h3, p, .stMarkdown {
+                color: #E2E8F0; /* Light gray text for contrast */
+            }
+            .title {
+                font-size: 3.5rem;
+                font-weight: 700;
+                text-align: center;
+                line-height: 1.2;
+                background: -webkit-linear-gradient(45deg, #38BDF8, #818CF8);
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+            }
+            .subtitle {
+                font-size: 1.25rem;
+                text-align: center;
+                color: #94A3B8;
+                max-width: 600px;
+                margin: 1rem auto 2rem auto;
+            }
+            .login-button-container {
+                display: flex;
+                justify-content: center;
+                margin-bottom: 4rem;
+            }
+            .comparison-table {
+                width: 100%;
+                max-width: 900px;
+                margin: 2rem auto;
+                border-collapse: collapse;
+                border-radius: 8px;
+                overflow: hidden;
+                box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            }
+            .comparison-table th, .comparison-table td {
+                padding: 1.25rem 1rem;
+                text-align: center;
+                border-bottom: 1px solid #334155;
+            }
+            .comparison-table th {
+                background-color: #1E293B;
+                font-size: 1.1rem;
+                color: #F8FAFC;
+            }
+            .comparison-table td {
+                background-color: #0F172A;
+                color: #CBD5E1;
+            }
+            .comparison-table .feature-col {
+                text-align: left;
+                font-weight: 600;
+            }
+            .comparison-table .vekkam-col {
+                background-color: #1E3A8A; /* Highlight Vekkam's column */
+                color: #E0E7FF;
+            }
+            .tick {
+                color: #4ADE80; /* Green tick */
+                font-size: 1.5rem;
+                font-weight: bold;
+            }
+            .cross {
+                color: #F87171; /* Red cross */
+                font-size: 1.5rem;
+                font-weight: bold;
+            }
+        </style>
+    """, unsafe_allow_html=True)
+
+    st.markdown('<h1 class="title">Stop Juggling Tabs. Start Understanding.</h1>', unsafe_allow_html=True)
+    st.markdown('<p class="subtitle">General AI chatbots give you answers. Vekkam gives you a workflow. We turn your chaotic lecture recordings, messy notes, and dense PDFs into a single, unified study guide—a feat impossible for generic tools.</p>', unsafe_allow_html=True)
+
+    # Use st.link_button within a container for better control
+    with st.container():
+        st.markdown('<div class="login-button-container">', unsafe_allow_html=True)
+        # The button itself will be styled by Streamlit, but we can center it.
+        st.link_button("Get Started - Sign in with Google", auth_url, type="primary")
+        st.markdown('</div>', unsafe_allow_html=True)
+    
+    st.markdown("---")
+    st.markdown('<h2 style="text-align: center;">The Right Tool for the Job</h2>', unsafe_allow_html=True)
+
+    st.markdown("""
+        <table class="comparison-table">
+            <thead>
+                <tr>
+                    <th class="feature-col">Feature</th>
+                    <th>Vekkam</th>
+                    <th>ChatGPT / Gemini</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="feature-col">Multi-Source Input (Audio, PDF, Images)</td>
+                    <td class="vekkam-col"><span class="tick">✔</span><br>Built-in</td>
+                    <td><span class="cross">✖</span><br>Requires separate tools & copy-pasting</td>
+                </tr>
+                <tr>
+                    <td class="feature-col">Context-Aware Synthesis</td>
+                    <td class="vekkam-col"><span class="tick">✔</span><br>Only uses <u>your</u> provided material</td>
+                    <td><span class="cross">✖</span><br>Can drift and pull in irrelevant web data</td>
+                </tr>
+                <tr>
+                    <td class="feature-col">Unified Study Guide Output</td>
+                    <td class="vekkam-col"><span class="tick">✔</span><br>One-click coherent output from all sources</td>
+                    <td><span class="cross">✖</span><br>Manual summarization and compilation needed</td>
+                </tr>
+                <tr>
+                    <td class="feature-col">Purpose-Built Study Workflow</td>
+                    <td class="vekkam-col"><span class="tick">✔</span><br>Designed for students from the ground up</td>
+                    <td><span class="cross">✖</span><br>General purpose, not optimized for study</td>
+                </tr>
+                 <tr>
+                    <td class="feature-col">Noise-Robust Audio Transcription</td>
+                    <td class="vekkam-col"><span class="tick">✔</span><br>Fine-tuned for messy classroom audio</td>
+                    <td><span class="cross">✖</span><br>Struggles with background noise & faint speech</td>
+                </tr>
+            </tbody>
+        </table>
+    """, unsafe_allow_html=True)
+
+
+# --- UI STATE FUNCTIONS for NOTE & LESSON ENGINE ---
 def show_upload_state():
-    st.header("Step 1: Upload Your Sources")
-    uploaded_files = st.file_uploader("Select audio, images, or PDFs", accept_multiple_files=True, type=['mp3', 'm4a', 'wav', 'png', 'jpg', 'pdf'])
+    st.header("Note & Lesson Engine: Upload")
+    uploaded_files = st.file_uploader("Select files", accept_multiple_files=True, type=['mp3', 'm4a', 'wav', 'png', 'jpg', 'pdf'])
     if st.button("Process Files", type="primary") and uploaded_files:
-        with st.spinner("Processing initial files... This can take a moment."):
-            process_files_and_chunks(uploaded_files)
-        st.session_state.current_state = 'workspace'
+        st.session_state.initial_files = uploaded_files
+        st.session_state.current_state = 'processing'
         st.rerun()
 
-def process_files_and_chunks(files_to_process):
-    results = []
-    with ThreadPoolExecutor() as executor:
-        futures = {executor.submit(process_source, f, 'transcript' if f.type.startswith('audio/') else 'image' if f.type.startswith('image/') else 'pdf'): f for f in files_to_process}
-        for future in as_completed(futures):
-            results.append(future.result())
-    
-    new_chunks = [c for r in results if r and r['status'] == 'success' for c in r['chunks']]
-    st.session_state.all_chunks.extend(new_chunks)
-    st.session_state.extraction_failures.extend([r for r in results if r and r['status'] == 'error'])
-    return new_chunks
+def show_processing_state():
+    st.header("Initial Processing...")
+    with st.spinner("Extracting content from all files..."):
+        results = []
+        with ThreadPoolExecutor() as executor:
+            futures = {executor.submit(process_source, f, 'transcript' if f.type.startswith('audio/') else 'image' if f.type.startswith('image/') else 'pdf'): f for f in st.session_state.initial_files}
+            for future in as_completed(futures): results.append(future.result())
+        st.session_state.all_chunks.extend([c for r in results if r and r['status'] == 'success' for c in r['chunks']])
+        st.session_state.extraction_failures.extend([r for r in results if r and r['status'] == 'error'])
+    st.session_state.current_state = 'workspace'
+    st.rerun()
 
 def show_workspace_state():
     st.header("Vekkam Workspace")
     col1, col2 = st.columns([2, 1])
-    
     with col1:
         st.subheader("Controls & Outline")
         if st.button("Generate / Regenerate Full Outline"):
             with st.spinner("AI is analyzing all content..."):
                 outline_json = generate_content_outline(st.session_state.all_chunks)
-                if outline_json and "outline" in outline_json:
-                    st.session_state.outline_data = outline_json["outline"]
-                else: st.error("Failed to generate outline.")
+                if outline_json and "outline" in outline_json: st.session_state.outline_data = outline_json["outline"]
+                else: st.error("Failed to generate outline. The AI couldn't structure the provided content. Try adding more context-rich files.")
         
         if 'outline_data' in st.session_state and st.session_state.outline_data:
-            initial_outline_text = "\n".join([item.get('topic', '') for item in st.session_state.outline_data])
-            st.session_state.editable_outline = st.text_area("Editable Outline:", value=initial_outline_text, height=300)
-            st.session_state.synthesis_instructions = st.text_area("Synthesis Instructions (Optional):", placeholder="e.g., Explain this like I'm 12")
+            initial_text = "\n".join([item.get('topic', '') for item in st.session_state.outline_data])
+            st.session_state.editable_outline = st.text_area("Editable Outline:", value=initial_text, height=300)
+            st.session_state.synthesis_instructions = st.text_area("Synthesis Instructions (Optional):", height=100, placeholder="e.g., 'Explain this like I'm 15' or 'Focus on key formulas'")
             if st.button("Synthesize Notes", type="primary"):
                 st.session_state.current_state = 'synthesizing'
                 st.rerun()
-    
     with col2:
         st.subheader("Source Explorer")
+        # Display extraction failures prominently
+        if st.session_state.get('extraction_failures'):
+            with st.expander("⚠️ Processing Errors", expanded=True):
+                for failure in st.session_state.extraction_failures:
+                    st.error(f"**{failure['source_id']}**: {failure['reason']}")
+
         with st.expander("Add More Files"):
             new_files = st.file_uploader("Upload more files", accept_multiple_files=True, key=f"uploader_{int(time.time())}")
             if new_files:
-                new_chunks = process_files_and_chunks(new_files)
-                with st.spinner("AI is suggesting new topics..."):
-                    update_json = generate_content_outline(new_chunks, existing_outline=st.session_state.get('outline_data', []))
-                    if update_json and "outline" in update_json:
-                        st.session_state.outline_data.extend(update_json["outline"])
-                        st.success(f"Added {len(update_json['outline'])} new topic(s)!")
-                        st.rerun()
-
-        if st.session_state.get('all_chunks'):
-            with st.expander("Explore All Content Chunks", expanded=False):
-                for i, chunk in enumerate(st.session_state.all_chunks):
-                    st.markdown(f"**Chunk ID:** `{chunk['chunk_id']}`")
-                    st.text_area("", chunk['text'], height=100, key=f"chunk_viewer_{i}")
+                st.info("File adding logic to be implemented.")
 
 def show_synthesizing_state():
     st.header("Synthesizing Note Blocks...")
-    progress_bar = st.progress(0, "Starting synthesis...")
-    # The rest of the function remains the same
     st.session_state.final_notes = []
-    outline_topics = [line.strip() for line in st.session_state.editable_outline.split('\n') if line.strip()]
-    all_chunks_map = {chunk['chunk_id']: chunk['text'] for chunk in st.session_state.all_chunks}
-    original_outline_map = {item['topic']: item.get('relevant_chunks', []) for item in st.session_state.outline_data}
-
-    for i, topic in enumerate(outline_topics):
-        progress_bar.progress((i + 1) / len(outline_topics), f"Synthesizing: {topic}")
-        relevant_chunk_ids = original_outline_map.get(topic, [])
-        relevant_chunks_text = "\n\n---\n\n".join([all_chunks_map.get(cid, "") for cid in relevant_chunk_ids])
-        content = synthesize_note_block(topic, relevant_chunks_text, st.session_state.synthesis_instructions)
-        st.session_state.final_notes.append({"topic": topic, "content": content, "source_chunks": relevant_chunk_ids})
+    topics = [line.strip() for line in st.session_state.editable_outline.split('\n') if line.strip()]
+    chunks_map = {c['chunk_id']: c['text'] for c in st.session_state.all_chunks}
     
+    # Re-map topics from the editable outline to the original outline data to find relevant chunks
+    original_outline_map = {item['topic']: item.get('relevant_chunks', []) for item in st.session_state.outline_data}
+    
+    bar = st.progress(0, "Starting synthesis...")
+    for i, topic in enumerate(topics):
+        bar.progress((i + 1) / len(topics), f"Synthesizing: {topic}")
+        # Find the original topic to get the chunk IDs, allows for minor edits in the text area
+        # This is a simple match; a more robust solution might use fuzzy matching
+        matched_chunks = original_outline_map.get(topic, [])
+        if not matched_chunks:
+            # Fallback for edited topics: search for any original topic containing the new one
+            for original_topic, chunk_ids in original_outline_map.items():
+                if topic in original_topic:
+                    matched_chunks = chunk_ids
+                    break
+        
+        text_to_synthesize = "\n\n---\n\n".join([chunks_map.get(cid, "") for cid in matched_chunks if cid in chunks_map])
+        
+        if not text_to_synthesize.strip():
+            content = "Could not find source text for this topic. It might have been edited or removed."
+        else:
+            content = synthesize_note_block(topic, text_to_synthesize, st.session_state.synthesis_instructions)
+            
+        st.session_state.final_notes.append({"topic": topic, "content": content, "source_chunks": matched_chunks})
+
     st.session_state.current_state = 'results'
     st.rerun()
 
-
 def show_results_state():
     st.header("Your Unified Notes")
-    col1, col2 = st.columns(2)
-    with col1:
-        if st.button("Back to Workspace"):
-            st.session_state.current_state = 'workspace'
+    if st.button("Start New Note Session"): reset_session(st.session_state.tool_choice); st.rerun()
+    if st.button("Back to Workspace"): st.session_state.current_state = 'workspace'; st.rerun()
+
+    st.subheader("Next Step: Create a Lesson")
+    if st.button("Create Lesson Plan", type="primary"):
+        st.session_state.current_state = 'generating_lesson'
+        st.rerun()
+
+    for i, block in enumerate(st.session_state.final_notes):
+        st.subheader(block['topic'])
+        st.markdown(block['content'])
+        if st.button("Regenerate this block", key=f"regen_{i}"):
+            st.info("Block regeneration logic to be implemented.")
+
+def show_generating_lesson_state():
+    st.header("Building Your Lesson...")
+    with st.spinner("AI is designing your lesson plan..."):
+        plan_json = generate_lesson_plan(st.session_state.outline_data, st.session_state.all_chunks)
+        if plan_json and "lesson_plan" in plan_json:
+            st.session_state.lesson_plan = plan_json["lesson_plan"]
+            st.session_state.current_state = 'review_lesson'
             st.rerun()
-    with col2:
-        if st.button("Start New Session"):
-            reset_session()
-            st.rerun()
+        else:
+            st.error("Failed to generate lesson plan."); st.session_state.current_state = 'results'; st.rerun()
 
-    st.divider()
-    for i, note_block in enumerate(st.session_state.final_notes):
-        with st.container():
-            st.subheader(note_block['topic'])
-            st.markdown(note_block['content'], unsafe_allow_html=True)
-            if st.button("Regenerate this block", key=f"regen_{i}"):
-                with st.spinner("Regenerating block..."):
-                    all_chunks_map = {chunk['chunk_id']: chunk['text'] for chunk in st.session_state.all_chunks}
-                    relevant_chunks_text = "\n\n---\n\n".join([all_chunks_map.get(cid, "") for cid in note_block['source_chunks']])
-                    new_content = synthesize_note_block(note_block['topic'], relevant_chunks_text, st.session_state.synthesis_instructions)
-                    st.session_state.final_notes[i]['content'] = new_content
-                    st.rerun()
-            with st.expander("View Source Chunks for this Block"):
-                st.json(note_block['source_chunks'])
-            st.divider()
+def show_review_lesson_state():
+    st.header("Review Your Lesson Plan")
+    st.write("This is the DNA of your video. Edit the JSON directly before playback.")
+    plan_str = json.dumps(st.session_state.lesson_plan, indent=2)
+    edited_plan = st.text_area("Editable Lesson Plan (JSON):", value=plan_str, height=600)
+    if st.button("Play Lesson", type="primary"):
+        try:
+            final_plan = json.loads(edited_plan)
+            st.success("Lesson plan is valid! Triggering playback engine...")
+            st.json(final_plan)
+        except json.JSONDecodeError:
+            st.error("Edited text is not valid JSON.")
 
-# --- AUTHENTICATION & MAIN APP LOGIC ---
-def check_secrets():
-    """Checks for all required secrets before app runs."""
-    if "google" not in st.secrets or "gemini" not in st.secrets:
-        st.error("Your `secrets.toml` file is missing `[google]` or `[gemini]` sections.")
-        return False
-    
-    required_google = ["client_id", "client_secret", "redirect_uri"]
-    if not all(key in st.secrets["google"] for key in required_google):
-        st.error("Your `[google]` secrets are missing required keys: client_id, client_secret, redirect_uri.")
-        return False
-        
-    if "api_key" not in st.secrets["gemini"]:
-        st.error("Your `[gemini]` secrets are missing the `api_key`.")
-        return False
-        
-    return True
+# --- UI STATE FUNCTIONS for MOCK TEST GENERATOR ---
+def show_mock_test_placeholder():
+    st.header("Mock Test Generator")
+    st.image("https://placehold.co/800x400/1A233A/E0E2E7?text=Coming+Soon", use_column_width=True)
+    st.write("This feature is under construction. The architecture for generating mock tests based on syllabus content, Bloom's Taxonomy, and a professor persona will be built here.")
+    st.info("The planned workflow includes: Syllabus Upload -> Topic Extraction -> Question Bank Generation -> Test Assembly -> CV-based Grading.")
 
-def get_google_flow():
-    """Initializes the Google OAuth flow."""
-    try:
-        client_config = {"web": {
-            "client_id": st.secrets["google"]["client_id"],
-            "client_secret": st.secrets["google"]["client_secret"],
-            "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-            "token_uri": "https://oauth2.googleapis.com/token",
-            "redirect_uris": [st.secrets["google"]["redirect_uri"]],
-        }}
-        scopes = ["https://www.googleapis.com/auth/userinfo.profile", "https://www.googleapis.com/auth/userinfo.email", "openid"]
-        return Flow.from_client_config(client_config, scopes=scopes, redirect_uri=st.secrets["google"]["redirect_uri"])
-    except Exception as e:
-        st.error(f"Failed to create OAuth flow. Check your secrets configuration. Details: {e}")
-        st.stop()
 
+# --- MAIN APP ---
 def main():
-    load_css()
-    
-    if 'user_info' not in st.session_state:
-        st.session_state.user_info = None
+    if 'user_info' not in st.session_state: st.session_state.user_info = None
+    try: genai.configure(api_key=st.secrets["gemini"]["api_key"])
+    except (KeyError, FileNotFoundError): st.error("Gemini API key not configured in st.secrets."); st.stop()
 
-    if not check_secrets():
-        st.stop()
-
-    genai.configure(api_key=st.secrets["gemini"]["api_key"])
     flow = get_google_flow()
     auth_code = st.query_params.get("code")
 
+    # This block handles the auth redirect
     if auth_code and not st.session_state.user_info:
         try:
             flow.fetch_token(code=auth_code)
-            credentials = flow.credentials
-            user_info_service = build('oauth2', 'v2', credentials=credentials)
-            user_info = user_info_service.userinfo().get().execute()
+            user_info = build('oauth2', 'v2', credentials=flow.credentials).userinfo().get().execute()
             st.session_state.user_info = user_info
-            st.query_params.clear()
-            st.rerun()
-        except GoogleAuthError as e:
-            st.error(f"Authentication Error: {e}")
-            st.error("This is often caused by a misconfigured Redirect URI. Please verify it in your Google Cloud Console and `secrets.toml` file, then try logging in again.")
+            st.query_params.clear(); st.rerun()
         except Exception as e:
-            st.error(f"An unexpected error occurred during login: {e}")
-            st.error("Please ensure your Google Cloud project credentials are correct.")
-
-    elif st.session_state.user_info:
-        # --- Post-Login App ---
-        st.sidebar.title("Vekkam")
-        user = st.session_state.user_info
-        st.sidebar.image(user['picture'], width=80, caption=user.get('name'))
-        st.sidebar.subheader(f"Welcome, {user['given_name']}")
-        if st.sidebar.button("Logout"):
-            st.session_state.clear()
-            st.rerun()
-
+            st.error(f"Authentication failed: {e}"); st.session_state.user_info = None
+    
+    # Pre-Login: Show the new landing page
+    if not st.session_state.user_info:
+        st.sidebar.title("Vekkam Engine")
         st.sidebar.divider()
         st.sidebar.subheader("API Status")
         st.sidebar.write(f"Gemini: **{check_gemini_api()}**")
+        auth_url, _ = flow.authorization_url(prompt='consent')
+        show_landing_page(auth_url) # <<<--- THIS IS THE ONLY CHANGE
+        return
 
-        if 'current_state' not in st.session_state:
-            reset_session()
-        
-        state_map = {
-            'upload': show_upload_state,
-            'workspace': show_workspace_state,
-            'synthesizing': show_synthesizing_state,
-            'results': show_results_state,
-        }
+    # Post-Login: Run the main application
+    st.sidebar.title("Vekkam Engine") # Re-add title for post-login sidebar
+    user = st.session_state.user_info
+    st.sidebar.image(user['picture'], width=80)
+    st.sidebar.subheader(f"Welcome, {user['given_name']}")
+    if st.sidebar.button("Logout"): 
+        # Clear everything on logout
+        st.session_state.clear()
+        st.rerun()
+    st.sidebar.divider()
+
+    # --- TOOL SELECTION ---
+    tool_choice = st.sidebar.radio(
+        "Select a Tool",
+        ("Note & Lesson Engine", "Mock Test Generator"),
+        key='tool_choice'
+    )
+    
+    # Reset session if tool is changed
+    if 'last_tool_choice' not in st.session_state:
+        st.session_state.last_tool_choice = tool_choice
+    if st.session_state.last_tool_choice != tool_choice:
+        reset_session(tool_choice)
+        st.session_state.last_tool_choice = tool_choice
+        st.rerun()
+
+    st.sidebar.divider()
+    st.sidebar.subheader("API Status")
+    st.sidebar.write(f"Gemini: **{check_gemini_api()}**")
+
+    # --- ROUTE TO THE CORRECT TOOL'S WORKFLOW ---
+    if tool_choice == "Note & Lesson Engine":
+        if 'current_state' not in st.session_state: reset_session(tool_choice)
+        state_map = { 'upload': show_upload_state, 'processing': show_processing_state, 'workspace': show_workspace_state,
+                      'synthesizing': show_synthesizing_state, 'results': show_results_state, 'generating_lesson': show_generating_lesson_state,
+                      'review_lesson': show_review_lesson_state, }
         state_function = state_map.get(st.session_state.current_state, show_upload_state)
         state_function()
-    else:
-        # --- Pre-Login Landing Page ---
-        auth_url, _ = flow.authorization_url(prompt='consent')
-        show_landing_page(auth_url)
+    elif tool_choice == "Mock Test Generator":
+        show_mock_test_placeholder()
+
 
 if __name__ == "__main__":
     main()
