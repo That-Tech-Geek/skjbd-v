@@ -278,7 +278,7 @@ def show_landing_page(auth_url):
                 display: inline-block;
                 padding: 1rem 2rem;
                 background-image: linear-gradient(to right, #38BDF8, #6D28D9);
-                color: white;
+                color: black; /* <<< THIS IS THE ONLY CHANGE */
                 border-radius: 0.5rem;
                 text-decoration: none;
                 font-weight: 600;
