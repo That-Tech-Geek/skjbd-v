@@ -231,10 +231,13 @@ def show_landing_page(auth_url):
     st.markdown("""
         <style>
             /* --- General Styles --- */
+            /* This overly broad rule was interfering with Streamlit's column layout, so it has been removed. */
+            /*
             .main > div {
                 padding-left: 1rem;
                 padding-right: 1rem;
             }
+            */
             .stApp {
                 background-color: #0F172A; /* Dark blue-gray background */
             }
