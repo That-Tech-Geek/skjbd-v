@@ -30,7 +30,43 @@ CHUNK_OVERLAP = 50
 MAX_RETRIES = 3
 
 # --- PAGE CONFIGURATION ---
-st.set_page_config(page_title="Vekkam Engine", page_icon="🧠", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(page_title="Vekkam Engine", page_icon="🧠", layout="wide", initial_sidebar_state="collapsed")
+
+# --- CUSTOM CSS ---
+def load_css():
+    st.markdown("""
+        <style>
+            /* Hide Streamlit's default header, footer, and main menu button */
+            header {visibility: hidden;}
+            .st-emotion-cache-18ni7ap {visibility: hidden;}
+            .st-emotion-cache-h4xjwg {display: none;}
+            
+            :root { 
+                --bg-primary: #0B1120; 
+                --bg-secondary: #1A233A; 
+                --text-primary: #E0E2E7; 
+                --text-secondary: #A0AEC0; 
+                --accent: #4A90E2; 
+                --border-color: #2D3748; 
+            }
+            .stApp { background-color: var(--bg-primary); color: var(--text-primary); }
+            div[data-testid="stButton"] > button, .stDownloadButton > button, .stLinkButton > a { 
+                background-color: var(--accent); color: white !important; border: none; 
+                border-radius: 0.5rem; padding: 0.75rem 1.5rem; font-weight: bold; 
+                transition: transform 0.2s ease, opacity 0.2s ease; 
+                text-decoration: none;
+            }
+            div[data-testid="stButton"] > button:hover, .stDownloadButton > button:hover, .stLinkButton > a:hover { 
+                transform: scale(1.05); opacity: 0.9;
+            }
+            .custom-card { 
+                background-color: var(--bg-secondary); border: 1px solid var(--border-color); 
+                border-radius: 0.75rem; padding: 1.5rem; 
+                box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1); 
+            }
+        </style>
+    """, unsafe_allow_html=True)
+
 
 # --- EXPONENTIAL BACKOFF DECORATOR ---
 def gemini_api_call_with_retry(func):
@@ -63,12 +99,6 @@ def gemini_api_call_with_retry(func):
     return wrapper
 
 # --- API SELF-DIAGNOSIS & UTILITIES ---
-def check_gemini_api():
-    try: genai.get_model('models/gemini-2.5-flash-lite'); return "Valid"
-    except Exception as e:
-        st.sidebar.error(f"Gemini API Key in secrets is invalid: {e}")
-        return "Invalid"
-
 def resilient_json_parser(json_string):
     try:
         match = re.search(r'\{.*\}', json_string, re.DOTALL)
@@ -197,7 +227,6 @@ def get_google_flow():
         st.error("OAuth credentials are not configured correctly in st.secrets."); st.stop()
 
 def reset_session(tool_choice):
-    # Preserve user info and tool choice, clear everything else
     user_info = st.session_state.get('user_info')
     st.session_state.clear()
     st.session_state.user_info = user_info
@@ -208,7 +237,23 @@ def reset_session(tool_choice):
     st.session_state.outline_data = []
     st.session_state.final_notes = []
 
-# --- UI STATE FUNCTIONS for NOTE & LESSON ENGINE ---
+# --- UI STATE FUNCTIONS ---
+def show_pre_login_view(flow):
+    st.markdown("""
+        <div style="min-height: 90vh; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;">
+            <h1 style="font-size: 4.5rem; font-weight: 900; letter-spacing: -0.05em; margin-bottom: 1rem;">
+                Turn Chaos into <span style="color: var(--accent);">Clarity</span>.
+            </h1>
+            <p style="font-size: 1.25rem; color: var(--text-secondary); max-width: 32rem; margin-bottom: 2rem;">
+                Vekkam synthesizes your lectures, slides, and readings into a unified study guide. Faster, smarter, and finally, together.
+            </p>
+        </div>
+    """, unsafe_allow_html=True)
+    auth_url, _ = flow.authorization_url(prompt='consent')
+    _, col2, _ = st.columns([1, 2, 1])
+    with col2:
+        st.link_button("Sign In with Google to Begin", auth_url)
+
 def show_upload_state():
     st.header("Note & Lesson Engine: Upload")
     uploaded_files = st.file_uploader("Select files", accept_multiple_files=True, type=['mp3', 'm4a', 'wav', 'png', 'jpg', 'pdf'])
@@ -274,12 +319,10 @@ def show_results_state():
     st.header("Your Unified Notes")
     if st.button("Start New Note Session"): reset_session(st.session_state.tool_choice); st.rerun()
     if st.button("Back to Workspace"): st.session_state.current_state = 'workspace'; st.rerun()
-
     st.subheader("Next Step: Create a Lesson")
     if st.button("Create Lesson Plan", type="primary"):
         st.session_state.current_state = 'generating_lesson'
         st.rerun()
-
     for i, block in enumerate(st.session_state.final_notes):
         st.subheader(block['topic'])
         st.markdown(block['content'])
@@ -310,21 +353,19 @@ def show_review_lesson_state():
         except json.JSONDecodeError:
             st.error("Edited text is not valid JSON.")
 
-# --- UI STATE FUNCTIONS for MOCK TEST GENERATOR ---
 def show_mock_test_placeholder():
     st.header("Mock Test Generator")
-    st.image("https://placehold.co/800x400/1A233A/E0E2E7?text=Coming+Soon", use_column_width=True)
-    st.write("This feature is under construction. The architecture for generating mock tests based on syllabus content, Bloom's Taxonomy, and a professor persona will be built here.")
-    st.info("The planned workflow includes: Syllabus Upload -> Topic Extraction -> Question Bank Generation -> Test Assembly -> CV-based Grading.")
-
+    st.image("https://placehold.co/800x400/1A233A/E0E2E7?text=Coming+Soon", use_container_width=True)
+    st.write("This feature is under construction.")
+    st.info("Planned workflow: Syllabus Upload -> Topic Extraction -> Question Bank Generation -> Test Assembly -> CV-based Grading.")
 
 # --- MAIN APP ---
 def main():
-    st.sidebar.title("Vekkam Engine")
+    load_css()
     if 'user_info' not in st.session_state: st.session_state.user_info = None
     try: genai.configure(api_key=st.secrets["gemini"]["api_key"])
     except (KeyError, FileNotFoundError): st.error("Gemini API key not configured in st.secrets."); st.stop()
-
+    
     flow = get_google_flow()
     auth_code = st.query_params.get("code")
 
@@ -338,48 +379,31 @@ def main():
             st.error(f"Authentication failed: {e}"); st.session_state.user_info = None
     
     if not st.session_state.user_info:
-        st.title("Welcome to Vekkam")
-        auth_url, _ = flow.authorization_url(prompt='consent')
-        st.link_button("Sign in with Google", auth_url)
+        show_pre_login_view(flow)
         return
 
-    user = st.session_state.user_info
-    st.sidebar.image(user['picture'], width=80)
-    st.sidebar.subheader(f"Welcome, {user['given_name']}")
+    # Post-Login: Show sidebar
+    st.sidebar.image(st.session_state.user_info['picture'], width=80)
+    st.sidebar.subheader(f"Welcome, {st.session_state.user_info['given_name']}")
     if st.sidebar.button("Logout"): st.session_state.clear(); st.rerun()
     st.sidebar.divider()
 
-    # --- TOOL SELECTION ---
-    tool_choice = st.sidebar.radio(
-        "Select a Tool",
-        ("Note & Lesson Engine", "Mock Test Generator"),
-        key='tool_choice'
-    )
+    tool_choice = st.sidebar.radio("Select a Tool", ("Note & Lesson Engine", "Mock Test Generator"), key='tool_choice')
     
-    # Reset session if tool is changed
-    if 'last_tool_choice' not in st.session_state:
-        st.session_state.last_tool_choice = tool_choice
+    if 'last_tool_choice' not in st.session_state: st.session_state.last_tool_choice = tool_choice
     if st.session_state.last_tool_choice != tool_choice:
-        reset_session(tool_choice)
-        st.session_state.last_tool_choice = tool_choice
-        st.rerun()
+        reset_session(tool_choice); st.session_state.last_tool_choice = tool_choice; st.rerun()
 
-
-    st.sidebar.divider()
-    st.sidebar.subheader("API Status")
-    st.sidebar.write(f"Gemini: **{check_gemini_api()}**")
-
-    # --- ROUTE TO THE CORRECT TOOL'S WORKFLOW ---
     if tool_choice == "Note & Lesson Engine":
         if 'current_state' not in st.session_state: reset_session(tool_choice)
         state_map = { 'upload': show_upload_state, 'processing': show_processing_state, 'workspace': show_workspace_state,
                       'synthesizing': show_synthesizing_state, 'results': show_results_state, 'generating_lesson': show_generating_lesson_state,
-                      'review_lesson': show_review_lesson_state, }
+                      'review_lesson': show_review_lesson_state }
         state_function = state_map.get(st.session_state.current_state, show_upload_state)
         state_function()
     elif tool_choice == "Mock Test Generator":
         show_mock_test_placeholder()
 
-
 if __name__ == "__main__":
     main()
+
