@@ -87,7 +87,7 @@ class PersistenceManager:
 class AIAgent:
     """Encapsulates all interactions with the Gemini API."""
     def __init__(self, user_preferences):
-        self.model = genai.GenerativeModel('models/gemini-2.5-flash-lite')
+        self.model = genai.GenerativeModel('models/gemini-1.5-pro-latest')
         self.user_preferences = user_preferences
 
     @staticmethod
@@ -127,6 +127,21 @@ class AIAgent:
         response = self.model.generate_content(prompt)
         return response.text
 
+    @_gemini_api_call_with_retry
+    def generate_lesson_plan(self, outline, all_chunks):
+        chunk_context_map = {c['chunk_id']: c['text'][:200] + "..." for c in all_chunks}; 
+        style_prompt = f"The user prefers a learning style that is {self.user_preferences.get('detail_level')} and uses {self.user_preferences.get('tone')}."
+        prompt = f"""
+        You are a world-class educator. {style_prompt}. Your prime directive is to design a detailed, step-by-step lesson plan based ONLY on the provided outline and source material.
+        If asked to use analogies or define terms, construct them based ONLY on the content within the provided text. Do not introduce external facts.
+        Available actions: {{ "type": "write_text", "content": "Text", "position": "top_center|etc." }}, {{ "type": "draw_box", "label": "Label", "id": "unique_id" }}, {{ "type": "draw_arrow", "from_id": "id_1", "to_id": "id_2", "label": "Label" }}, {{ "type": "highlight", "target_id": "id_to_highlight" }}, {{ "type": "wipe_board" }}.
+        Output ONLY a valid JSON object with a root key "lesson_plan".
+        **User-Approved Outline:** {json.dumps(outline, indent=2)}
+        **Source Content Context (Your only source of truth):** {json.dumps(chunk_context_map, indent=2)}
+        """
+        response = self.model.generate_content(prompt)
+        return AIAgent._resilient_json_parser(response.text)
+
     @staticmethod
     def _resilient_json_parser(json_string):
         try: match = re.search(r'\{.*\}', json_string, re.DOTALL); return json.loads(match.group(0)) if match else None
@@ -137,7 +152,7 @@ class ContentProcessor:
     @staticmethod
     def process_source(file, source_type):
         try:
-            source_id = f"{source_type}:{file.name}"; model = genai.GenerativeModel('models/gemini-2.5-flash-lite')
+            source_id = f"{source_type}:{file.name}"; model = genai.GenerativeModel('models/gemini-1.5-pro-latest')
             if source_type == 'transcript':
                 with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(file.name)[1]) as tmp: tmp.write(file.getvalue()); original_path = tmp.name
                 enhanced_path = None
@@ -264,14 +279,120 @@ def show_processing_state():
     st.session_state.current_view = 'workspace'; st.rerun()
 
 def show_workspace_state():
-    # ... Implementation for workspace view ...
     st.header("Vekkam Workspace")
     if st.button("Back to Dashboard"): st.session_state.current_view = 'dashboard'; st.rerun()
+    agent = AIAgent(st.session_state.user_preferences)
+    
+    col1, col2 = st.columns([2, 1])
+    with col1:
+        st.subheader("Controls & Outline")
+        if st.button("Generate / Regenerate Full Outline"):
+            with st.spinner("AI is analyzing all content..."):
+                outline_json = agent.generate_content_outline(st.session_state.all_chunks)
+                if outline_json and "outline" in outline_json: st.session_state.outline_data = outline_json["outline"]
+                else: st.error("Failed to generate outline.")
+        
+        if 'outline_data' in st.session_state and st.session_state.outline_data:
+            initial_text = "\n".join([item.get('topic', '') for item in st.session_state.outline_data])
+            st.session_state.editable_outline = st.text_area("Editable Outline:", value=initial_text, height=300)
+            st.session_state.synthesis_instructions = st.text_area("Synthesis Instructions (Optional):", height=100)
+            if st.button("Synthesize Notes", type="primary"):
+                st.session_state.current_view = 'synthesizing'
+                st.rerun()
+    with col2:
+        st.subheader("Source Explorer")
+        with st.expander("Add More Files"):
+            new_files = st.file_uploader("Upload more files", accept_multiple_files=True, key=f"uploader_{int(time.time())}")
+            if new_files:
+                with st.spinner("Processing new files..."):
+                    results = []
+                    with ThreadPoolExecutor() as executor:
+                        futures = {executor.submit(ContentProcessor.process_source, f, 'transcript' if f.type.startswith('audio/') else 'image' if f.type.startswith('image/') else 'pdf'): f for f in new_files}
+                        for future in as_completed(futures): results.append(future.result())
+                    new_chunks = [c for r in results if r and r['status'] == 'success' for c in r['chunks']]
+                    st.session_state.all_chunks.extend(new_chunks)
+                    st.session_state.extraction_failures.extend([r for r in results if r and r['status'] == 'error'])
+                with st.spinner("AI is suggesting new topics..."):
+                    update_json = agent.generate_content_outline(new_chunks, existing_outline=st.session_state.get('outline_data', []))
+                    if update_json and "outline" in update_json:
+                        st.session_state.outline_data.extend(update_json["outline"])
+                        st.success(f"Added {len(update_json['outline'])} new topic(s)! The outline has been updated.")
+                        st.rerun()
+        if st.session_state.get('all_chunks'):
+            with st.expander("Explore All Content Chunks", expanded=False):
+                for i, chunk in enumerate(st.session_state.all_chunks):
+                    st.markdown(f"**Chunk ID:** `{chunk['chunk_id']}`")
+                    st.text_area("", chunk['text'], height=100, key=f"chunk_viewer_{i}")
+
+def show_synthesizing_state():
+    st.header("Synthesizing Note Blocks...")
+    agent = AIAgent(st.session_state.user_preferences)
+    st.session_state.final_notes = []
+    topics = [line.strip() for line in st.session_state.editable_outline.split('\n') if line.strip()]
+    chunks_map = {c['chunk_id']: c['text'] for c in st.session_state.all_chunks}
+    outline_map = {item['topic']: item.get('relevant_chunks', []) for item in st.session_state.outline_data}
+    bar = st.progress(0, "Starting synthesis...")
+    for i, topic in enumerate(topics):
+        bar.progress((i + 1) / len(topics), f"Synthesizing: {topic}")
+        chunk_ids = outline_map.get(topic, [])
+        text = "\n\n---\n\n".join([chunks_map.get(cid, "") for cid in chunk_ids])
+        content = agent.synthesize_note_block(topic, text, st.session_state.synthesis_instructions)
+        st.session_state.final_notes.append({"topic": topic, "content": content, "source_chunks": chunk_ids})
+    st.session_state.current_view = 'results'
+    st.rerun()
 
 def show_results_state():
-    # ... Implementation for results view ...
     st.header("Your Unified Guide")
+    agent = AIAgent(st.session_state.user_preferences)
     if st.button("Return to Dashboard"): st.session_state.current_view = 'dashboard'; st.rerun()
+    if not st.session_state.get('session_saved', False):
+        first_topic = st.session_state.final_notes[0]['topic'] if st.session_state.final_notes else "Untitled"
+        session_name = f"{time.strftime('%Y-%m-%d')}_{first_topic[:30].replace(' ', '_')}"
+        session_data = {"notes": st.session_state.final_notes, "lesson_plan": st.session_state.get('lesson_plan'), "outline_data": st.session_state.outline_data, "all_chunks": st.session_state.all_chunks}
+        PersistenceManager.save_session_data(st.session_state.user_info['id'], session_name, session_data)
+        st.session_state.session_saved = True; st.toast(f"Session '{session_name}' saved!")
+    
+    st.subheader("Next Step: Create a Lesson")
+    if st.button("Create Lesson Plan", type="primary"):
+        st.session_state.current_view = 'generating_lesson'; st.rerun()
+
+    for i, block in enumerate(st.session_state.final_notes):
+        st.subheader(block['topic'])
+        st.markdown(block['content'])
+        if st.button("Regenerate this block", key=f"regen_{i}"):
+            with st.spinner("Regenerating block..."):
+                chunks_map = {c['chunk_id']: c['text'] for c in st.session_state.all_chunks}
+                text = "\n\n---\n\n".join([chunks_map.get(cid, "") for cid in block['source_chunks']])
+                new_content = agent.synthesize_note_block(block['topic'], text, st.session_state.synthesis_instructions)
+                st.session_state.final_notes[i]['content'] = new_content
+                st.rerun()
+        with st.expander("View Source Chunks for this Block"):
+            st.json(block['source_chunks'])
+
+def show_generating_lesson_state():
+    st.header("Building Your Lesson...")
+    agent = AIAgent(st.session_state.user_preferences)
+    with st.spinner("AI is designing your lesson plan..."):
+        plan_json = agent.generate_lesson_plan(st.session_state.outline_data, st.session_state.all_chunks)
+        if plan_json and "lesson_plan" in plan_json:
+            st.session_state.lesson_plan = plan_json["lesson_plan"]
+            st.session_state.current_view = 'review_lesson'
+            st.rerun()
+        else:
+            st.error("Failed to generate lesson plan."); st.session_state.current_view = 'results'; st.rerun()
+
+def show_review_lesson_state():
+    st.header("Review Your Lesson Plan")
+    st.write("This is the DNA of your video. Edit the JSON directly before playback.")
+    plan_str = json.dumps(st.session_state.lesson_plan, indent=2)
+    edited_plan = st.text_area("Editable Lesson Plan (JSON):", value=plan_str, height=600)
+    if st.button("Play Lesson", type="primary"):
+        try:
+            final_plan = json.loads(edited_plan)
+            st.success("Lesson plan is valid! Triggering playback engine...")
+            st.json(final_plan)
+        except json.JSONDecodeError:
+            st.error("Edited text is not valid JSON.")
 
 def main():
     load_css()
@@ -307,7 +428,9 @@ def main():
         st.session_state.current_view = 'onboarding' if st.session_state.get('is_first_time_user', True) else 'dashboard'
     
     view_map = { 'dashboard': show_dashboard_view, 'onboarding': show_onboarding_view, 'activation': show_activation_view,
-                 'processing': show_processing_state, 'workspace': show_workspace_state, 'results': show_results_state }
+                 'processing': show_processing_state, 'workspace': show_workspace_state, 
+                 'synthesizing': show_synthesizing_state, 'results': show_results_state,
+                 'generating_lesson': show_generating_lesson_state, 'review_lesson': show_review_lesson_state }
     render_view = view_map.get(st.session_state.current_view, show_dashboard_view)
     render_view()
 
