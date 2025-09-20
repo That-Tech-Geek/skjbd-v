@@ -255,10 +255,6 @@ def show_landing_page(auth_url):
             /* Adjust top padding for main content after hiding header */
             .main .block-container {
                 padding-top: 2rem;
-                /* --- FIX: FORCING FLEXBOX CENTERING WITH !IMPORTANT --- */
-                display: flex !important;
-                flex-direction: column !important;
-                align-items: center !important;
             }
 
             /* --- Specific Element Styles --- */
@@ -315,15 +311,18 @@ def show_landing_page(auth_url):
             .card p { color: #94A3B8; font-size: 1rem; line-height: 1.6; }
         </style>
     """, unsafe_allow_html=True)
-
-    st.markdown('<h1 class="title">Stop Juggling Tabs. Start Understanding.</h1>', unsafe_allow_html=True)
-    st.markdown('<p class="subtitle">General AI chatbots give you answers. Vekkam gives you a workflow. We turn your chaotic lecture recordings, messy notes, and dense PDFs into a single, unified study guide—a feat impossible for generic tools.</p>', unsafe_allow_html=True)
-
-    with st.container():
-        st.markdown('<div class="login-button-container">', unsafe_allow_html=True)
-        st.link_button("Get Started - Sign in with Google", auth_url, type="primary")
-        st.markdown('</div>', unsafe_allow_html=True)
     
+    # --- FIX: Use st.columns to enforce centering for the hero section ---
+    _, center_col, _ = st.columns([1, 2, 1])
+    with center_col:
+        st.markdown('<h1 class="title">Stop Juggling Tabs. Start Understanding.</h1>', unsafe_allow_html=True)
+        st.markdown('<p class="subtitle">General AI chatbots give you answers. Vekkam gives you a workflow. We turn your chaotic lecture recordings, messy notes, and dense PDFs into a single, unified study guide—a feat impossible for generic tools.</p>', unsafe_allow_html=True)
+        with st.container():
+            st.markdown('<div class="login-button-container">', unsafe_allow_html=True)
+            st.link_button("Get Started - Sign in with Google", auth_url, type="primary")
+            st.markdown('</div>', unsafe_allow_html=True)
+
+    # --- Rest of the page remains full-width ---
     st.markdown('<h2 class="section-title">The Right Tool for the Job</h2>', unsafe_allow_html=True)
     st.markdown("""
         <table class="comparison-table">
