@@ -255,9 +255,10 @@ def show_landing_page(auth_url):
             /* Adjust top padding for main content after hiding header */
             .main .block-container {
                 padding-top: 2rem;
-                /* --- FIX: USE CSS GRID FOR CENTERING --- */
-                display: grid;
-                justify-items: center;
+                /* --- FIX: FORCING FLEXBOX CENTERING WITH !IMPORTANT --- */
+                display: flex !important;
+                flex-direction: column !important;
+                align-items: center !important;
             }
 
             /* --- Specific Element Styles --- */
