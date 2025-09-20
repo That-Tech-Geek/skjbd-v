@@ -227,40 +227,41 @@ def reset_session(tool_choice):
 # --- NEW: ADVANCED PRE-LOGIN LANDING PAGE ---
 def show_landing_page(auth_url):
     """Displays the new, feature-rich landing page."""
-
-    # --- FIX: Define all HTML and CSS in one block for absolute control ---
     
-    # Using an f-string to inject the auth_url directly into the HTML `<a>` tag
-    hero_html = f"""
-    <div class="hero-container">
-        <h1 class="title">Stop Juggling Tabs. Start Understanding.</h1>
-        <p class="subtitle">General AI chatbots give you answers. Vekkam gives you a workflow. We turn your chaotic lecture recordings, messy notes, and dense PDFs into a single, unified study guide—a feat impossible for generic tools.</p>
-        <a href="{auth_url}" class="custom-google-button" target="_self">Get Started - Sign in with Google</a>
-    </div>
-    """
-
-    st.markdown(f"""
+    st.markdown("""
         <style>
-            .stApp {{
-                background-color: #0F172A;
-            }}
-            .main .block-container {{
-                padding-top: 2rem;
-            }}
-            header[data-testid="stHeader"] {{
+            /* --- General Styles --- */
+            /* This overly broad rule was interfering with Streamlit's column layout, so it has been removed. */
+            /*
+            .main > div {
+                padding-left: 1rem;
+                padding-right: 1rem;
+            }
+            */
+            .stApp {
+                background-color: #0F172A; /* Dark blue-gray background */
+            }
+            h1, h2, h3, p, .stMarkdown {
+                color: #E2E8F0; /* Light gray text */
+                text-align: center; /* Center all text by default */
+            }
+            .stButton > a { /* Target the link inside the button */
+                width: 100%;
+                text-align: center;
+            }
+            
+            /* --- Hide Streamlit Header --- */
+            header[data-testid="stHeader"] {
                 display: none !important;
                 visibility: hidden !important;
-            }}
-            
-            /* Styles for the self-contained hero section */
-            .hero-container {{
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                text-align: center;
-                padding: 3rem 1rem;
-            }}
-            .title {{
+            }
+            /* Adjust top padding for main content after hiding header */
+            .main .block-container {
+                padding-top: 2rem;
+            }
+
+            /* --- Specific Element Styles --- */
+            .title {
                 font-size: 3.5rem;
                 font-weight: 700;
                 line-height: 1.2;
@@ -268,54 +269,63 @@ def show_landing_page(auth_url):
                 -webkit-background-clip: text;
                 -webkit-text-fill-color: transparent;
                 margin-bottom: 1rem;
-            }}
-            .subtitle {{
+            }
+            .subtitle {
                 font-size: 1.25rem;
                 color: #94A3B8;
                 max-width: 650px;
-                margin: 0 auto 2.5rem auto; /* Increased bottom margin */
-            }}
-            .custom-google-button {{
-                display: inline-block;
-                background-color: #FF4B4B; /* Streamlit's primary red */
-                color: white;
-                padding: 0.75rem 1.5rem;
-                border-radius: 0.5rem;
-                text-decoration: none;
+                margin: 0 auto 2rem auto;
+            }
+            .login-button-container {
+                display: flex;
+                justify-content: center;
+                margin-bottom: 4rem;
+            }
+            .section-title {
+                font-size: 2.5rem;
                 font-weight: 600;
-                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
-                font-size: 1rem;
-                border: none;
-                cursor: pointer;
-                transition: background-color 0.2s ease, color 0.2s ease;
-            }}
-            .custom-google-button:hover {{
-                background-color: #FF6B6B; /* Lighter red for hover */
-                color: white;
-                text-decoration: none;
-            }}
+                margin-top: 5rem;
+                margin-bottom: 3rem;
+            }
 
-            /* Styles for the rest of the page remain the same */
-            .section-title {{ font-size: 2.5rem; font-weight: 600; margin-top: 5rem; margin-bottom: 3rem; text-align:center; color:#E2E8F0;}}
-            .comparison-table {{ width: 100%; max-width: 900px; margin: 2rem auto; border-collapse: collapse; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2); }}
-            .comparison-table th, .comparison-table td {{ padding: 1.25rem 1rem; border-bottom: 1px solid #334155; text-align:center;}}
-            .comparison-table th {{ background-color: #1E293B; font-size: 1.1rem; color: #F8FAFC; }}
-            .comparison-table td {{ background-color: #0F172A; color: #CBD5E1; }}
-            .comparison-table .feature-col {{ text-align: left; font-weight: 600; }}
-            .comparison-table .vekkam-col {{ background-color: rgba(30, 58, 138, 0.5); color: #E0E7FF; }}
-            .tick {{ color: #4ADE80; font-size: 1.5rem; font-weight: bold; }}
-            .cross {{ color: #F87171; font-size: 1.5rem; font-weight: bold; }}
-            .card {{ background-color: #1E293B; padding: 2rem; border-radius: 12px; border: 1px solid #334155; height: 100%; text-align:center; color:#E2E8F0;}}
-            .card .icon {{ font-size: 3rem; }}
-            .card h3 {{ font-size: 1.5rem; margin-top: 1rem; margin-bottom: 0.5rem; color: #F8FAFC; }}
-            .card p {{ color: #94A3B8; font-size: 1rem; line-height: 1.6; text-align:center;}}
+            /* --- Comparison Table --- */
+            .comparison-table {
+                width: 100%; max-width: 900px; margin: 2rem auto;
+                border-collapse: collapse; border-radius: 8px; overflow: hidden;
+                box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            }
+            .comparison-table th, .comparison-table td {
+                padding: 1.25rem 1rem; border-bottom: 1px solid #334155;
+            }
+            .comparison-table th { background-color: #1E293B; font-size: 1.1rem; color: #F8FAFC; }
+            .comparison-table td { background-color: #0F172A; color: #CBD5E1; }
+            .comparison-table .feature-col { text-align: left; font-weight: 600; }
+            .comparison-table .vekkam-col { background-color: rgba(30, 58, 138, 0.5); color: #E0E7FF; }
+            .tick { color: #4ADE80; font-size: 1.5rem; font-weight: bold; }
+            .cross { color: #F87171; font-size: 1.5rem; font-weight: bold; }
+            
+            /* --- How-It-Works & Who-Is-It-For Sections --- */
+            .card {
+                background-color: #1E293B; padding: 2rem; border-radius: 12px;
+                border: 1px solid #334155; height: 100%;
+            }
+            .card .icon { font-size: 3rem; }
+            .card h3 { font-size: 1.5rem; margin-top: 1rem; margin-bottom: 0.5rem; color: #F8FAFC; }
+            .card p { color: #94A3B8; font-size: 1rem; line-height: 1.6; }
         </style>
     """, unsafe_allow_html=True)
     
-    # Inject the hero HTML block
-    st.markdown(hero_html, unsafe_allow_html=True)
-    
-    # --- The rest of the page is rendered normally ---
+    # --- FIX: Use st.columns to enforce centering for the hero section ---
+    _, center_col, _ = st.columns([1, 2, 1])
+    with center_col:
+        st.markdown('<h1 class="title">Stop Juggling Tabs. Start Understanding.</h1>', unsafe_allow_html=True)
+        st.markdown('<p class="subtitle">General AI chatbots give you answers. Vekkam gives you a workflow. We turn your chaotic lecture recordings, messy notes, and dense PDFs into a single, unified study guide—a feat impossible for generic tools.</p>', unsafe_allow_html=True)
+        with st.container():
+            st.markdown('<div class="login-button-container">', unsafe_allow_html=True)
+            st.link_button("Get Started - Sign in with Google", auth_url, type="primary")
+            st.markdown('</div>', unsafe_allow_html=True)
+
+    # --- Rest of the page remains full-width ---
     st.markdown('<h2 class="section-title">The Right Tool for the Job</h2>', unsafe_allow_html=True)
     st.markdown("""
         <table class="comparison-table">
@@ -345,6 +355,7 @@ def show_landing_page(auth_url):
     with col3:
         st.markdown('<div class="card"><div class="icon">📝</div><h3>3. Synthesize & Generate</h3><p>Once you approve the outline, a final agent writes your study guide, topic by topic. Crucially, it uses <strong>only the text chunks from your material</strong>, ensuring zero drift or hallucination.</p></div>', unsafe_allow_html=True)
 
+    # --- NEW "WHO IS THIS FOR?" SECTION ---
     st.markdown('<h2 class="section-title">Built for the Modern Student</h2>', unsafe_allow_html=True)
     col4, col5, col6 = st.columns(3, gap="large")
     with col4:
@@ -507,7 +518,7 @@ def main():
         # Hide sidebar on landing page
         st.markdown("<style>#MainMenu {visibility: hidden;} footer {visibility: hidden;} [data-testid='stSidebar'] {display: none;}</style>", unsafe_allow_html=True)
         auth_url, _ = flow.authorization_url(prompt='consent')
-        show_landing_page(auth_url)
+        show_landing_page(auth_url) # <<<--- THIS IS THE ONLY CHANGE
         return
 
     # Post-Login: Show sidebar and run app
