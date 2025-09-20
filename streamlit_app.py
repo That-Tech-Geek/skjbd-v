@@ -127,7 +127,6 @@ def process_source(file, source_type):
 @gemini_api_call_with_retry
 def generate_content_outline(all_chunks, existing_outline=None):
     model = genai.GenerativeModel('models/gemini-1.5-flash')
-    # Filter out empty or very short chunks to improve signal-to-noise for the outline model
     prompt_chunks = [{"chunk_id": c['chunk_id'], "text_snippet": c['text'][:200] + "..."} for c in all_chunks if c.get('text') and len(c['text'].split()) > 10]
     
     if not prompt_chunks:
@@ -179,8 +178,7 @@ def generate_lesson_plan(outline, all_chunks):
     model = genai.GenerativeModel('models/gemini-1.5-flash')
     chunk_context_map = {c['chunk_id']: c['text'][:200] + "..." for c in all_chunks}
     prompt = f"""
-    You are a world-class educator with the explanatory power of Sal Khan and the visual clarity of Kurzgesagt. 
-    Design a detailed, step-by-step lesson plan based on the provided outline and source material.
+    You are a world-class educator. Design a detailed, step-by-step lesson plan based on the provided outline and source material.
     The goal is deep, intuitive understanding. Build from first principles. Use analogies. Define all terms.
     For each topic in the outline, create a list of "steps". Each step must have "narration" and a list of "actions".
     Available actions:
@@ -232,32 +230,48 @@ def show_landing_page(auth_url):
     
     st.markdown("""
         <style>
+            /* --- General Styles --- */
             .main > div {
-                padding-top: 2rem;
-                padding-left: 2rem;
-                padding-right: 2rem;
+                padding-left: 1rem;
+                padding-right: 1rem;
             }
             .stApp {
                 background-color: #0F172A; /* Dark blue-gray background */
             }
             h1, h2, h3, p, .stMarkdown {
-                color: #E2E8F0; /* Light gray text for contrast */
+                color: #E2E8F0; /* Light gray text */
+                text-align: center; /* Center all text by default */
             }
+            .stButton > a { /* Target the link inside the button */
+                width: 100%;
+                text-align: center;
+            }
+            
+            /* --- Hide Streamlit Header --- */
+            header[data-testid="stHeader"] {
+                display: none !important;
+                visibility: hidden !important;
+            }
+            /* Adjust top padding for main content after hiding header */
+            .main .block-container {
+                padding-top: 2rem;
+            }
+
+            /* --- Specific Element Styles --- */
             .title {
                 font-size: 3.5rem;
                 font-weight: 700;
-                text-align: center;
                 line-height: 1.2;
                 background: -webkit-linear-gradient(45deg, #38BDF8, #818CF8);
                 -webkit-background-clip: text;
                 -webkit-text-fill-color: transparent;
+                margin-bottom: 1rem;
             }
             .subtitle {
                 font-size: 1.25rem;
-                text-align: center;
                 color: #94A3B8;
-                max-width: 600px;
-                margin: 1rem auto 2rem auto;
+                max-width: 650px;
+                margin: 0 auto 2rem auto;
             }
             .login-button-container {
                 display: flex;
@@ -265,68 +279,36 @@ def show_landing_page(auth_url):
                 margin-bottom: 4rem;
             }
             .section-title {
-                text-align: center;
                 font-size: 2.5rem;
                 font-weight: 600;
-                margin-top: 4rem;
-                margin-bottom: 2rem;
+                margin-top: 5rem;
+                margin-bottom: 3rem;
             }
+
+            /* --- Comparison Table --- */
             .comparison-table {
-                width: 100%;
-                max-width: 900px;
-                margin: 2rem auto;
-                border-collapse: collapse;
-                border-radius: 8px;
-                overflow: hidden;
+                width: 100%; max-width: 900px; margin: 2rem auto;
+                border-collapse: collapse; border-radius: 8px; overflow: hidden;
                 box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
             }
             .comparison-table th, .comparison-table td {
-                padding: 1.25rem 1rem;
-                text-align: center;
-                border-bottom: 1px solid #334155;
+                padding: 1.25rem 1rem; border-bottom: 1px solid #334155;
             }
-            .comparison-table th {
-                background-color: #1E293B;
-                font-size: 1.1rem;
-                color: #F8FAFC;
-            }
-            .comparison-table td {
-                background-color: #0F172A;
-                color: #CBD5E1;
-            }
-            .comparison-table .feature-col {
-                text-align: left;
-                font-weight: 600;
-            }
-            .comparison-table .vekkam-col {
-                background-color: rgba(30, 58, 138, 0.5); /* Highlight Vekkam's column */
-                color: #E0E7FF;
-            }
+            .comparison-table th { background-color: #1E293B; font-size: 1.1rem; color: #F8FAFC; }
+            .comparison-table td { background-color: #0F172A; color: #CBD5E1; }
+            .comparison-table .feature-col { text-align: left; font-weight: 600; }
+            .comparison-table .vekkam-col { background-color: rgba(30, 58, 138, 0.5); color: #E0E7FF; }
             .tick { color: #4ADE80; font-size: 1.5rem; font-weight: bold; }
             .cross { color: #F87171; font-size: 1.5rem; font-weight: bold; }
             
-            .how-it-works-step {
-                background-color: #1E293B;
-                padding: 2rem;
-                border-radius: 12px;
-                text-align: center;
-                border: 1px solid #334155;
-                height: 100%;
+            /* --- How-It-Works & Who-Is-It-For Sections --- */
+            .card {
+                background-color: #1E293B; padding: 2rem; border-radius: 12px;
+                border: 1px solid #334155; height: 100%;
             }
-            .how-it-works-step .icon {
-                font-size: 3rem;
-            }
-            .how-it-works-step h3 {
-                font-size: 1.5rem;
-                margin-top: 1rem;
-                margin-bottom: 0.5rem;
-                color: #F8FAFC;
-            }
-            .how-it-works-step p {
-                color: #94A3B8;
-                font-size: 1rem;
-                line-height: 1.6;
-            }
+            .card .icon { font-size: 3rem; }
+            .card h3 { font-size: 1.5rem; margin-top: 1rem; margin-bottom: 0.5rem; color: #F8FAFC; }
+            .card p { color: #94A3B8; font-size: 1rem; line-height: 1.6; }
         </style>
     """, unsafe_allow_html=True)
 
@@ -339,7 +321,6 @@ def show_landing_page(auth_url):
         st.markdown('</div>', unsafe_allow_html=True)
     
     st.markdown('<h2 class="section-title">The Right Tool for the Job</h2>', unsafe_allow_html=True)
-
     st.markdown("""
         <table class="comparison-table">
             <thead>
@@ -350,66 +331,33 @@ def show_landing_page(auth_url):
                 </tr>
             </thead>
             <tbody>
-                <tr>
-                    <td class="feature-col">Multi-Source Input (Audio, PDF, Images)</td>
-                    <td class="vekkam-col"><span class="tick">✔</span><br>Built-in</td>
-                    <td><span class="cross">✖</span><br>Requires separate tools & copy-pasting</td>
-                </tr>
-                <tr>
-                    <td class="feature-col">Context-Aware Synthesis</td>
-                    <td class="vekkam-col"><span class="tick">✔</span><br>Only uses <u>your</u> provided material</td>
-                    <td><span class="cross">✖</span><br>Can drift and pull in irrelevant web data</td>
-                </tr>
-                <tr>
-                    <td class="feature-col">Unified Study Guide Output</td>
-                    <td class="vekkam-col"><span class="tick">✔</span><br>One-click coherent output from all sources</td>
-                    <td><span class="cross">✖</span><br>Manual summarization and compilation needed</td>
-                </tr>
-                <tr>
-                    <td class="feature-col">Purpose-Built Study Workflow</td>
-                    <td class="vekkam-col"><span class="tick">✔</span><br>Designed for students from the ground up</td>
-                    <td><span class="cross">✖</span><br>General purpose, not optimized for study</td>
-                </tr>
-                 <tr>
-                    <td class="feature-col">Noise-Robust Audio Transcription</td>
-                    <td class="vekkam-col"><span class="tick">✔</span><br>Fine-tuned for messy classroom audio</td>
-                    <td><span class="cross">✖</span><br>Struggles with background noise & faint speech</td>
-                </tr>
+                <tr><td class="feature-col">Multi-Source Input (Audio, PDF, Images)</td><td class="vekkam-col"><span class="tick">✔</span><br>Built-in</td><td><span class="cross">✖</span><br>Requires separate tools & copy-pasting</td></tr>
+                <tr><td class="feature-col">Context-Aware Synthesis</td><td class="vekkam-col"><span class="tick">✔</span><br>Only uses <u>your</u> provided material</td><td><span class="cross">✖</span><br>Can drift and pull in irrelevant web data</td></tr>
+                <tr><td class="feature-col">Unified Study Guide Output</td><td class="vekkam-col"><span class="tick">✔</span><br>One-click coherent output from all sources</td><td><span class="cross">✖</span><br>Manual summarization and compilation needed</td></tr>
+                <tr><td class="feature-col">Purpose-Built Study Workflow</td><td class="vekkam-col"><span class="tick">✔</span><br>Designed for students from the ground up</td><td><span class="cross">✖</span><br>General purpose, not optimized for study</td></tr>
+                <tr><td class="feature-col">Noise-Robust Audio Transcription</td><td class="vekkam-col"><span class="tick">✔</span><br>Fine-tuned for messy classroom audio</td><td><span class="cross">✖</span><br>Struggles with background noise & faint speech</td></tr>
             </tbody>
         </table>
     """, unsafe_allow_html=True)
 
-    # --- NEW "HOW IT WORKS" SECTION ---
     st.markdown('<h2 class="section-title">No Black Box. Just a Smarter Workflow.</h2>', unsafe_allow_html=True)
-    
     col1, col2, col3 = st.columns(3, gap="large")
-
     with col1:
-        st.markdown("""
-            <div class="how-it-works-step">
-                <div class="icon">📥</div>
-                <h3>1. Ingest & Deconstruct</h3>
-                <p>You upload everything—lecture recordings, PDFs, handwritten notes. Our first AI agent standardizes and breaks it all down into thousands of context-rich, searchable text chunks.</p>
-            </div>
-        """, unsafe_allow_html=True)
-
+        st.markdown('<div class="card"><div class="icon">📥</div><h3>1. Ingest & Deconstruct</h3><p>You upload everything—lecture recordings, PDFs, handwritten notes. Our first AI agent standardizes and breaks it all down into thousands of context-rich, searchable text chunks.</p></div>', unsafe_allow_html=True)
     with col2:
-        st.markdown("""
-            <div class="how-it-works-step">
-                <div class="icon">🔗</div>
-                <h3>2. Connect & Outline</h3>
-                <p>A specialized curriculum agent analyzes these chunks, identifying core themes, key concepts, and the logical flow of information to propose a structured, editable study outline for your approval.</p>
-            </div>
-        """, unsafe_allow_html=True)
-
+        st.markdown('<div class="card"><div class="icon">🔗</div><h3>2. Connect & Outline</h3><p>A specialized curriculum agent analyzes these chunks, identifying core themes, key concepts, and the logical flow of information to propose a structured, editable study outline for your approval.</p></div>', unsafe_allow_html=True)
     with col3:
-        st.markdown("""
-            <div class="how-it-works-step">
-                <div class="icon">📝</div>
-                <h3>3. Synthesize & Generate</h3>
-                <p>Once you approve the outline, a final agent writes your study guide, topic by topic. Crucially, it uses <strong>only the text chunks from your material</strong>, ensuring zero drift or hallucination.</p>
-            </div>
-        """, unsafe_allow_html=True)
+        st.markdown('<div class="card"><div class="icon">📝</div><h3>3. Synthesize & Generate</h3><p>Once you approve the outline, a final agent writes your study guide, topic by topic. Crucially, it uses <strong>only the text chunks from your material</strong>, ensuring zero drift or hallucination.</p></div>', unsafe_allow_html=True)
+
+    # --- NEW "WHO IS THIS FOR?" SECTION ---
+    st.markdown('<h2 class="section-title">Built for the Modern Student</h2>', unsafe_allow_html=True)
+    col4, col5, col6 = st.columns(3, gap="large")
+    with col4:
+        st.markdown('<div class="card"><div class="icon">🤯</div><h3>The Overwhelmed</h3><p>For those juggling multiple complex subjects. Vekkam finds the signal in the noise, connecting dots between lecture slides, textbook chapters, and class discussions automatically.</p></div>', unsafe_allow_html=True)
+    with col5:
+        st.markdown('<div class="card"><div class="icon">✍️</div><h3>The Diligent</h3><p>For the meticulous note-taker who wants more. Combine your handwritten notes (as images) with official materials to create a "director\'s cut" study guide that has every angle covered.</p></div>', unsafe_allow_html=True)
+    with col6:
+        st.markdown('<div class="card"><div class="icon">🗺️</div><h3>The Big-Picture Thinker</h3><p>For the student who needs to see the map before the journey. Vekkam excels at creating a high-level structure first, so you can dive into the details with a clear understanding of how everything fits together.</p></div>', unsafe_allow_html=True)
 
 
 # --- UI STATE FUNCTIONS for NOTE & LESSON ENGINE ---
@@ -453,7 +401,6 @@ def show_workspace_state():
                 st.rerun()
     with col2:
         st.subheader("Source Explorer")
-        # Display extraction failures prominently
         if st.session_state.get('extraction_failures'):
             with st.expander("⚠️ Processing Errors", expanded=True):
                 for failure in st.session_state.extraction_failures:
@@ -470,17 +417,13 @@ def show_synthesizing_state():
     topics = [line.strip() for line in st.session_state.editable_outline.split('\n') if line.strip()]
     chunks_map = {c['chunk_id']: c['text'] for c in st.session_state.all_chunks}
     
-    # Re-map topics from the editable outline to the original outline data to find relevant chunks
     original_outline_map = {item['topic']: item.get('relevant_chunks', []) for item in st.session_state.outline_data}
     
     bar = st.progress(0, "Starting synthesis...")
     for i, topic in enumerate(topics):
         bar.progress((i + 1) / len(topics), f"Synthesizing: {topic}")
-        # Find the original topic to get the chunk IDs, allows for minor edits in the text area
-        # This is a simple match; a more robust solution might use fuzzy matching
         matched_chunks = original_outline_map.get(topic, [])
         if not matched_chunks:
-            # Fallback for edited topics: search for any original topic containing the new one
             for original_topic, chunk_ids in original_outline_map.items():
                 if topic in original_topic:
                     matched_chunks = chunk_ids
@@ -555,7 +498,6 @@ def main():
     flow = get_google_flow()
     auth_code = st.query_params.get("code")
 
-    # This block handles the auth redirect
     if auth_code and not st.session_state.user_info:
         try:
             flow.fetch_token(code=auth_code)
@@ -567,35 +509,25 @@ def main():
     
     # Pre-Login: Show the new landing page
     if not st.session_state.user_info:
-        st.sidebar.title("Vekkam Engine")
-        st.sidebar.divider()
-        st.sidebar.subheader("API Status")
-        st.sidebar.write(f"Gemini: **{check_gemini_api()}**")
+        # Hide sidebar on landing page
+        st.markdown("<style>#MainMenu {visibility: hidden;} footer {visibility: hidden;} [data-testid='stSidebar'] {display: none;}</style>", unsafe_allow_html=True)
         auth_url, _ = flow.authorization_url(prompt='consent')
         show_landing_page(auth_url) # <<<--- THIS IS THE ONLY CHANGE
         return
 
-    # Post-Login: Run the main application
-    st.sidebar.title("Vekkam Engine") # Re-add title for post-login sidebar
+    # Post-Login: Show sidebar and run app
+    st.sidebar.title("Vekkam Engine")
     user = st.session_state.user_info
     st.sidebar.image(user['picture'], width=80)
     st.sidebar.subheader(f"Welcome, {user['given_name']}")
     if st.sidebar.button("Logout"): 
-        # Clear everything on logout
         st.session_state.clear()
         st.rerun()
     st.sidebar.divider()
 
-    # --- TOOL SELECTION ---
-    tool_choice = st.sidebar.radio(
-        "Select a Tool",
-        ("Note & Lesson Engine", "Mock Test Generator"),
-        key='tool_choice'
-    )
+    tool_choice = st.sidebar.radio("Select a Tool", ("Note & Lesson Engine", "Mock Test Generator"), key='tool_choice')
     
-    # Reset session if tool is changed
-    if 'last_tool_choice' not in st.session_state:
-        st.session_state.last_tool_choice = tool_choice
+    if 'last_tool_choice' not in st.session_state: st.session_state.last_tool_choice = tool_choice
     if st.session_state.last_tool_choice != tool_choice:
         reset_session(tool_choice)
         st.session_state.last_tool_choice = tool_choice
@@ -605,7 +537,6 @@ def main():
     st.sidebar.subheader("API Status")
     st.sidebar.write(f"Gemini: **{check_gemini_api()}**")
 
-    # --- ROUTE TO THE CORRECT TOOL'S WORKFLOW ---
     if tool_choice == "Note & Lesson Engine":
         if 'current_state' not in st.session_state: reset_session(tool_choice)
         state_map = { 'upload': show_upload_state, 'processing': show_processing_state, 'workspace': show_workspace_state,
