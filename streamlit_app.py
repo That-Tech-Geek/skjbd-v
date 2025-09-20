@@ -200,8 +200,12 @@ def reset_session():
 # --- UI STATE FUNCTIONS ---
 def show_pre_login_view():
     st.markdown("""<div style="min-height: 90vh; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;">
-            <h1 style="font-size: 4.5rem; font-weight: 900; letter-spacing: -0.05em; margin-bottom: 1rem;">Turn Chaos into <span style="color: var(--accent);">Clarity</span>.</h1>
-            <p style="font-size: 1.25rem; color: var(--text-secondary); max-width: 32rem; margin-bottom: 2rem;">Vekkam synthesizes your lectures, slides, and readings into a unified study guide. Faster, smarter, and finally, together.</p>
+            <h1 style="font-size: 4.5rem; font-weight: 900; letter-spacing: -0.05em; margin-bottom: 1rem;">
+                ChatGPT summarizes.<br>Vekkam <span style="color: var(--accent);">synthesizes.</span>
+            </h1>
+            <p style="font-size: 1.25rem; color: var(--text-secondary); max-width: 32rem; margin-bottom: 2rem;">
+                Stop feeding your notes to a glorified search bar. Our engine turns your scattered materials into a cohesive study guide that actually helps you learn. This is your new co-pilot.
+            </p>
         </div>""", unsafe_allow_html=True)
     auth_url, _ = get_google_flow().authorization_url(prompt='consent')
     _, col2, _ = st.columns([1,2,1]); col2.link_button("Sign In with Google to Begin", auth_url)
@@ -243,6 +247,9 @@ def show_dashboard_view():
                 if st.button(session_name.replace("_", " ").title()):
                     loaded_data = load_session_data(st.session_state.user_info['id'], session_name)
                     st.session_state.final_notes = loaded_data.get('notes', []); st.session_state.lesson_plan = loaded_data.get('lesson_plan', None)
+                    # Add other necessary state from session data
+                    st.session_state.outline_data = loaded_data.get('outline_data', [])
+                    st.session_state.all_chunks = loaded_data.get('all_chunks', [])
                     st.session_state.current_view = 'results'; st.rerun()
         st.markdown("</div>", unsafe_allow_html=True)
     with col2:
@@ -270,8 +277,63 @@ def show_processing_state():
 def show_workspace_state():
     st.header("Vekkam Workspace")
     if st.button("Back to Dashboard"): st.session_state.current_view = 'dashboard'; st.rerun()
-    # This would contain the full V7 workspace UI with columns and controls
-    st.write("Workspace view to be fully implemented here.")
+    
+    col1, col2 = st.columns([2, 1])
+    with col1:
+        st.subheader("Controls & Outline")
+        if st.button("Generate / Regenerate Full Outline"):
+            with st.spinner("AI is analyzing all content..."):
+                outline_json = generate_content_outline(st.session_state.all_chunks)
+                if outline_json and "outline" in outline_json: st.session_state.outline_data = outline_json["outline"]
+                else: st.error("Failed to generate outline.")
+        
+        if 'outline_data' in st.session_state and st.session_state.outline_data:
+            initial_text = "\n".join([item.get('topic', '') for item in st.session_state.outline_data])
+            st.session_state.editable_outline = st.text_area("Editable Outline:", value=initial_text, height=300)
+            st.session_state.synthesis_instructions = st.text_area("Synthesis Instructions (Optional):", height=100)
+            if st.button("Synthesize Notes", type="primary"):
+                st.session_state.current_view = 'synthesizing'
+                st.rerun()
+    with col2:
+        st.subheader("Source Explorer")
+        with st.expander("Add More Files"):
+            new_files = st.file_uploader("Upload more files", accept_multiple_files=True, key=f"uploader_{int(time.time())}")
+            if new_files:
+                with st.spinner("Processing new files..."):
+                    results = []
+                    with ThreadPoolExecutor() as executor:
+                        futures = {executor.submit(process_source, f, 'transcript' if f.type.startswith('audio/') else 'image' if f.type.startswith('image/') else 'pdf'): f for f in new_files}
+                        for future in as_completed(futures): results.append(future.result())
+                    new_chunks = [c for r in results if r and r['status'] == 'success' for c in r['chunks']]
+                    st.session_state.all_chunks.extend(new_chunks)
+                    st.session_state.extraction_failures.extend([r for r in results if r and r['status'] == 'error'])
+                with st.spinner("AI is suggesting new topics..."):
+                    update_json = generate_content_outline(new_chunks, existing_outline=st.session_state.get('outline_data', []))
+                    if update_json and "outline" in update_json:
+                        st.session_state.outline_data.extend(update_json["outline"])
+                        st.success(f"Added {len(update_json['outline'])} new topic(s)! The outline has been updated.")
+                        st.rerun()
+        if st.session_state.get('all_chunks'):
+            with st.expander("Explore All Content Chunks", expanded=False):
+                for i, chunk in enumerate(st.session_state.all_chunks):
+                    st.markdown(f"**Chunk ID:** `{chunk['chunk_id']}`")
+                    st.text_area("", chunk['text'], height=100, key=f"chunk_viewer_{i}")
+
+def show_synthesizing_state():
+    st.header("Synthesizing Note Blocks...")
+    st.session_state.final_notes = []
+    topics = [line.strip() for line in st.session_state.editable_outline.split('\n') if line.strip()]
+    chunks_map = {c['chunk_id']: c['text'] for c in st.session_state.all_chunks}
+    outline_map = {item['topic']: item.get('relevant_chunks', []) for item in st.session_state.outline_data}
+    bar = st.progress(0, "Starting synthesis...")
+    for i, topic in enumerate(topics):
+        bar.progress((i + 1) / len(topics), f"Synthesizing: {topic}")
+        chunk_ids = outline_map.get(topic, [])
+        text = "\n\n---\n\n".join([chunks_map.get(cid, "") for cid in chunk_ids])
+        content = synthesize_note_block(topic, text, st.session_state.synthesis_instructions, st.session_state.user_preferences)
+        st.session_state.final_notes.append({"topic": topic, "content": content, "source_chunks": chunk_ids})
+    st.session_state.current_view = 'results'
+    st.rerun()
 
 def show_results_state():
     st.header("Your Unified Guide")
@@ -279,11 +341,50 @@ def show_results_state():
     if not st.session_state.get('session_saved', False):
         first_topic = st.session_state.final_notes[0]['topic'] if st.session_state.final_notes else "Untitled"
         session_name = f"{time.strftime('%Y-%m-%d')}_{first_topic[:30].replace(' ', '_')}"
-        session_data = {"notes": st.session_state.final_notes, "lesson_plan": st.session_state.get('lesson_plan')}
+        session_data = {"notes": st.session_state.final_notes, "lesson_plan": st.session_state.get('lesson_plan'), "outline_data": st.session_state.outline_data, "all_chunks": st.session_state.all_chunks}
         save_session_data(st.session_state.user_info['id'], session_name, session_data)
         st.session_state.session_saved = True; st.toast(f"Session '{session_name}' saved!")
-    # This would contain the full results UI with block regeneration
-    st.write("Results view to be fully implemented here.")
+    
+    st.subheader("Next Step: Create a Lesson")
+    if st.button("Create Lesson Plan", type="primary"):
+        st.session_state.current_state = 'generating_lesson'; st.rerun()
+
+    for i, block in enumerate(st.session_state.final_notes):
+        st.subheader(block['topic'])
+        st.markdown(block['content'])
+        if st.button("Regenerate this block", key=f"regen_{i}"):
+            with st.spinner("Regenerating block..."):
+                chunks_map = {c['chunk_id']: c['text'] for c in st.session_state.all_chunks}
+                text = "\n\n---\n\n".join([chunks_map.get(cid, "") for cid in block['source_chunks']])
+                new_content = synthesize_note_block(block['topic'], text, st.session_state.synthesis_instructions, st.session_state.user_preferences)
+                st.session_state.final_notes[i]['content'] = new_content
+                st.rerun()
+        with st.expander("View Source Chunks for this Block"):
+            st.json(block['source_chunks'])
+
+def show_generating_lesson_state():
+    st.header("Building Your Lesson...")
+    with st.spinner("AI is designing your lesson plan..."):
+        plan_json = generate_lesson_plan(st.session_state.outline_data, st.session_state.all_chunks, st.session_state.user_preferences)
+        if plan_json and "lesson_plan" in plan_json:
+            st.session_state.lesson_plan = plan_json["lesson_plan"]
+            st.session_state.current_view = 'review_lesson'
+            st.rerun()
+        else:
+            st.error("Failed to generate lesson plan."); st.session_state.current_view = 'results'; st.rerun()
+
+def show_review_lesson_state():
+    st.header("Review Your Lesson Plan")
+    st.write("This is the DNA of your video. Edit the JSON directly before playback.")
+    plan_str = json.dumps(st.session_state.lesson_plan, indent=2)
+    edited_plan = st.text_area("Editable Lesson Plan (JSON):", value=plan_str, height=600)
+    if st.button("Play Lesson", type="primary"):
+        try:
+            final_plan = json.loads(edited_plan)
+            st.success("Lesson plan is valid! Triggering playback engine...")
+            st.json(final_plan)
+        except json.JSONDecodeError:
+            st.error("Edited text is not valid JSON.")
 
 # --- MAIN APP ---
 def main():
@@ -309,23 +410,21 @@ def main():
         show_pre_login_view()
         return
 
-    # Post-Login Top Banner
-    cols = st.columns([1, 1, 1, 6, 1, 1])
-    with cols[5]:
-        if st.button("Logout"): st.session_state.clear(); st.rerun()
-    with cols[4]:
-        st.markdown(f"<div style='text-align: right;'>Welcome, {st.session_state.user_info['given_name']}</div>", unsafe_allow_html=True)
-    with cols[0]:
-        st.image(st.session_state.user_info['picture'], width=40)
-    st.markdown("---")
-
+    # Post-Login Top Banner & Sidebar
+    st.sidebar.image(st.session_state.user_info['picture'], width=60)
+    st.sidebar.header(f"{st.session_state.user_info['given_name']}")
+    if st.sidebar.button("Logout"): st.session_state.clear(); st.rerun()
+    st.sidebar.divider()
+    
     if 'current_view' not in st.session_state:
         st.session_state.current_view = 'onboarding' if st.session_state.get('is_first_time_user', True) else 'dashboard'
     
     view_map = {
         'dashboard': show_dashboard_view, 'onboarding': show_onboarding_view,
         'activation': show_activation_view, 'processing': show_processing_state,
-        'workspace': show_workspace_state, 'results': show_results_state,
+        'workspace': show_workspace_state, 'synthesizing': show_synthesizing_state, 
+        'results': show_results_state, 'generating_lesson': show_generating_lesson_state,
+        'review_lesson': show_review_lesson_state
     }
     render_view = view_map.get(st.session_state.current_view, show_dashboard_view)
     render_view()
