@@ -133,14 +133,16 @@ def generate_content_outline(all_chunks, existing_outline=None):
         st.error("Could not find enough content to generate an outline. Please check your uploaded files.")
         return None
 
-    instruction = "Analyze the content chunks and create a structured, logical topic outline."
+    instruction = "Analyze the content chunks and create a structured, logical topic outline. The topics should flow from foundational concepts to more advanced ones."
     if existing_outline:
-        instruction = "Analyze the NEW content chunks and suggest topics to ADD to the existing outline."
+        instruction = "Analyze the NEW content chunks and suggest topics to ADD to the existing outline. Maintain a logical flow."
     
     prompt = f"""
-    You are a master curriculum designer. {instruction}
-    For each topic, you MUST list the `chunk_id`s that are most relevant. Base the outline STRICTLY on the provided content.
-    Output ONLY a valid JSON object with a root key "outline", a list of objects. Each object must have keys "topic" (string) and "relevant_chunks" (a list of string chunk_ids).
+    You are a master curriculum designer. Your task is to create a coherent and comprehensive study outline from fragmented pieces of text.
+    {instruction}
+    For each topic, you MUST list the `chunk_id`s that are most relevant to that topic. Ensure every chunk is used if possible, but prioritize relevance.
+    Do not invent topics not supported by the text. Base the outline STRICTLY on the provided content.
+    Output ONLY a valid JSON object with a root key "outline", which is a list of objects. Each object must have keys "topic" (string) and "relevant_chunks" (a list of string chunk_ids).
 
     **Existing Outline (for context):**
     {json.dumps(existing_outline, indent=2) if existing_outline else "None"}
@@ -157,11 +159,11 @@ def generate_content_outline(all_chunks, existing_outline=None):
 def synthesize_note_block(topic, relevant_chunks_text, instructions):
     model = genai.GenerativeModel('models/gemini-1.5-flash')
     prompt = f"""
-    Synthesize a detailed note block for: "{topic}".
-    Your response MUST be based STRICTLY and ONLY on the provided source text. Do not introduce any external information.
-    Format the output in Markdown.
+    You are a world-class note-taker. Synthesize a detailed, clear, and well-structured note block for a single topic: "{topic}".
+    Your entire response MUST be based STRICTLY and ONLY on the provided source text. Do not introduce any external information.
+    Adhere to the user's instructions for formatting and style. Format the output in Markdown.
 
-    **User Instructions:** {instructions if instructions else "Default: Create clear, concise notes."}
+    **User Instructions:** {instructions if instructions else "Default: Create clear, concise, well-structured notes."}
 
     **Source Text (Use only this):**
     ---
@@ -176,13 +178,14 @@ def generate_lesson_plan(outline, all_chunks):
     model = genai.GenerativeModel('models/gemini-1.5-flash')
     chunk_context_map = {c['chunk_id']: c['text'][:200] + "..." for c in all_chunks}
     prompt = f"""
-    You are a world-class educator. Design a detailed, step-by-step lesson plan based on the provided outline.
-    For each topic, create a list of "steps". Each step must have "narration" and a list of "actions".
+    You are a world-class educator. Design a detailed, step-by-step lesson plan based on the provided outline and source material.
+    The goal is deep, intuitive understanding. Build from first principles. Use analogies. Define all terms.
+    For each topic in the outline, create a list of "steps". Each step must have "narration" and a list of "actions".
     Available actions:
-    - {{ "type": "write_text", "content": "Text to write", "position": "..." }}
-    - {{ "type": "draw_box", "label": "...", "id": "..." }}
-    - {{ "type": "draw_arrow", "from_id": "...", "to_id": "...", "label": "..." }}
-    - {{ "type": "highlight", "target_id": "..." }}
+    - {{ "type": "write_text", "content": "Text to write", "position": "top_center|middle_left|etc." }}
+    - {{ "type": "draw_box", "label": "Box Label", "id": "unique_id_for_this_box" }}
+    - {{ "type": "draw_arrow", "from_id": "box_id_1", "to_id": "box_id_2", "label": "Arrow Label" }}
+    - {{ "type": "highlight", "target_id": "box_or_text_id_to_highlight" }}
     - {{ "type": "wipe_board" }}
     Output ONLY a valid JSON object with a root key "lesson_plan".
 
@@ -225,110 +228,97 @@ def reset_session(tool_choice):
 def show_landing_page(auth_url):
     """Displays the new, feature-rich landing page."""
     
-    st.markdown(f"""
+    st.markdown("""
         <style>
-            /* --- General Styles & Resets --- */
-            .main > div {{
+            /* --- General Styles --- */
+            .main > div {
                 padding-left: 1rem;
                 padding-right: 1rem;
-            }}
-            .stApp {{
-                background-color: #0F172A;
-            }}
-            h1, h2, h3, p, .stMarkdown {{
-                color: #E2E8F0;
+            }
+            .stApp {
+                background-color: #0F172A; /* Dark blue-gray background */
+            }
+            h1, h2, h3, p, .stMarkdown {
+                color: #E2E8F0; /* Light gray text */
+                text-align: center; /* Center all text by default */
+            }
+            .stButton > a { /* Target the link inside the button */
+                width: 100%;
                 text-align: center;
-            }}
+            }
             
-            /* --- Hide Streamlit UI --- */
-            header[data-testid="stHeader"], footer {{
+            /* --- Hide Streamlit Header --- */
+            header[data-testid="stHeader"] {
                 display: none !important;
                 visibility: hidden !important;
-            }}
-            .main .block-container {{
+            }
+            /* Adjust top padding for main content after hiding header */
+            .main .block-container {
                 padding-top: 2rem;
-            }}
+            }
 
-            /* --- Hero Section --- */
-            .hero-container {{
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                justify-content: center;
-                min-height: 50vh;
-            }}
-            .title {{
-                font-size: 3.8rem;
+            /* --- Specific Element Styles --- */
+            .title {
+                font-size: 3.5rem;
                 font-weight: 700;
                 line-height: 1.2;
                 background: -webkit-linear-gradient(45deg, #38BDF8, #818CF8);
                 -webkit-background-clip: text;
                 -webkit-text-fill-color: transparent;
                 margin-bottom: 1rem;
-            }}
-            .subtitle {{
+            }
+            .subtitle {
                 font-size: 1.25rem;
                 color: #94A3B8;
                 max-width: 650px;
-                margin: 0 auto 2.5rem auto;
-            }}
-            
-            /* --- FIXED: Custom Login Button --- */
-            .custom-login-button {{
-                display: inline-block;
-                padding: 1rem 2rem;
-                background-image: linear-gradient(to right, #38BDF8, #6D28D9);
-                color: white;
-                border-radius: 0.5rem;
-                text-decoration: none;
-                font-weight: 600;
-                font-size: 1.1rem;
-                transition: transform 0.2s, box-shadow 0.2s;
-                box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-            }}
-            .custom-login-button:hover {{
-                transform: translateY(-2px);
-                box-shadow: 0 6px 20px rgba(109, 40, 217, 0.4);
-            }}
-            
-            /* --- Section & Card Styles --- */
-            .section-title {{
+                margin: 0 auto 2rem auto;
+            }
+            .login-button-container {
+                display: flex;
+                justify-content: center;
+                margin-bottom: 4rem;
+            }
+            .section-title {
                 font-size: 2.5rem;
                 font-weight: 600;
                 margin-top: 5rem;
                 margin-bottom: 3rem;
-            }}
-            .card {{
-                background-color: #1E293B; padding: 2rem; border-radius: 12px;
-                border: 1px solid #334155; height: 100%;
-            }}
-            .card .icon {{ font-size: 3rem; }}
-            .card h3 {{ font-size: 1.5rem; margin-top: 1rem; color: #F8FAFC; }}
-            .card p {{ color: #94A3B8; font-size: 1rem; line-height: 1.6; }}
-            
+            }
+
             /* --- Comparison Table --- */
-            .comparison-table {{
+            .comparison-table {
                 width: 100%; max-width: 900px; margin: 2rem auto;
                 border-collapse: collapse; border-radius: 8px; overflow: hidden;
-            }}
-            .comparison-table th, .comparison-table td {{
+                box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            }
+            .comparison-table th, .comparison-table td {
                 padding: 1.25rem 1rem; border-bottom: 1px solid #334155;
-            }}
-            .comparison-table th {{ background-color: #1E293B; }}
-            .comparison-table .feature-col {{ text-align: left; font-weight: 600; }}
-            .comparison-table .vekkam-col {{ background-color: rgba(30, 58, 138, 0.5); }}
-            .tick {{ color: #4ADE80; font-size: 1.5rem; }}
-            .cross {{ color: #F87171; font-size: 1.5rem; }}
+            }
+            .comparison-table th { background-color: #1E293B; font-size: 1.1rem; color: #F8FAFC; }
+            .comparison-table td { background-color: #0F172A; color: #CBD5E1; }
+            .comparison-table .feature-col { text-align: left; font-weight: 600; }
+            .comparison-table .vekkam-col { background-color: rgba(30, 58, 138, 0.5); color: #E0E7FF; }
+            .tick { color: #4ADE80; font-size: 1.5rem; font-weight: bold; }
+            .cross { color: #F87171; font-size: 1.5rem; font-weight: bold; }
+            
+            /* --- How-It-Works & Who-Is-It-For Sections --- */
+            .card {
+                background-color: #1E293B; padding: 2rem; border-radius: 12px;
+                border: 1px solid #334155; height: 100%;
+            }
+            .card .icon { font-size: 3rem; }
+            .card h3 { font-size: 1.5rem; margin-top: 1rem; margin-bottom: 0.5rem; color: #F8FAFC; }
+            .card p { color: #94A3B8; font-size: 1rem; line-height: 1.6; }
         </style>
-
-        <div class="hero-container">
-            <h1 class="title">Stop Juggling Tabs. Start Understanding.</h1>
-            <p class="subtitle">General AI chatbots give you answers. Vekkam gives you a workflow. We turn your chaotic lecture recordings, messy notes, and dense PDFs into a single, unified study guide—a feat impossible for generic tools.</p>
-            <a href="{auth_url}" target="_self" class="custom-login-button">
-                Get Started - Sign in with Google
-            </a>
-        </div>
     """, unsafe_allow_html=True)
+
+    st.markdown('<h1 class="title">Stop Juggling Tabs. Start Understanding.</h1>', unsafe_allow_html=True)
+    st.markdown('<p class="subtitle">General AI chatbots give you answers. Vekkam gives you a workflow. We turn your chaotic lecture recordings, messy notes, and dense PDFs into a single, unified study guide—a feat impossible for generic tools.</p>', unsafe_allow_html=True)
+
+    with st.container():
+        st.markdown('<div class="login-button-container">', unsafe_allow_html=True)
+        st.link_button("Get Started - Sign in with Google", auth_url, type="primary")
+        st.markdown('</div>', unsafe_allow_html=True)
     
     st.markdown('<h2 class="section-title">The Right Tool for the Job</h2>', unsafe_allow_html=True)
     st.markdown("""
@@ -359,6 +349,7 @@ def show_landing_page(auth_url):
     with col3:
         st.markdown('<div class="card"><div class="icon">📝</div><h3>3. Synthesize & Generate</h3><p>Once you approve the outline, a final agent writes your study guide, topic by topic. Crucially, it uses <strong>only the text chunks from your material</strong>, ensuring zero drift or hallucination.</p></div>', unsafe_allow_html=True)
 
+    # --- NEW "WHO IS THIS FOR?" SECTION ---
     st.markdown('<h2 class="section-title">Built for the Modern Student</h2>', unsafe_allow_html=True)
     col4, col5, col6 = st.columns(3, gap="large")
     with col4:
@@ -441,7 +432,7 @@ def show_synthesizing_state():
         text_to_synthesize = "\n\n---\n\n".join([chunks_map.get(cid, "") for cid in matched_chunks if cid in chunks_map])
         
         if not text_to_synthesize.strip():
-            content = "Could not find source text for this topic."
+            content = "Could not find source text for this topic. It might have been edited or removed."
         else:
             content = synthesize_note_block(topic, text_to_synthesize, st.session_state.synthesis_instructions)
             
@@ -494,8 +485,8 @@ def show_review_lesson_state():
 def show_mock_test_placeholder():
     st.header("Mock Test Generator")
     st.image("https://placehold.co/800x400/1A233A/E0E2E7?text=Coming+Soon", use_column_width=True)
-    st.write("This feature is under construction.")
-    st.info("Planned workflow: Syllabus Upload -> Topic Extraction -> Question Generation -> Test Assembly -> CV-based Grading.")
+    st.write("This feature is under construction. The architecture for generating mock tests based on syllabus content, Bloom's Taxonomy, and a professor persona will be built here.")
+    st.info("The planned workflow includes: Syllabus Upload -> Topic Extraction -> Question Bank Generation -> Test Assembly -> CV-based Grading.")
 
 
 # --- MAIN APP ---
@@ -518,7 +509,8 @@ def main():
     
     # Pre-Login: Show the new landing page
     if not st.session_state.user_info:
-        st.markdown("<style>[data-testid='stSidebar'] {display: none;}</style>", unsafe_allow_html=True)
+        # Hide sidebar on landing page
+        st.markdown("<style>#MainMenu {visibility: hidden;} footer {visibility: hidden;} [data-testid='stSidebar'] {display: none;}</style>", unsafe_allow_html=True)
         auth_url, _ = flow.authorization_url(prompt='consent')
         show_landing_page(auth_url) # <<<--- THIS IS THE ONLY CHANGE
         return
