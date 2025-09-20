@@ -255,6 +255,10 @@ def show_landing_page(auth_url):
             /* Adjust top padding for main content after hiding header */
             .main .block-container {
                 padding-top: 2rem;
+                /* --- FIX: ADD FLEXBOX CENTERING --- */
+                display: flex;
+                flex-direction: column;
+                align-items: center;
             }
 
             /* --- Specific Element Styles --- */
@@ -540,8 +544,8 @@ def main():
     if tool_choice == "Note & Lesson Engine":
         if 'current_state' not in st.session_state: reset_session(tool_choice)
         state_map = { 'upload': show_upload_state, 'processing': show_processing_state, 'workspace': show_workspace_state,
-                      'synthesizing': show_synthesizing_state, 'results': show_results_state, 'generating_lesson': show_generating_lesson_state,
-                      'review_lesson': show_review_lesson_state, }
+                        'synthesizing': show_synthesizing_state, 'results': show_results_state, 'generating_lesson': show_generating_lesson_state,
+                        'review_lesson': show_review_lesson_state, }
         state_function = state_map.get(st.session_state.current_state, show_upload_state)
         state_function()
     elif tool_choice == "Mock Test Generator":
