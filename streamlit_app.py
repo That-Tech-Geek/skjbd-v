@@ -87,7 +87,7 @@ class PersistenceManager:
 class AIAgent:
     """Encapsulates all interactions with the Gemini API."""
     def __init__(self, user_preferences):
-        self.model = genai.GenerativeModel('models/gemini-1.5-pro-latest')
+        self.model = genai.GenerativeModel('models/gemini-2.5-flash-lite')
         self.user_preferences = user_preferences
 
     @staticmethod
@@ -137,7 +137,7 @@ class ContentProcessor:
     @staticmethod
     def process_source(file, source_type):
         try:
-            source_id = f"{source_type}:{file.name}"; model = genai.GenerativeModel('models/gemini-1.5-pro-latest')
+            source_id = f"{source_type}:{file.name}"; model = genai.GenerativeModel('models/gemini-2.5-flash-lite')
             if source_type == 'transcript':
                 with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(file.name)[1]) as tmp: tmp.write(file.getvalue()); original_path = tmp.name
                 enhanced_path = None
