@@ -1,5 +1,8 @@
 streamlit
 cohere
+pydub
+noisereduce
+scipy
 PyMuPDF
 python-docx
 google.generativeai
