@@ -140,7 +140,7 @@ def chunk_text(text, source_id, chunk_size=CHUNK_SIZE, overlap=CHUNK_OVERLAP):
     return chunks
 def process_source(file, source_type):
     try:
-        source_id = f"{source_type}:{file.name}"; model = genai.GenerativeModel('models/gemini-1.5-pro-latest')
+        source_id = f"{source_type}:{file.name}"; model = genai.GenerativeModel('models/gemini-2.5-flash-lite')
         if source_type == 'transcript':
             with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(file.name)[1]) as tmp: tmp.write(file.getvalue()); tmp_path = tmp.name
             try:
@@ -159,13 +159,13 @@ def process_source(file, source_type):
     except Exception as e: return {"status": "error", "source_id": f"{source_type}:{file.name}", "reason": str(e)}
 @gemini_api_call_with_retry
 def generate_content_outline(all_chunks, existing_outline=None):
-    model = genai.GenerativeModel('models/gemini-1.5-pro-latest'); prompt_chunks = [{"chunk_id": c['chunk_id'], "text_snippet": c['text'][:200] + "..."} for c in all_chunks]
+    model = genai.GenerativeModel('models/gemini-2.5-flash-lite'); prompt_chunks = [{"chunk_id": c['chunk_id'], "text_snippet": c['text'][:200] + "..."} for c in all_chunks]
     instruction = "Analyze and create a structured outline."; 
     if existing_outline: instruction = "Analyze the NEW content chunks and suggest topics to ADD to the existing outline."
     prompt = f"""You are a curriculum designer. {instruction} For each topic, you MUST list the `chunk_id`s that are most relevant. Output ONLY a JSON object with a root key "outline", a list of objects. Each object must have keys "topic" (string) and "relevant_chunks" (list of strings). **Existing Outline:** {json.dumps(existing_outline, indent=2) if existing_outline else "None"} **Content Chunks:** --- {json.dumps(prompt_chunks, indent=2)}"""; response = model.generate_content(prompt); return resilient_json_parser(response.text)
 @gemini_api_call_with_retry
 def synthesize_note_block(topic, relevant_chunks_text, instructions, user_preferences):
-    model = genai.GenerativeModel('models/gemini-1.5-pro-latest')
+    model = genai.GenerativeModel('models/gemini-2.5-flash-lite')
     style_guide = []; detail = user_preferences.get('detail_level', 'Balanced'); tone = user_preferences.get('tone', 'Neutral')
     if detail == 'Concise': style_guide.append("Be extremely concise and use bullet points.")
     elif detail == 'Detailed': style_guide.append("Be highly detailed, explanatory, and thorough.")
@@ -191,7 +191,7 @@ def synthesize_note_block(topic, relevant_chunks_text, instructions, user_prefer
     """; response = model.generate_content(prompt); return response.text
 @gemini_api_call_with_retry
 def generate_lesson_plan(outline, all_chunks, user_preferences):
-    model = genai.GenerativeModel('models/gemini-1.5-pro-latest'); chunk_context_map = {c['chunk_id']: c['text'][:200] + "..." for c in all_chunks}; 
+    model = genai.GenerativeModel('models/gemini-2.5-flash-lite'); chunk_context_map = {c['chunk_id']: c['text'][:200] + "..." for c in all_chunks}; 
     style_prompt = f"The user prefers a learning style that is {user_preferences.get('detail_level')} and uses {user_preferences.get('tone')}."
     prompt = f"""
     You are a world-class educator. Your prime directive is to design a detailed, step-by-step lesson plan based ONLY on the provided outline and source material.
