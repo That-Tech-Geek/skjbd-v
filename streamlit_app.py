@@ -234,6 +234,8 @@ def show_landing_page(auth_url):
         <style>
             .main > div {
                 padding-top: 2rem;
+                padding-left: 2rem;
+                padding-right: 2rem;
             }
             .stApp {
                 background-color: #0F172A; /* Dark blue-gray background */
@@ -261,6 +263,13 @@ def show_landing_page(auth_url):
                 display: flex;
                 justify-content: center;
                 margin-bottom: 4rem;
+            }
+            .section-title {
+                text-align: center;
+                font-size: 2.5rem;
+                font-weight: 600;
+                margin-top: 4rem;
+                margin-bottom: 2rem;
             }
             .comparison-table {
                 width: 100%;
@@ -290,18 +299,33 @@ def show_landing_page(auth_url):
                 font-weight: 600;
             }
             .comparison-table .vekkam-col {
-                background-color: #1E3A8A; /* Highlight Vekkam's column */
+                background-color: rgba(30, 58, 138, 0.5); /* Highlight Vekkam's column */
                 color: #E0E7FF;
             }
-            .tick {
-                color: #4ADE80; /* Green tick */
-                font-size: 1.5rem;
-                font-weight: bold;
+            .tick { color: #4ADE80; font-size: 1.5rem; font-weight: bold; }
+            .cross { color: #F87171; font-size: 1.5rem; font-weight: bold; }
+            
+            .how-it-works-step {
+                background-color: #1E293B;
+                padding: 2rem;
+                border-radius: 12px;
+                text-align: center;
+                border: 1px solid #334155;
+                height: 100%;
             }
-            .cross {
-                color: #F87171; /* Red cross */
+            .how-it-works-step .icon {
+                font-size: 3rem;
+            }
+            .how-it-works-step h3 {
                 font-size: 1.5rem;
-                font-weight: bold;
+                margin-top: 1rem;
+                margin-bottom: 0.5rem;
+                color: #F8FAFC;
+            }
+            .how-it-works-step p {
+                color: #94A3B8;
+                font-size: 1rem;
+                line-height: 1.6;
             }
         </style>
     """, unsafe_allow_html=True)
@@ -309,22 +333,19 @@ def show_landing_page(auth_url):
     st.markdown('<h1 class="title">Stop Juggling Tabs. Start Understanding.</h1>', unsafe_allow_html=True)
     st.markdown('<p class="subtitle">General AI chatbots give you answers. Vekkam gives you a workflow. We turn your chaotic lecture recordings, messy notes, and dense PDFs into a single, unified study guide—a feat impossible for generic tools.</p>', unsafe_allow_html=True)
 
-    # Use st.link_button within a container for better control
     with st.container():
         st.markdown('<div class="login-button-container">', unsafe_allow_html=True)
-        # The button itself will be styled by Streamlit, but we can center it.
         st.link_button("Get Started - Sign in with Google", auth_url, type="primary")
         st.markdown('</div>', unsafe_allow_html=True)
     
-    st.markdown("---")
-    st.markdown('<h2 style="text-align: center;">The Right Tool for the Job</h2>', unsafe_allow_html=True)
+    st.markdown('<h2 class="section-title">The Right Tool for the Job</h2>', unsafe_allow_html=True)
 
     st.markdown("""
         <table class="comparison-table">
             <thead>
                 <tr>
                     <th class="feature-col">Feature</th>
-                    <th>Vekkam</th>
+                    <th class="vekkam-col">Vekkam</th>
                     <th>ChatGPT / Gemini</th>
                 </tr>
             </thead>
@@ -357,6 +378,38 @@ def show_landing_page(auth_url):
             </tbody>
         </table>
     """, unsafe_allow_html=True)
+
+    # --- NEW "HOW IT WORKS" SECTION ---
+    st.markdown('<h2 class="section-title">No Black Box. Just a Smarter Workflow.</h2>', unsafe_allow_html=True)
+    
+    col1, col2, col3 = st.columns(3, gap="large")
+
+    with col1:
+        st.markdown("""
+            <div class="how-it-works-step">
+                <div class="icon">📥</div>
+                <h3>1. Ingest & Deconstruct</h3>
+                <p>You upload everything—lecture recordings, PDFs, handwritten notes. Our first AI agent standardizes and breaks it all down into thousands of context-rich, searchable text chunks.</p>
+            </div>
+        """, unsafe_allow_html=True)
+
+    with col2:
+        st.markdown("""
+            <div class="how-it-works-step">
+                <div class="icon">🔗</div>
+                <h3>2. Connect & Outline</h3>
+                <p>A specialized curriculum agent analyzes these chunks, identifying core themes, key concepts, and the logical flow of information to propose a structured, editable study outline for your approval.</p>
+            </div>
+        """, unsafe_allow_html=True)
+
+    with col3:
+        st.markdown("""
+            <div class="how-it-works-step">
+                <div class="icon">📝</div>
+                <h3>3. Synthesize & Generate</h3>
+                <p>Once you approve the outline, a final agent writes your study guide, topic by topic. Crucially, it uses <strong>only the text chunks from your material</strong>, ensuring zero drift or hallucination.</p>
+            </div>
+        """, unsafe_allow_html=True)
 
 
 # --- UI STATE FUNCTIONS for NOTE & LESSON ENGINE ---
