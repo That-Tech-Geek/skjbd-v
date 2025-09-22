@@ -68,12 +68,12 @@ def gemini_api_call_with_retry(func):
 
 # --- NEW: PERSISTENT DATA STORAGE ---
 def get_user_data_path(user_id):
-    """Generates a secure filepath for a user's data."""
+    """Generates a secure filepath for a user data."""
     safe_filename = hashlib.md5(user_id.encode()).hexdigest() + ".json"
     return DATA_DIR / safe_filename
 
 def load_user_data(user_id):
-    """Loads a user's session history from a JSON file."""
+    """Loads a user session history from a JSON file."""
     filepath = get_user_data_path(user_id)
     if filepath.exists():
         with open(filepath, 'r') as f:
@@ -84,7 +84,7 @@ def load_user_data(user_id):
     return {"sessions": []}
 
 def save_user_data(user_id, data):
-    """Saves a user's session history to a JSON file."""
+    """Saves a user session history to a JSON file."""
     filepath = get_user_data_path(user_id)
     with open(filepath, 'w') as f:
         json.dump(data, f, indent=2)
@@ -201,7 +201,7 @@ def synthesize_note_block(topic, relevant_chunks_text, instructions):
     prompt = f"""
     You are a world-class note-taker. Synthesize a detailed, clear, and well-structured note block for a single topic: "{topic}".
     Your entire response MUST be based STRICTLY and ONLY on the provided source text. Do not introduce any external information.
-    Adhere to the user's instructions for formatting and style. Format the output in Markdown.
+    Adhere to the user instructions for formatting and style. Format the output in Markdown.
 
     **User Instructions:** {instructions if instructions else "Default: Create clear, concise, well-structured notes."}
 
@@ -244,10 +244,10 @@ def answer_from_context(query, context):
     """Answers a user query based ONLY on the provided context."""
     model = genai.GenerativeModel('models/gemini-1.5-flash')
     prompt = f"""
-    You are a helpful study assistant. Your task is to answer the user's question based strictly and exclusively on the provided study material context.
+    You are a helpful study assistant. Your task is to answer the user question based strictly and exclusively on the provided study material context.
     Do not use any external knowledge. If the answer is not in the context, clearly state that the information is not available in the provided materials.
 
-    **User's Question:**
+    **user Question:**
     {query}
 
     **Study Material Context:**
