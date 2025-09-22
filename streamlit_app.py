@@ -286,7 +286,7 @@ def reset_session(tool_choice):
 
 # --- LANDING PAGE ---
 def show_landing_page(auth_url):
-    """Displays the feature-rich landing page."""
+    """Displays the feature-rich landing page"""
     # This function remains unchanged, so it is omitted for brevity.
     # The original code for this function would be placed here.
     st.markdown("<h1>Landing Page Placeholder</h1>", unsafe_allow_html=True)
