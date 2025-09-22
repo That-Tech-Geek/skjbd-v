@@ -292,7 +292,7 @@ def show_landing_page(auth_url):
 # --- UI STATE FUNCTIONS for NOTE & LESSON ENGINE ---
 def show_upload_state():
     st.header("Note & Lesson Engine: Upload")
-    uploaded_files = st.file_uploader("Select files", accept_multiple_files=True, type=['mp3', 'm4a', 'wav', 'png', 'jpg', 'pdf'])
+    uploaded_files = st.file_uploader("Select files", accept_multiple_files=True, type=['mp3', 'm4a', 'wav', 'png', 'jpg', 'pdf', 'pptx'])
     if st.button("Process Files", type="primary") and uploaded_files:
         st.session_state.initial_files = uploaded_files
         st.session_state.current_state = 'processing'
