@@ -241,7 +241,7 @@ def generate_lesson_plan(outline, all_chunks):
 # --- NEW: AGENTIC CHAT FUNCTION ---
 @gemini_api_call_with_retry
 def answer_from_context(query, context):
-    """Answers a user's query based ONLY on the provided context."""
+    """Answers a user query based ONLY on the provided context."""
     model = genai.GenerativeModel('models/gemini-1.5-flash')
     prompt = f"""
     You are a helpful study assistant. Your task is to answer the user's question based strictly and exclusively on the provided study material context.
