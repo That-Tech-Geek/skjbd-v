@@ -381,19 +381,56 @@ def show_synthesizing_state():
 
 def show_results_state():
     st.header("Your Unified Notes")
-    if st.button("Start New Note Session"): reset_session(st.session_state.tool_choice); st.rerun()
-    if st.button("Back to Workspace"): st.session_state.current_state = 'workspace'; st.rerun()
+    
+    # --- Action Buttons ---
+    col_actions1, col_actions2, _ = st.columns([1, 1, 3])
+    with col_actions1:
+        if st.button("Go to Workspace"): 
+            st.session_state.current_state = 'workspace'
+            st.rerun()
+    with col_actions2:
+        if st.button("Start New Session"): 
+            reset_session(st.session_state.tool_choice)
+            st.rerun()
 
-    st.subheader("Next Step: Create a Lesson")
-    if st.button("Create Lesson Plan", type="primary"):
-        st.session_state.current_state = 'generating_lesson'
-        st.rerun()
+    st.divider()
 
-    for i, block in enumerate(st.session_state.final_notes):
-        st.subheader(block['topic'])
-        st.markdown(block['content'])
-        if st.button("Regenerate this block", key=f"regen_{i}"):
-            st.info("Block regeneration logic to be implemented.")
+    # --- Initialize session state to track the selected note ---
+    if 'selected_note_index' not in st.session_state:
+        st.session_state.selected_note_index = None # Nothing is selected initially
+
+    # --- Create a two-column layout ---
+    col1, col2 = st.columns([1, 2], gap="large")
+
+    # --- Column 1: Clickable list of note topics ---
+    with col1:
+        st.subheader("Topics")
+        for i, block in enumerate(st.session_state.final_notes):
+            # When a topic button is clicked, store its index in session_state
+            if st.button(block['topic'], key=f"topic_{i}", use_container_width=True):
+                st.session_state.selected_note_index = i
+
+    # --- Column 2: Display content for the selected note ---
+    with col2:
+        st.subheader("Content Viewer")
+        # Check if a note has been selected
+        if st.session_state.selected_note_index is not None:
+            # Retrieve the full note data using the stored index
+            selected_note = st.session_state.final_notes[st.session_state.selected_note_index]
+            
+            # Use tabs to organize the output and sources
+            tab1, tab2 = st.tabs(["Formatted Output", "Source Chunks"])
+
+            with tab1:
+                st.markdown(f"### {selected_note['topic']}")
+                st.markdown(selected_note['content'])
+
+            with tab2:
+                st.markdown("These are the raw text chunks from your source files that the AI used to generate the note.")
+                st.code('\n\n'.join(selected_note['source_chunks']))
+        else:
+            # Show a helpful message if no note is selected yet
+            st.info("👆 Select a topic from the left to view its details.")
     
     # --- NEW: CHAT WITH CURRENT NOTES ---
     st.divider()
