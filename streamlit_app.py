@@ -209,7 +209,7 @@ def synthesize_note_block(topic, relevant_chunks_text, instructions):
     ---
     {relevant_chunks_text}
     ---
-    """
+    
     response = model.generate_content(prompt)
     return response.text
 
