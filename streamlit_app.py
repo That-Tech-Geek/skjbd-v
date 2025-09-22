@@ -62,6 +62,29 @@ def gemini_api_call_with_retry(func):
         return None
     return wrapper
 
+# --- SESSION PERSISTENCE (IN-MEMORY CACHE) ---
+@st.cache_resource
+def get_session_history_db():
+    """Returns a dict to act as a simple in-memory DB for session history."""
+    return {}
+
+def save_session_summary(user_id, topics):
+    """Saves the topics from a completed session for a user."""
+    db = get_session_history_db()
+    if user_id not in db:
+        db[user_id] = []
+    session_summary = {
+        "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
+        "topics": topics
+    }
+    db[user_id].insert(0, session_summary)
+    db[user_id] = db[user_id][:5] # Keep only the last 5 sessions
+
+def get_user_session_history(user_id):
+    """Retrieves the session history for a user."""
+    db = get_session_history_db()
+    return db.get(user_id, [])
+
 # --- API SELF-DIAGNOSIS & UTILITIES ---
 def check_gemini_api():
     try: genai.get_model('models/gemini-1.5-flash'); return "Valid"
@@ -443,6 +466,12 @@ def show_synthesizing_state():
             content = synthesize_note_block(topic, text_to_synthesize, st.session_state.synthesis_instructions)
             
         st.session_state.final_notes.append({"topic": topic, "content": content, "source_chunks": matched_chunks})
+    
+    # --- SAVE SESSION SUMMARY ---
+    if st.session_state.get('user_info'):
+        user_id = st.session_state.user_info.get('id') or st.session_state.user_info.get('email')
+        if user_id and topics:
+            save_session_summary(user_id, topics)
 
     st.session_state.current_state = 'results'
     st.rerun()
@@ -530,6 +559,16 @@ def main():
         st.session_state.clear()
         st.rerun()
     st.sidebar.divider()
+
+    # --- Display Session History ---
+    history = get_user_session_history(user.get('id') or user.get('email'))
+    if history:
+        st.sidebar.subheader("Recent Sessions")
+        for session in history:
+            with st.sidebar.expander(f"{session['timestamp']}"):
+                for topic in session['topics']:
+                    st.write(f"- {topic}")
+        st.sidebar.divider()
 
     tool_choice = st.sidebar.radio("Select a Tool", ("Note & Lesson Engine", "Mock Test Generator"), key='tool_choice')
     
