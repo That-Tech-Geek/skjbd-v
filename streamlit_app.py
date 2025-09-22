@@ -196,23 +196,19 @@ def generate_content_outline(all_chunks, existing_outline=None):
 
 
 @gemini_api_call_with_retry
+# Incorrect Code
 def synthesize_note_block(topic, relevant_chunks_text, instructions):
     model = genai.GenerativeModel('models/gemini-1.5-flash')
     prompt = f"""
-    You are a world-class note-taker. Synthesize a detailed, clear, and well-structured note block for a single topic: "{topic}".
-    Your entire response MUST be based STRICTLY and ONLY on the provided source text. Do not introduce any external information.
-    Adhere to the user instructions for formatting and style. Format the output in Markdown.
-
-    **User Instructions:** {instructions if instructions else "Default: Create clear, concise, well-structured notes."}
+    ... (prompt content) ...
 
     **Source Text (Use only this):**
     ---
     {relevant_chunks_text}
     ---
-    
-    response = model.generate_content(prompt)
-    return response.text
-
+    """
+    response = model.generate_content(prompt) # This line is inside the string
+    return response.text # This line is also inside the string
 @gemini_api_call_with_retry
 def generate_lesson_plan(outline, all_chunks):
     model = genai.GenerativeModel('models/gemini-1.5-flash')
