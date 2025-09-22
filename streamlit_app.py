@@ -12,8 +12,8 @@ import requests
 import tempfile
 from functools import wraps
 from google.api_core import exceptions
-from pathlib import Path # Added for file path management
-import uuid # Added for unique session IDs
+from pathlib import Path
+import uuid
 
 # --- GOOGLE OAUTH LIBRARIES ---
 try:
@@ -31,7 +31,7 @@ CHUNK_SIZE = 500
 CHUNK_OVERLAP = 50
 MAX_RETRIES = 3
 DATA_DIR = Path("user_data")
-DATA_DIR.mkdir(exist_ok=True) # Create data directory if it doesn't exist
+DATA_DIR.mkdir(exist_ok=True)
 
 # --- PAGE CONFIGURATION ---
 st.set_page_config(page_title="Vekkam Engine", page_icon="🧠", layout="wide", initial_sidebar_state="expanded")
@@ -66,7 +66,7 @@ def gemini_api_call_with_retry(func):
         return None
     return wrapper
 
-# --- NEW: PERSISTENT DATA STORAGE ---
+# --- PERSISTENT DATA STORAGE ---
 def get_user_data_path(user_id):
     """Generates a secure filepath for a user data."""
     safe_filename = hashlib.md5(user_id.encode()).hexdigest() + ".json"
@@ -194,21 +194,24 @@ def generate_content_outline(all_chunks, existing_outline=None):
     response = model.generate_content(prompt)
     return resilient_json_parser(response.text)
 
-
 @gemini_api_call_with_retry
-# Incorrect Code
 def synthesize_note_block(topic, relevant_chunks_text, instructions):
     model = genai.GenerativeModel('models/gemini-1.5-flash')
     prompt = f"""
-    ... (prompt content) ...
+    You are a world-class note-taker. Synthesize a detailed, clear, and well-structured note block for a single topic: "{topic}".
+    Your entire response MUST be based STRICTLY and ONLY on the provided source text. Do not introduce any external information.
+    Adhere to the user instructions for formatting and style. Format the output in Markdown.
+
+    **User Instructions:** {instructions if instructions else "Default: Create clear, concise, well-structured notes."}
 
     **Source Text (Use only this):**
     ---
     {relevant_chunks_text}
     ---
     """
-    response = model.generate_content(prompt) # This line is inside the string
-    return response.text # This line is also inside the string
+    response = model.generate_content(prompt)
+    return response.text
+
 @gemini_api_call_with_retry
 def generate_lesson_plan(outline, all_chunks):
     model = genai.GenerativeModel('models/gemini-1.5-flash')
@@ -234,7 +237,6 @@ def generate_lesson_plan(outline, all_chunks):
     response = model.generate_content(prompt)
     return resilient_json_parser(response.text)
 
-# --- NEW: AGENTIC CHAT FUNCTION ---
 @gemini_api_call_with_retry
 def answer_from_context(query, context):
     """Answers a user query based ONLY on the provided context."""
@@ -269,7 +271,6 @@ def get_google_flow():
         st.error("OAuth credentials are not configured correctly in st.secrets."); st.stop()
 
 def reset_session(tool_choice):
-    # Preserve user info and tool choice, clear everything else
     user_info = st.session_state.get('user_info')
     st.session_state.clear()
     st.session_state.user_info = user_info
@@ -283,16 +284,13 @@ def reset_session(tool_choice):
 # --- LANDING PAGE ---
 def show_landing_page(auth_url):
     """Displays the feature-rich landing page"""
-    # This function remains unchanged, so it is omitted for brevity.
-    # The original code for this function would be placed here.
     st.markdown("<h1>Landing Page Placeholder</h1>", unsafe_allow_html=True)
     st.link_button("Get Started - Sign in with Google", auth_url, type="primary")
-
 
 # --- UI STATE FUNCTIONS for NOTE & LESSON ENGINE ---
 def show_upload_state():
     st.header("Note & Lesson Engine: Upload")
-    uploaded_files = st.file_uploader("Select files", accept_multiple_files=True, type=['mp3', 'm4a', 'wav', 'png', 'jpg', 'pdf', 'pptx'])
+    uploaded_files = st.file_uploader("Select files", accept_multiple_files=True, type=['mp3', 'm4a', 'wav', 'png', 'jpg', 'pdf'])
     if st.button("Process Files", type="primary") and uploaded_files:
         st.session_state.initial_files = uploaded_files
         st.session_state.current_state = 'processing'
@@ -367,7 +365,6 @@ def show_synthesizing_state():
             
         st.session_state.final_notes.append({"topic": topic, "content": content, "source_chunks": matched_chunks})
     
-    # --- SAVE SESSION TO PERSISTENT HISTORY ---
     if st.session_state.get('user_info') and st.session_state.final_notes:
         user_id = st.session_state.user_info.get('id') or st.session_state.user_info.get('email')
         save_session_to_history(user_id, st.session_state.final_notes)
@@ -378,7 +375,6 @@ def show_synthesizing_state():
 def show_results_state():
     st.header("Your Unified Notes")
     
-    # --- Action Buttons ---
     col_actions1, col_actions2, _ = st.columns([1, 1, 3])
     with col_actions1:
         if st.button("Go to Workspace"): 
@@ -391,30 +387,22 @@ def show_results_state():
 
     st.divider()
 
-    # --- Initialize session state to track the selected note ---
     if 'selected_note_index' not in st.session_state:
-        st.session_state.selected_note_index = None # Nothing is selected initially
+        st.session_state.selected_note_index = None
 
-    # --- Create a two-column layout ---
     col1, col2 = st.columns([1, 2], gap="large")
 
-    # --- Column 1: Clickable list of note topics ---
     with col1:
         st.subheader("Topics")
         for i, block in enumerate(st.session_state.final_notes):
-            # When a topic button is clicked, store its index in session_state
             if st.button(block['topic'], key=f"topic_{i}", use_container_width=True):
                 st.session_state.selected_note_index = i
 
-    # --- Column 2: Display content for the selected note ---
     with col2:
         st.subheader("Content Viewer")
-        # Check if a note has been selected
         if st.session_state.selected_note_index is not None:
-            # Retrieve the full note data using the stored index
             selected_note = st.session_state.final_notes[st.session_state.selected_note_index]
             
-            # Use tabs to organize the output and sources
             tab1, tab2 = st.tabs(["Formatted Output", "Source Chunks"])
 
             with tab1:
@@ -425,10 +413,8 @@ def show_results_state():
                 st.markdown("These are the raw text chunks from your source files that the AI used to generate the note.")
                 st.code('\n\n'.join(selected_note['source_chunks']))
         else:
-            # Show a helpful message if no note is selected yet
             st.info("👆 Select a topic from the left to view its details.")
     
-    # --- NEW: CHAT WITH CURRENT NOTES ---
     st.divider()
     st.subheader("Communicate with these Notes")
     if "messages" not in st.session_state:
@@ -450,15 +436,7 @@ def show_results_state():
                 st.markdown(response)
         st.session_state.messages.append({"role": "assistant", "content": response})
 
-# ... The lesson plan generation states (show_generating_lesson_state, show_review_lesson_state) remain unchanged ...
-
-# --- UI STATE FUNCTIONS for MOCK TEST GENERATOR ---
-def show_mock_test_placeholder():
-    st.header("Mock Test Generator")
-    st.image("https://placehold.co/800x400/1A233A/E0E2E7?text=Coming+Soon", use_column_width=True)
-    st.info("This feature is under construction.")
-
-# --- NEW: UI STATE FUNCTION for PERSONAL TA ---
+# --- UI STATE FUNCTION for PERSONAL TA ---
 def show_personal_ta_ui():
     st.header("🎓 Your Personal TA")
     st.markdown("Ask questions and get answers based on the knowledge from all your past study sessions.")
@@ -469,16 +447,13 @@ def show_personal_ta_ui():
         st.warning("You don't have any saved study sessions yet. Create some notes first to power up your TA!")
         return
 
-    # Initialize chat history
     if "ta_messages" not in st.session_state:
         st.session_state.ta_messages = []
 
-    # Display chat messages
     for message in st.session_state.ta_messages:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
 
-    # Chat input
     if prompt := st.chat_input("Ask your Personal TA..."):
         st.session_state.ta_messages.append({"role": "user", "content": prompt})
         with st.chat_message("user"):
@@ -486,7 +461,6 @@ def show_personal_ta_ui():
 
         with st.chat_message("assistant"):
             with st.spinner("Consulting your past notes..."):
-                # Build context from all past sessions
                 full_context = []
                 for session in user_data["sessions"]:
                     for note in session["notes"]:
@@ -498,6 +472,162 @@ def show_personal_ta_ui():
         
         st.session_state.ta_messages.append({"role": "assistant", "content": response})
 
+# --- UI STATE FUNCTIONS for MOCK TEST GENERATOR ---
+def show_mock_test_generator():
+    """Main function to handle the multi-stage mock test generation and execution."""
+    st.header("📝 Mock Test Generator")
+
+    # Initialize session state variables
+    if 'test_stage' not in st.session_state:
+        st.session_state.test_stage = 'start'
+    if 'syllabus' not in st.session_state:
+        st.session_state.syllabus = ""
+    if 'questions' not in st.session_state:
+        st.session_state.questions = {}
+    if 'user_answers' not in st.session_state:
+        st.session_state.user_answers = {}
+    if 'score' not in st.session_state:
+        st.session_state.score = {}
+    if 'feedback' not in st.session_state:
+        st.session_state.feedback = {}
+
+    # State machine to render the correct UI
+    stage = st.session_state.test_stage
+    if stage == 'start':
+        render_syllabus_input()
+    elif stage == 'generating':
+        render_generating_questions()
+    elif stage == 'mcq_test':
+        render_mcq_test()
+    elif stage == 'mcq_results':
+        render_mcq_results()
+    elif stage == 'fib_test':
+        st.info("Fill-in-the-Blanks Test Stage - To be implemented")
+    elif stage == 'short_answer_test':
+        st.info("Short Answer Test Stage - To be implemented")
+    elif stage == 'long_answer_test':
+        st.info("Long Answer Test Stage - To be implemented")
+
+# --- Helper Functions for Mock Test Stages ---
+def render_syllabus_input():
+    """Renders the UI for the user to input their syllabus."""
+    st.subheader("Step 1: Provide Your Syllabus")
+    st.write("Paste the syllabus or topic outline you want to be tested on. The more detail you provide, the better the questions will be.")
+    
+    syllabus_text = st.text_area("Syllabus / Topics", height=250, key="syllabus_input_area")
+    
+    if st.button("Generate My Test", type="primary"):
+        if len(syllabus_text) < 50:
+            st.warning("Please provide a more detailed syllabus for best results.")
+        else:
+            st.session_state.syllabus = syllabus_text
+            st.session_state.test_stage = 'generating'
+            st.rerun()
+
+def render_generating_questions():
+    """Handles the background generation of questions for all stages."""
+    with st.spinner("Building your test... The AI is analyzing the syllabus and crafting questions based on Bloom's Taxonomy..."):
+        mcq_questions = generate_questions_from_syllabus(st.session_state.syllabus, "MCQ", 10)
+        st.session_state.questions['mcq'] = mcq_questions
+        st.session_state.questions['fib'] = [] 
+        st.session_state.questions['short'] = []
+        st.session_state.questions['long'] = []
+
+        if mcq_questions:
+            st.session_state.test_stage = 'mcq_test'
+            st.rerun()
+        else:
+            st.error("Failed to generate questions. Please try again with a different syllabus.")
+            st.session_state.test_stage = 'start'
+            st.rerun()
+
+def render_mcq_test():
+    """Renders the MCQ test form."""
+    st.subheader("Stage 1: Multiple Choice Questions")
+    st.write("Answer at least 7 out of 10 questions correctly to advance to the next stage.")
+    mcq_questions = st.session_state.questions.get('mcq', [])
+    
+    if not mcq_questions:
+        st.error("MCQ questions not found. Please restart the test.")
+        if st.button("Restart"):
+            st.session_state.test_stage = 'start'
+            st.rerun()
+        return
+
+    with st.form("mcq_form"):
+        user_answers = {}
+        for i, q in enumerate(mcq_questions):
+            st.markdown(f"**{i+1}. {q['question_text']}**")
+            st.caption(f"Bloom's Taxonomy Level: {q['taxonomy_level']} ({get_bloom_level_name(q['taxonomy_level'])})")
+            options = list(q['options'].values())
+            option_keys = list(q['options'].keys())
+            selected_option_text = st.radio("Select your answer:", options, key=q['question_id'], label_visibility="collapsed")
+            user_answers[q['question_id']] = option_keys[options.index(selected_option_text)]
+            st.divider()
+
+        submitted = st.form_submit_button("Submit Answers")
+        if submitted:
+            st.session_state.user_answers['mcq'] = user_answers
+            score = 0
+            for q in mcq_questions:
+                if user_answers.get(q['question_id']) == q['answer']:
+                    score += 1
+            st.session_state.score['mcq'] = score
+            st.session_state.test_stage = 'mcq_results'
+            st.rerun()
+
+def render_mcq_results():
+    """Displays the results of the MCQ test and provides feedback."""
+    score = st.session_state.score.get('mcq', 0)
+    total = len(st.session_state.questions.get('mcq', []))
+    st.subheader(f"MCQ Results: You scored {score} / {total}")
+
+    feedback_text = f"Based on your score of {score}, you have a good foundational knowledge. Consider reviewing topics related to questions you got wrong, especially those at the 'Analyzing' and 'Evaluating' levels of Bloom's Taxonomy." # Placeholder
+    st.session_state.feedback['mcq'] = feedback_text
+    
+    with st.container(border=True):
+        st.subheader("💡 Suggestions for Improvement")
+        st.write(st.session_state.feedback['mcq'])
+        
+    if score >= 7:
+        st.success("Congratulations! You've passed this stage.")
+        if st.button("Proceed to Fill-in-the-Blanks", type="primary"):
+            st.session_state.test_stage = 'fib_test'
+            st.rerun()
+    else:
+        st.error("You need a score of 7/10 to proceed. Please review the material based on the feedback and try again.")
+        if st.button("Restart Test"):
+            for key in ['test_stage', 'syllabus', 'questions', 'user_answers', 'score', 'feedback']:
+                if key in st.session_state:
+                    del st.session_state[key]
+            st.rerun()
+
+# --- Placeholder AI & Utility Functions ---
+def get_bloom_level_name(level):
+    """Maps a Bloom's Taxonomy level number to its name."""
+    levels = {1: "Remembering", 2: "Understanding", 3: "Applying", 4: "Analyzing", 5: "Evaluating"}
+    return levels.get(level, "Unknown")
+
+def generate_questions_from_syllabus(syllabus_text, question_type, question_count):
+    """Placeholder for the AI call to generate questions."""
+    st.info(f"Simulating AI call to generate {question_count} {question_type} questions...")
+    if question_type == "MCQ":
+        # This structure should be generated by the AI based on the prompt.
+        # It follows the requested normal-like distribution of Bloom's Taxonomy levels.
+        placeholder_mcqs = [
+            {"question_id": "mcq_1", "taxonomy_level": 1, "question_text": "What is the capital of France?", "options": {"A": "London", "B": "Berlin", "C": "Paris", "D": "Madrid"}, "answer": "C"},
+            {"question_id": "mcq_2", "taxonomy_level": 2, "question_text": "Explain the main difference between a stock and a bond.", "options": {"A": "Stocks represent ownership, bonds represent debt.", "B": "Bonds represent ownership, stocks represent debt.", "C": "They are identical.", "D": "Stocks are only issued by governments."}, "answer": "A"},
+            {"question_id": "mcq_3", "taxonomy_level": 2, "question_text": "Summarize the plot of 'Hamlet'.", "options": {"A": "A comedy about mistaken identity.", "B": "A tragedy about revenge and madness.", "C": "A historical play about a king.", "D": "A romance about forbidden love."}, "answer": "B"},
+            {"question_id": "mcq_4", "taxonomy_level": 3, "question_text": "If a company has a high P/E ratio, what investment strategy does this suggest?", "options": {"A": "Value investing", "B": "Growth investing", "C": "Income investing", "D": "Index investing"}, "answer": "B"},
+            {"question_id": "mcq_5", "taxonomy_level": 3, "question_text": "Which of these is a direct application of Newton's Third Law?", "options": {"A": "A ball falling to the ground", "B": "The orbit of the moon", "C": "A rocket accelerating in space", "D": "A book resting on a table"}, "answer": "C"},
+            {"question_id": "mcq_6", "taxonomy_level": 3, "question_text": "Given a list [2, 7, 11, 15] and a target of 9, which pair adds up to the target?", "options": {"A": "[7, 11]", "B": "[2, 15]", "C": "[2, 7]", "D": "[11, 15]"}, "answer": "C"},
+            {"question_id": "mcq_7", "taxonomy_level": 3, "question_text": "Which of these is an application of Python dictionaries?", "options": {"A": "Storing ordered items", "B": "Implementing a LIFO stack", "C": "Storing key-value pairs for fast lookup", "D": "Performing complex math"}, "answer": "C"},
+            {"question_id": "mcq_8", "taxonomy_level": 4, "question_text": "Analyze the components of a laptop to determine the most critical factor for video editing performance.", "options": {"A": "Hard drive size", "B": "Screen resolution", "C": "RAM and GPU", "D": "Number of USB ports"}, "answer": "C"},
+            {"question_id": "mcq_9", "taxonomy_level": 4, "question_text": "Compare and contrast the economic policies of Keynesianism and Monetarism.", "options": {"A": "Both focus on tax cuts.", "B": "Keynesianism focuses on government spending, Monetarism on money supply.", "C": "They are the same.", "D": "Monetarism advocates for more government intervention."}, "answer": "B"},
+            {"question_id": "mcq_10", "taxonomy_level": 5, "question_text": "Evaluate the ethical implications of using AI in hiring processes.", "options": {"A": "It is always fair.", "B": "It has no ethical implications.", "C": "It removes all human bias.", "D": "It risks amplifying existing biases from training data."}, "answer": "D"}
+        ]
+        return placeholder_mcqs
+    return []
 
 # --- MAIN APP ---
 def main():
@@ -534,45 +664,38 @@ def main():
         st.rerun()
     st.sidebar.divider()
 
-    # --- NEW: CRUD Session History in Sidebar ---
     st.sidebar.subheader("Study Session History")
     user_data = load_user_data(user_id)
     if not user_data["sessions"]:
         st.sidebar.info("Your saved sessions will appear here.")
     else:
-        # Create a copy to iterate over, allowing modification of the original
         for i, session in enumerate(list(user_data["sessions"])):
             with st.sidebar.expander(f"{session['timestamp']} - {session['title']}"):
                 col1, col2 = st.columns(2)
-                # DELETE BUTTON
                 if col1.button("Delete", key=f"del_{session['id']}", use_container_width=True):
                     user_data["sessions"].pop(i)
                     save_user_data(user_id, user_data)
                     st.rerun()
                 
-                # EDIT/SAVE BUTTON LOGIC
                 is_editing = st.session_state.get('editing_session_id') == session['id']
                 if is_editing:
                     if col2.button("Save", key=f"save_{session['id']}", type="primary", use_container_width=True):
-                        # Get new title from session state and save
                         new_title = st.session_state.get(f"edit_title_{session['id']}", session['title'])
                         user_data["sessions"][i]['title'] = new_title
                         save_user_data(user_id, user_data)
-                        st.session_state.editing_session_id = None # Exit edit mode
+                        st.session_state.editing_session_id = None
                         st.rerun()
                 else:
                     if col2.button("Edit", key=f"edit_{session['id']}", use_container_width=True):
-                        st.session_state.editing_session_id = session['id'] # Enter edit mode
+                        st.session_state.editing_session_id = session['id']
                         st.rerun()
                 
-                # Display content or edit fields
                 if is_editing:
                     st.text_input("Edit Title", value=session['title'], key=f"edit_title_{session['id']}")
                 else:
                     for note in session['notes']:
                         st.write(f"- {note['topic']}")
     st.sidebar.divider()
-
 
     tool_choice = st.sidebar.radio("Select a Tool", ("Note & Lesson Engine", "Personal TA", "Mock Test Generator"), key='tool_choice')
     
@@ -589,7 +712,6 @@ def main():
     # --- Tool Routing ---
     if tool_choice == "Note & Lesson Engine":
         if 'current_state' not in st.session_state: reset_session(tool_choice)
-        # Note: Lesson plan states are omitted here for brevity but should be included
         state_map = { 'upload': show_upload_state, 'processing': show_processing_state, 
                       'workspace': show_workspace_state, 'synthesizing': show_synthesizing_state, 
                       'results': show_results_state }
@@ -598,8 +720,7 @@ def main():
     elif tool_choice == "Personal TA":
         show_personal_ta_ui()
     elif tool_choice == "Mock Test Generator":
-        show_mock_test_placeholder()
-
+        show_mock_test_generator()
 
 if __name__ == "__main__":
     main()
