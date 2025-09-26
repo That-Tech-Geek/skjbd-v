@@ -630,6 +630,7 @@ def generate_questions_from_syllabus(syllabus_text, question_type, question_coun
     return []
 
 # --- MAIN APP ---
+# --- MAIN APP ---
 def main():
     if 'user_info' not in st.session_state: st.session_state.user_info = None
     try: genai.configure(api_key=st.secrets["gemini"]["api_key"])
@@ -669,32 +670,60 @@ def main():
     if not user_data["sessions"]:
         st.sidebar.info("Your saved sessions will appear here.")
     else:
-        for i, session in enumerate(list(user_data["sessions"])):
+        # Create a mutable copy to iterate over while allowing deletion
+        sessions_copy = list(user_data["sessions"])
+        for session in sessions_copy:
             with st.sidebar.expander(f"{session['timestamp']} - {session['title']}"):
-                col1, col2 = st.columns(2)
-                if col1.button("Delete", key=f"del_{session['id']}", use_container_width=True):
-                    user_data["sessions"].pop(i)
-                    save_user_data(user_id, user_data)
-                    st.rerun()
                 
                 is_editing = st.session_state.get('editing_session_id') == session['id']
+
                 if is_editing:
-                    if col2.button("Save", key=f"save_{session['id']}", type="primary", use_container_width=True):
-                        new_title = st.session_state.get(f"edit_title_{session['id']}", session['title'])
-                        user_data["sessions"][i]['title'] = new_title
-                        save_user_data(user_id, user_data)
+                    # UI for when editing a title
+                    new_title = st.text_input(
+                        "New Title", 
+                        value=session['title'], 
+                        key=f"edit_title_{session['id']}",
+                        label_visibility="collapsed"
+                    )
+                    
+                    col1, col2 = st.columns(2)
+                    if col1.button("Save", key=f"save_{session['id']}", type="primary", use_container_width=True):
+                        original_index = next((idx for idx, s in enumerate(user_data["sessions"]) if s['id'] == session['id']), None)
+                        if original_index is not None:
+                            user_data["sessions"][original_index]['title'] = new_title
+                            save_user_data(user_id, user_data)
+                        st.session_state.editing_session_id = None
+                        st.rerun()
+
+                    if col2.button("Cancel", key=f"cancel_{session['id']}", use_container_width=True):
                         st.session_state.editing_session_id = None
                         st.rerun()
                 else:
-                    if col2.button("Edit", key=f"edit_{session['id']}", use_container_width=True):
+                    # UI for normal view
+                    for note in session.get('notes', []):
+                        st.write(f"• {note['topic']}")
+                    st.divider()
+                    
+                    col1, col2, col3 = st.columns(3)
+                    
+                    if col1.button("👁️ View", key=f"view_{session['id']}", use_container_width=True):
+                        reset_session("Note & Lesson Engine")
+                        st.session_state.final_notes = session.get('notes', [])
+                        st.session_state.current_state = 'results'
+                        st.session_state.messages = [] 
+                        st.rerun()
+
+                    if col2.button("✏️ Edit", key=f"edit_{session['id']}", use_container_width=True):
                         st.session_state.editing_session_id = session['id']
                         st.rerun()
-                
-                if is_editing:
-                    st.text_input("Edit Title", value=session['title'], key=f"edit_title_{session['id']}")
-                else:
-                    for note in session['notes']:
-                        st.write(f"- {note['topic']}")
+
+                    if col3.button("🗑️ Delete", key=f"del_{session['id']}", type="secondary", use_container_width=True):
+                        original_index = next((idx for idx, s in enumerate(user_data["sessions"]) if s['id'] == session['id']), None)
+                        if original_index is not None:
+                            user_data["sessions"].pop(original_index)
+                            save_user_data(user_id, user_data)
+                        st.rerun()
+
     st.sidebar.divider()
 
     tool_choice = st.sidebar.radio("Select a Tool", ("Note & Lesson Engine", "Personal TA", "Mock Test Generator"), key='tool_choice')
