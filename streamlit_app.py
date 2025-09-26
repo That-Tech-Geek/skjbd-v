@@ -104,7 +104,7 @@ def save_session_to_history(user_id, final_notes):
 
 # --- API SELF-DIAGNOSIS & UTILITIES ---
 def check_gemini_api():
-    try: genai.get_model('models/gemini-2.5-flash-lite); return "Valid"
+    try: genai.get_model('models/gemini-2.5-flash-lite'); return "Valid"
     except Exception as e:
         st.sidebar.error(f"Gemini API Key in secrets is invalid: {e}")
         return "Invalid"
@@ -198,7 +198,7 @@ def generate_content_outline(all_chunks, existing_outline=None):
 def synthesize_note_block(topic, relevant_chunks_text, instructions):
     model = genai.GenerativeModel('models/gemini-1.5-flash')
     prompt = f"""
-    You are a world-class note-taker. Synthesize a detailed, clear, and well-structured note block for a single topic: "{topic}".
+    You are a world-class note-taker. Synthesize a detailed, clear, and well-structured note block for a single topic: {topic}.
     Your entire response MUST be based STRICTLY and ONLY on the provided source text. Do not introduce any external information.
     Adhere to the user instructions for formatting and style. Format the output in Markdown.
 
