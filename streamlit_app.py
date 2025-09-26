@@ -104,7 +104,7 @@ def save_session_to_history(user_id, final_notes):
 
 # --- API SELF-DIAGNOSIS & UTILITIES ---
 def check_gemini_api():
-    try: genai.get_model('models/gemini-1.5-flash-002'); return "Valid"
+    try: genai.get_model('models/gemini-2.5-flash-lite); return "Valid"
     except Exception as e:
         st.sidebar.error(f"Gemini API Key in secrets is invalid: {e}")
         return "Invalid"
