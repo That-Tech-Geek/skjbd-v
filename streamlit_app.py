@@ -133,7 +133,7 @@ def chunk_text(text, source_id, chunk_size=CHUNK_SIZE, overlap=CHUNK_OVERLAP):
 def process_source(file, source_type):
     try:
         source_id = f"{source_type}:{file.name}"
-        model = genai.GenerativeModel('models/gemini-1.5-flash')
+        model = genai.GenerativeModel('models/gemini-2.5-flash-lite')
         if source_type == 'transcript':
             with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(file.name)[1]) as tmp:
                 tmp.write(file.getvalue())
