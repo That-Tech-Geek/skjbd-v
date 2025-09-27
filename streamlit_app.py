@@ -12,7 +12,7 @@ import requests
 import tempfile
 from functools import wraps
 from google.api_core import exceptions
-from pathlib import Path
+from pathlib import Path # Added import for Path
 import uuid
 
 # --- GOOGLE OAUTH LIBRARIES ---
@@ -276,9 +276,9 @@ def get_google_flow():
     try:
         client_config = {
             "web": { "client_id": st.secrets["google"]["client_id"], "client_secret": st.secrets["google"]["client_secret"],
-                    "auth_uri": "https://accounts.google.com/o/oauth2/auth", "token_uri": "https://oauth2.googleapis.com/token",
-                    "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-                    "redirect_uris": [st.secrets["google"]["redirect_uri"]],
+                     "auth_uri": "https://accounts.google.com/o/oauth2/auth", "token_uri": "https://oauth2.googleapis.com/token",
+                     "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+                     "redirect_uris": [st.secrets["google"]["redirect_uri"]],
             }}
         scopes = ["https://www.googleapis.com/auth/userinfo.profile", "https://www.googleapis.com/auth/userinfo.email", "openid"]
         return Flow.from_client_config(client_config, scopes=scopes, redirect_uri=st.secrets["google"]["redirect_uri"])
@@ -561,11 +561,11 @@ def show_results_state():
     
     col_actions1, col_actions2, _ = st.columns([1, 1, 3])
     with col_actions1:
-        if st.button("Go to Workspace"): 
+        if st.button("Go to Workspace"):    
             st.session_state.current_state = 'workspace'
             st.rerun()
     with col_actions2:
-        if st.button("Start New Session"): 
+        if st.button("Start New Session"):    
             reset_session(st.session_state.tool_choice)
             st.rerun()
 
@@ -886,6 +886,67 @@ def generate_feedback_on_performance(score, total, questions, user_answers, syll
     response = model.generate_content(prompt)
     return response.text
 
+# --- AI & Utility Functions for Mastery Engine ---
+def generate_allele_from_query(user_topic):
+    model = genai.GenerativeModel('models/gemini-2.5-flash-lite')
+    
+    # Generate a descriptive gene_name, ensuring it's concise
+    gene_name_response = model.generate_content(f"Provide a concise, 3-5 word conceptual name for the topic: '{user_topic}'. Output only the name.")
+    gene_name = gene_name_response.text.strip().replace('"', '') if gene_name_response.text else user_topic.title()
+    
+    # Generate a unique gene_id
+    gene_id = f"USER_{hashlib.md5(user_topic.encode()).hexdigest()[:8].upper()}"
+    
+    # Fetch content using Google Search
+    search_queries = [f"{user_topic} explanation", f"{user_topic} simple definition", f"{user_topic} youtube video tutorial"]
+    search_results = google_search.search(queries=search_queries)
+    
+    text_content = []
+    video_url = None
+    
+    for result_set in search_results:
+        for res in result_set.results:
+            if "youtube.com/watch" in res.url and not video_url:
+                video_url = res.url
+            if res.snippet:
+                text_content.append(res.snippet)
+    
+    # Combine relevant text snippets
+    full_text = " ".join(text_content)
+    
+    # If text content is too sparse, try to synthesize a better explanation
+    if len(full_text.split()) < 100: # Arbitrary threshold for "sparse"
+        st.write("Generating a more comprehensive text explanation...")
+        synthesis_prompt = f"Based on the following snippets, provide a concise but comprehensive explanation of '{user_topic}':\n\n{full_text}"
+        synthesis_response = model.generate_content(synthesis_prompt)
+        if synthesis_response.text:
+            full_text = synthesis_response.text
+            
+    # Construct content alleles
+    content_alleles = []
+    if full_text:
+        content_alleles.append({"type": "text", "content": full_text})
+    if video_url:
+        # Check if youtube API can get info for the video, if not, just use the raw URL
+        try:
+            video_info = youtube.get_video_information(url=video_url, fetch_audio_video_tokens=False)
+            if video_info and video_info.url: # Ensure it's a valid youtube video and not a generic link
+                content_alleles.append({"type": "video", "url": video_info.url})
+        except Exception as e:
+            st.warning(f"Could not retrieve YouTube video info for {video_url}: {e}. Adding raw URL.")
+            content_alleles.append({"type": "video", "url": video_url})
+
+
+    if not content_alleles:
+        return None # Failed to generate any content
+
+    return {
+        "gene_id": gene_id,
+        "gene_name": gene_name,
+        "difficulty": 0, # Default difficulty for user-generated alleles
+        "content_alleles": content_alleles
+    }
+
 # --- UI STATE FUNCTIONS for MASTERY ENGINE (GENESIS MODULE) ---
 def show_mastery_engine():
     """Renders the entire Genesis Module feature."""
@@ -897,6 +958,10 @@ def show_mastery_engine():
     if 'user_progress' not in st.session_state:
         st.session_state.user_progress = {} # Will store node_id: 'locked'/'unlocked'/'mastered'
     
+    if 'current_genome' not in st.session_state:
+        st.session_state.current_genome = None # Initialize current_genome
+
+
     # State machine for the module
     stage = st.session_state.mastery_stage
     if stage == 'course_selection':
@@ -910,10 +975,15 @@ def show_mastery_engine():
 
 def render_course_selection():
     """Allows the user to select a course to begin."""
-    st.subheader("Select Your Course")
+    st.subheader("Select Your Course or Create a New Concept")
+    
+    st.markdown("### Pre-built Courses")
     if st.button("Econ 101", use_container_width=True, type="primary"):
         # This is the "genome_importer" step
-        st.session_state.current_genome = ECON_101_GENOME
+        # Use a deep copy to allow modifications without affecting the original constant
+        st.session_state.current_genome = dict(ECON_101_GENOME) 
+        st.session_state.current_genome['nodes'] = list(ECON_101_GENOME['nodes'])
+        st.session_state.current_genome['edges'] = list(ECON_101_GENOME['edges'])
         
         # Initialize user progress for this genome
         progress = {}
@@ -933,6 +1003,39 @@ def render_course_selection():
         st.session_state.user_progress = progress
         st.session_state.mastery_stage = 'skill_tree'
         st.rerun()
+
+    st.markdown("### Create Your Own Concept")
+    user_interest = st.text_input("What concept are you interested in learning about?", key="user_allele_query")
+    if st.button("Generate Concept Allele", use_container_width=True, disabled=not user_interest):
+        if st.session_state.current_genome is None:
+            # If no course is selected, initialize with an empty genome structure
+            st.session_state.current_genome = {
+                "subject": "My Custom Concepts",
+                "version": "1.0",
+                "nodes": [],
+                "edges": []
+            }
+        
+        with st.spinner(f"Generating concept for '{user_interest}'... This might take a moment as AI synthesizes knowledge from the web."):
+            new_allele = generate_allele_from_query(user_interest)
+            
+            if new_allele:
+                # Check for existing node with the same gene_id to prevent duplicates
+                existing_node_ids = {node['gene_id'] for node in st.session_state.current_genome['nodes']}
+                if new_allele['gene_id'] not in existing_node_ids:
+                    st.session_state.current_genome['nodes'].append(new_allele)
+                    st.session_state.user_progress[new_allele['gene_id']] = 'unlocked'
+                    st.success(f"Concept '{new_allele['gene_name']}' generated and unlocked!")
+                else:
+                    st.info(f"Concept '{new_allele['gene_name']}' already exists.")
+                    # Ensure it's unlocked if it exists but wasn't before
+                    st.session_state.user_progress[new_allele['gene_id']] = 'unlocked'
+                
+                st.session_state.mastery_stage = 'skill_tree'
+                st.rerun()
+            else:
+                st.error("Failed to generate concept allele. Please try a different topic or provide more specific input.")
+
 
 def render_skill_tree():
     """Renders the interactive skill tree UI based on user progress."""
@@ -993,7 +1096,11 @@ def render_content_viewer():
     if col2.button(f"⚔️ Challenge Boss: {node_data['gene_name']}", type="primary"):
         st.session_state.mastery_stage = 'boss_battle'
         # Set up the context for the mock test generator (the "Boss Battle Engine")
-        st.session_state.syllabus = f"Topic: {node_data['gene_name']}. Content: {node_data['content_alleles'][0]['content']}" # Use text content as syllabus
+        
+        # Aggregate all text content from the alleles to form the syllabus
+        syllabus_parts = [a['content'] for a in node_data['content_alleles'] if a['type'] == 'text']
+        st.session_state.syllabus = f"Topic: {node_data['gene_name']}. Content: {' '.join(syllabus_parts)}"
+        
         st.session_state.test_stage = 'generating'
         # Clear any previous test data
         for key in ['questions', 'user_answers', 'score', 'feedback']:
@@ -1045,8 +1152,11 @@ def render_boss_battle():
 # --- MAIN APP ---
 def main():
     if 'user_info' not in st.session_state: st.session_state.user_info = None
-    try: genai.configure(api_key=st.secrets["gemini"]["api_key"])
-    except (KeyError, FileNotFoundError): st.error("Gemini API key not configured in st.secrets."); st.stop()
+    try:
+        genai.configure(api_key=st.secrets["gemini"]["api_key"])
+        # google_search and youtube APIs are automatically configured by the framework with secrets.toml values.
+    except (KeyError, FileNotFoundError) as e:
+        st.error(f"API keys not configured in st.secrets or invalid: {e}"); st.stop()
 
     flow = get_google_flow()
     auth_code = st.query_params.get("code")
@@ -1072,7 +1182,7 @@ def main():
     user_id = user.get('id') or user.get('email')
     st.sidebar.image(user['picture'], width=80)
     st.sidebar.subheader(f"Welcome, {user['given_name']}")
-    if st.sidebar.button("Logout"): 
+    if st.sidebar.button("Logout"):    
         st.session_state.clear()
         st.rerun()
     st.sidebar.divider()
@@ -1092,8 +1202,8 @@ def main():
                 if is_editing:
                     # UI for when a title is being edited
                     new_title = st.text_input(
-                        "Edit Title", 
-                        value=session['title'], 
+                        "Edit Title",    
+                        value=session['title'],    
                         key=f"edit_title_{session['id']}",
                         label_visibility="collapsed"
                     )
@@ -1149,8 +1259,8 @@ def main():
     # --- Tool Routing ---
     if tool_choice == "Note & Lesson Engine":
         if 'current_state' not in st.session_state: reset_session(tool_choice)
-        state_map = { 'upload': show_upload_state, 'processing': show_processing_state, 
-                      'workspace': show_workspace_state, 'synthesizing': show_synthesizing_state, 
+        state_map = { 'upload': show_upload_state, 'processing': show_processing_state,    
+                      'workspace': show_workspace_state, 'synthesizing': show_synthesizing_state,    
                       'results': show_results_state }
         state_function = state_map.get(st.session_state.current_state, show_upload_state)
         state_function()
