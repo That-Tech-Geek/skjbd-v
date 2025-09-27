@@ -166,7 +166,7 @@ def process_source(file, source_type):
 # --- AGENTIC WORKFLOW FUNCTIONS ---
 @gemini_api_call_with_retry
 def generate_content_outline(all_chunks, existing_outline=None):
-    model = genai.GenerativeModel('models/gemini-1.5-flash')
+    model = genai.GenerativeModel('models/gemini-2.5-flash-lite')
     prompt_chunks = [{"chunk_id": c['chunk_id'], "text_snippet": c['text'][:200] + "..."} for c in all_chunks if c.get('text') and len(c['text'].split()) > 10]
     
     if not prompt_chunks:
@@ -196,7 +196,7 @@ def generate_content_outline(all_chunks, existing_outline=None):
 
 @gemini_api_call_with_retry
 def synthesize_note_block(topic, relevant_chunks_text, instructions):
-    model = genai.GenerativeModel('models/gemini-1.5-flash')
+    model = genai.GenerativeModel('models/gemini-2.5-flash-lite')
     prompt = f"""
     You are a world-class note-taker. Synthesize a detailed, clear, and well-structured note block for a single topic: {topic}.
     Your entire response MUST be based STRICTLY and ONLY on the provided source text. Do not introduce any external information.
@@ -214,7 +214,7 @@ def synthesize_note_block(topic, relevant_chunks_text, instructions):
 
 @gemini_api_call_with_retry
 def generate_lesson_plan(outline, all_chunks):
-    model = genai.GenerativeModel('models/gemini-1.5-flash')
+    model = genai.GenerativeModel('models/gemini-2.5-flash-lite')
     chunk_context_map = {c['chunk_id']: c['text'][:200] + "..." for c in all_chunks}
     prompt = f"""
     You are a world-class educator. Design a detailed, step-by-step lesson plan based on the provided outline and source material.
@@ -240,7 +240,7 @@ def generate_lesson_plan(outline, all_chunks):
 @gemini_api_call_with_retry
 def answer_from_context(query, context):
     """Answers a user query based ONLY on the provided context."""
-    model = genai.GenerativeModel('models/gemini-1.5-flash')
+    model = genai.GenerativeModel('models/gemini-2.5-flash-lite')
     prompt = f"""
     You are a helpful study assistant. Your task is to answer the user question based strictly and exclusively on the provided study material context.
     Do not use any external knowledge. If the answer is not in the context, clearly state that the information is not available in the provided materials.
