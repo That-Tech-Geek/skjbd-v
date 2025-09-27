@@ -154,7 +154,6 @@ def check_gemini_api():
 
 def resilient_json_parser(json_string):
     try:
-        # Relaxed JSON parsing to find JSON object within a string that might contain other text
         match = re.search(r'```(json)?\s*(\{.*?\})\s*```', json_string, re.DOTALL)
         if match:
             return json.loads(match.group(2))
@@ -291,22 +290,41 @@ def get_google_flow():
     except (KeyError, FileNotFoundError):
         st.error("OAuth credentials are not configured correctly in st.secrets."); st.stop()
 
-def reset_session(tool_choice):
+def reset_session():
+    """
+    Resets the state of the current tool, while preserving essential global state
+    like user information and processed file context (`all_chunks`).
+    """
+    # Preserve essential state that persists across all tools
     user_info = st.session_state.get('user_info')
-    # Preserve context across tool switches if it exists
     all_chunks = st.session_state.get('all_chunks', [])
-    
-    st.session_state.clear()
-    
-    st.session_state.user_info = user_info
-    st.session_state.tool_choice = tool_choice
-    st.session_state.all_chunks = all_chunks # Restore the context
-    
-    # Reset specific tool states
-    st.session_state.current_state = 'upload'
-    st.session_state.extraction_failures = []
-    st.session_state.outline_data = []
-    st.session_state.final_notes = []
+    tool_choice = st.session_state.get('tool_choice')
+    last_tool_choice = st.session_state.get('last_tool_choice')
+
+    # List of all keys that are specific to a tool's state and should be cleared
+    tool_specific_keys = [
+        # Note & Lesson Engine state
+        'current_state', 'initial_files', 'extraction_failures', 'outline_data', 
+        'editable_outline', 'synthesis_instructions', 'final_notes', 
+        'selected_note_index', 'messages',
+
+        # Personal TA state
+        'ta_messages',
+
+        # Mock Test Generator state
+        'test_stage', 'syllabus', 'questions', 'user_answers', 'score', 'feedback',
+        
+        # Mastery Engine state
+        'mastery_stage', 'user_progress', 'current_genome', 'selected_node_id',
+        
+        # Other transient keys
+        'editing_session_id'
+    ]
+
+    # Delete only the tool-specific keys, preserving the rest
+    for key in tool_specific_keys:
+        if key in st.session_state:
+            del st.session_state[key]
 
 
 # --- LANDING PAGE ---
@@ -448,7 +466,7 @@ def show_results_state():
     with col_actions1:
         if st.button("Go to Workspace"): st.session_state.current_state = 'workspace'; st.rerun()
     with col_actions2:
-        if st.button("Start New Session"): reset_session(st.session_state.tool_choice); st.rerun()
+        if st.button("Start New Session"): reset_session(); st.rerun()
     st.divider()
     if 'selected_note_index' not in st.session_state: st.session_state.selected_note_index = None
     col1, col2 = st.columns([1, 2], gap="large")
@@ -513,7 +531,6 @@ def show_mock_test_generator():
     """Main function to handle the multi-stage mock test generation and execution."""
     st.header("📝 Mock Test Generator")
 
-    # Initialize session state variables for the entire test flow
     if 'test_stage' not in st.session_state: st.session_state.test_stage = 'start'
     if 'syllabus' not in st.session_state: st.session_state.syllabus = ""
     if 'questions' not in st.session_state: st.session_state.questions = {}
@@ -521,15 +538,12 @@ def show_mock_test_generator():
     if 'score' not in st.session_state: st.session_state.score = {}
     if 'feedback' not in st.session_state: st.session_state.feedback = {}
 
-    # State machine to render the correct UI for each stage
     stage = st.session_state.test_stage
-    
-    # Define a map for stages to functions for cleaner routing
     stage_map = {
         'start': render_syllabus_input,
-        'mcq_generating': lambda: render_generating_questions('mcq', 'vsa_generating', 10),
-        'mcq_test': render_mcq_test,
-        'mcq_results': lambda: render_mcq_results(7, 'vsa_generating'),
+        'mcq_generating': lambda: render_generating_questions('mcq', 'mcq_test', 10),
+        'mcq_test': lambda: render_mcq_test('mcq_results'),
+        'mcq_results': lambda: render_mcq_results(70, 'vsa_generating'),
         'vsa_generating': lambda: render_generating_questions('vsa', 'vsa_test', 10),
         'vsa_test': lambda: render_subjective_test('vsa', 'vsa_results'),
         'vsa_results': lambda: render_subjective_results('vsa', 75, 'sa_generating'),
@@ -542,10 +556,9 @@ def show_mock_test_generator():
         'final_results': render_final_results
     }
     
-    # Execute the function corresponding to the current stage
     if stage in stage_map:
         stage_map[stage]()
-    else: # Fallback
+    else:
         st.session_state.test_stage = 'start'
         st.rerun()
 
@@ -574,7 +587,7 @@ def render_generating_questions(q_type, next_stage, q_count):
             st.session_state.test_stage = 'start'
             st.rerun()
 
-def render_mcq_test():
+def render_mcq_test(next_stage='mcq_results'):
     st.subheader("Stage 1: Multiple Choice Questions")
     st.write("Pass Mark: 70%")
     mcq_questions = st.session_state.questions.get('mcq', [])
@@ -591,7 +604,7 @@ def render_mcq_test():
             st.session_state.user_answers['mcq'] = user_answers
             score = sum(1 for q in mcq_questions if user_answers.get(q['question_id']) == q['answer'])
             st.session_state.score['mcq'] = score
-            st.session_state.test_stage = 'mcq_results'
+            st.session_state.test_stage = next_stage
             st.rerun()
 
 def render_mcq_results(pass_mark_percent, next_stage):
@@ -701,7 +714,6 @@ def render_final_results():
         for key in ['test_stage', 'syllabus', 'questions', 'user_answers', 'score', 'feedback']:
             if key in st.session_state: del st.session_state[key]
         st.rerun()
-
 
 # --- AI & Utility Functions for Mock Test ---
 def get_bloom_level_name(level):
@@ -873,7 +885,7 @@ def render_course_selection():
     use_context = st.checkbox("Use context from 'Note & Lesson Engine' session", key="use_context", value=True)
     if st.button("Generate Concept Allele", use_container_width=True, disabled=not user_interest):
         context_chunks = st.session_state.get('all_chunks') if use_context else None
-        if use_context and not context_chunks: st.warning("Contextual generation selected, but no files processed. Falling back to non-contextual mode.")
+        if use_context and not context_chunks: st.warning("Contextual generation selected, but no files have been processed in the 'Note & Lesson Engine'. Falling back to non-contextual generation.")
         if st.session_state.current_genome is None: st.session_state.current_genome = {"subject": "My Custom Concepts", "version": "1.0", "nodes": [], "edges": []}
         with st.spinner(f"Generating concept for '{user_interest}'..."):
             new_allele = generate_allele_from_query(user_interest, context_chunks=context_chunks)
@@ -916,7 +928,7 @@ def render_content_viewer():
         st.session_state.mastery_stage = 'boss_battle'
         syllabus_parts = [a['content'] for a in node_data['content_alleles'] if a['type'] == 'text']
         st.session_state.syllabus = f"Topic: {node_data['gene_name']}. Content: {' '.join(syllabus_parts)}"
-        st.session_state.test_stage = 'mcq_generating' # Start the test flow from MCQ
+        st.session_state.test_stage = 'mcq_generating'
         for key in ['questions', 'user_answers', 'score', 'feedback']:
             if key in st.session_state: del st.session_state[key]
         st.rerun()
@@ -925,8 +937,38 @@ def render_boss_battle():
     node_id = st.session_state.selected_node_id
     node_data = next((n for n in st.session_state.current_genome['nodes'] if n['gene_id'] == node_id), None)
     st.subheader(f"Boss Battle: {node_data['gene_name']}")
-    # The main show_mock_test_generator now handles the state machine for the battle
-    show_mock_test_generator()
+    
+    # Custom boss battle flow, separate from the main test generator's multi-stage logic
+    if 'test_stage' not in st.session_state: st.session_state.test_stage = 'mcq_generating'
+    stage = st.session_state.test_stage
+    
+    if stage == 'mcq_generating':
+        render_generating_questions('mcq', 'boss_mcq_test', 10)
+    elif stage == 'boss_mcq_test':
+        render_mcq_test('boss_mcq_results')
+    elif stage == 'boss_mcq_results':
+        score = st.session_state.score.get('mcq', 0)
+        total = 10
+        st.subheader(f"Battle Results: You scored {score} / {total}")
+        if score >= 7:
+            st.balloons()
+            st.success("Victory! You have mastered this concept.")
+            st.session_state.user_progress[node_id] = 'mastered'
+            for edge in st.session_state.current_genome.get('edges', []):
+                if edge['from'] == node_id:
+                    st.session_state.user_progress[edge['to']] = 'unlocked'
+            if st.button("Return to Skill Tree", type="primary"):
+                st.session_state.mastery_stage = 'skill_tree'
+                for key in ['test_stage', 'syllabus', 'questions', 'user_answers', 'score', 'feedback']:
+                    if key in st.session_state: del st.session_state[key]
+                st.rerun()
+        else:
+            st.error("Defeated. The concept is not yet mastered. Review the material and try again.")
+            if st.button("Return to Learning"):
+                st.session_state.mastery_stage = 'content_viewer'
+                for key in ['test_stage', 'syllabus', 'questions', 'user_answers', 'score', 'feedback']:
+                    if key in st.session_state: del st.session_state[key]
+                st.rerun()
 
 
 # --- MAIN APP ---
@@ -983,7 +1025,7 @@ def main():
                     st.divider()
                     col1, col2, col3 = st.columns(3)
                     if col1.button("👁️ View", key=f"view_{session.get('id')}", use_container_width=True):
-                        reset_session("Note & Lesson Engine"); st.session_state.final_notes = session.get('notes', []); st.session_state.current_state = 'results'; st.session_state.messages = []; st.rerun()
+                        reset_session(); st.session_state.tool_choice = "Note & Lesson Engine"; st.session_state.final_notes = session.get('notes', []); st.session_state.current_state = 'results'; st.session_state.messages = []; st.rerun()
                     if col2.button("✏️ Edit", key=f"edit_{session.get('id')}", use_container_width=True):
                         st.session_state.editing_session_id = session.get('id'); st.rerun()
                     if col3.button("🗑️ Delete", key=f"del_{session.get('id')}", type="secondary", use_container_width=True):
@@ -995,7 +1037,7 @@ def main():
     if 'last_tool_choice' not in st.session_state: st.session_state.last_tool_choice = tool_choice
     if st.session_state.last_tool_choice != tool_choice:
         st.session_state.last_tool_choice = tool_choice
-        reset_session(tool_choice); st.rerun()
+        reset_session(); st.rerun()
 
     st.sidebar.divider()
     st.sidebar.subheader("API Status")
