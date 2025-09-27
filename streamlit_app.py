@@ -146,7 +146,7 @@ def save_session_to_history(user_id, final_notes):
 # --- API SELF-DIAGNOSIS & UTILITIES ---
 def check_gemini_api():
     try:
-        genai.get_model('models/gemini-pro')
+        genai.get_model('models/gemini-2.5-flash-lite')
         return "Valid"
     except Exception as e:
         st.sidebar.error(f"Gemini API Key in secrets is invalid: {e}")
@@ -182,7 +182,7 @@ def chunk_text(text, source_id, chunk_size=CHUNK_SIZE, overlap=CHUNK_OVERLAP):
 def process_source(file, source_type):
     try:
         source_id = f"{source_type}:{file.name}"
-        model_name = 'gemini-pro-vision' if source_type in ['image', 'pdf'] else 'gemini-pro'
+        model_name = 'gemini-2.5-flash-lite-vision' if source_type in ['image', 'pdf'] else 'gemini-2.5-flash-lite'
         model = genai.GenerativeModel(model_name)
         if source_type == 'transcript':
             with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(file.name)[1]) as tmp:
@@ -211,7 +211,7 @@ def process_source(file, source_type):
 # --- AGENTIC WORKFLOW FUNCTIONS ---
 @gemini_api_call_with_retry
 def generate_content_outline(all_chunks, existing_outline=None):
-    model = genai.GenerativeModel('gemini-pro')
+    model = genai.GenerativeModel('gemini-2.5-flash-lite')
     prompt_chunks = [{"chunk_id": c['chunk_id'], "text_snippet": c['text'][:200] + "..."} for c in all_chunks if c.get('text') and len(c['text'].split()) > 10]
     
     if not prompt_chunks:
@@ -241,7 +241,7 @@ def generate_content_outline(all_chunks, existing_outline=None):
 
 @gemini_api_call_with_retry
 def synthesize_note_block(topic, relevant_chunks_text, instructions):
-    model = genai.GenerativeModel('gemini-pro')
+    model = genai.GenerativeModel('gemini-2.5-flash-lite')
     prompt = f"""
     You are a world-class note-taker. Synthesize a detailed, clear, and well-structured note block for a single topic: {topic}.
     Your entire response MUST be based STRICTLY and ONLY on the provided source text. Do not introduce any external information.
@@ -260,7 +260,7 @@ def synthesize_note_block(topic, relevant_chunks_text, instructions):
 @gemini_api_call_with_retry
 def answer_from_context(query, context):
     """Answers a user query based ONLY on the provided context."""
-    model = genai.GenerativeModel('gemini-pro')
+    model = genai.GenerativeModel('gemini-2.5-flash-lite')
     prompt = f"""
     You are a helpful study assistant. Your task is to answer the user question based strictly and exclusively on the provided study material context.
     Do not use any external knowledge. If the answer is not in the context, clearly state that the information is not available in the provided materials.
@@ -579,14 +579,14 @@ def get_bloom_level_name(level):
 
 @gemini_api_call_with_retry
 def generate_questions_from_syllabus(syllabus_text, question_type, question_count):
-    model = genai.GenerativeModel('gemini-pro')
+    model = genai.GenerativeModel('gemini-2.5-flash-lite')
     prompt = f"""You are an expert Question Paper Setter...""" # Truncated for brevity
     response = model.generate_content(prompt)
     return resilient_json_parser(response.text)
 
 @gemini_api_call_with_retry
 def generate_feedback_on_performance(score, total, questions, user_answers, syllabus):
-    model = genai.GenerativeModel('gemini-pro')
+    model = genai.GenerativeModel('gemini-2.5-flash-lite')
     prompt = f"""You are an encouraging academic coach...""" # Truncated for brevity
     response = model.generate_content(prompt)
     return response.text
@@ -607,7 +607,7 @@ def get_google_search_service():
 
 def generate_allele_from_query(user_topic, context_chunks=None):
     # (This function is unchanged from the previous correct version)
-    model = genai.GenerativeModel('gemini-pro')
+    model = genai.GenerativeModel('gemini-2.5-flash-lite')
     # ... code is unchanged
 
 # --- UI STATE FUNCTIONS for MASTERY ENGINE (GENESIS MODULE) ---
