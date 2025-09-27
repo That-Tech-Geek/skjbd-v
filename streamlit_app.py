@@ -198,11 +198,9 @@ def check_gemini_api():
 
 def resilient_json_parser(json_string):
     try:
-        # First, try to find a JSON block enclosed in markdown backticks
         match = re.search(r'```json\s*(\{.*?\})\s*```', json_string, re.DOTALL)
         if match:
             return json.loads(match.group(1))
-        # If not found, try to find any valid JSON object in the string
         match = re.search(r'(\{.*?\})', json_string, re.DOTALL)
         if match:
             return json.loads(match.group(0))
@@ -241,7 +239,7 @@ def process_source(file, source_type):
                     return {"status": "error", "source_id": source_id, "reason": "Gemini file processing failed."}
                 response = model.generate_content(["Transcribe this audio recording.", audio_file])
                 chunks = chunk_text(response.text, source_id)
-                genai.delete_file(audio_file.name) # Clean up the uploaded file
+                genai.delete_file(audio_file.name)
                 return {"status": "success", "source_id": source_id, "chunks": chunks}
             finally:
                 os.unlink(tmp_path)
@@ -319,13 +317,12 @@ def answer_from_context(query, context):
 def get_google_flow():
     """Initializes the Google OAuth flow with required scopes."""
     try:
-        # The structure of st.secrets["google"] is expected to match the client_secret.json file.
         client_config = {"web": st.secrets["google"]}
         scopes = [
             "https://www.googleapis.com/auth/userinfo.profile", 
             "https://www.googleapis.com/auth/userinfo.email", 
             "openid",
-            "https://www.googleapis.com/auth/spreadsheets" # Scope for Google Sheets API
+            "https://www.googleapis.com/auth/spreadsheets"
         ]
         return Flow.from_client_config(client_config, scopes=scopes, redirect_uri=st.secrets["google"]["redirect_uri"])
     except (KeyError, FileNotFoundError):
@@ -339,7 +336,7 @@ def reset_session(tool_choice):
     st.session_state.user_info = user_info
     st.session_state.credentials = credentials
     st.session_state.tool_choice = tool_choice
-    st.session_state.current_state = 'upload' # Default start state for Note Engine
+    st.session_state.current_state = 'upload'
 
 # --- UI COMPONENTS & STATES ---
 
@@ -348,69 +345,21 @@ def show_landing_page(auth_url):
     st.markdown("""
         <style>
             @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
-            .main {
-                background-color: #FFFFFF;
-                font-family: 'Inter', sans-serif;
-            }
-            .hero-container {
-                padding: 4rem 1rem;
-                text-align: center;
-            }
-            .hero-title {
-                font-size: 3.5rem;
-                font-weight: 700;
-                background: -webkit-linear-gradient(45deg, #004080, #007BFF);
-                -webkit-background-clip: text;
-                -webkit-text-fill-color: transparent;
-                margin-bottom: 1rem;
-            }
-            .hero-subtitle {
-                font-size: 1.25rem;
-                color: #555;
-                max-width: 700px;
-                margin: 0 auto 2rem auto;
-                line-height: 1.6;
-            }
-            .how-it-works-card {
-                padding: 1.5rem; text-align: center;
-            }
-            .how-it-works-card .step-number {
-                display: inline-block; width: 40px; height: 40px; line-height: 40px;
-                border-radius: 50%; background-color: #E6F2FF; color: #007BFF;
-                font-weight: 700; font-size: 1.2rem; margin-bottom: 1rem;
-            }
-            .comparison-table-premium {
-                width: 100%; border-collapse: separate; border-spacing: 0;
-                border-radius: 12px; overflow: hidden;
-                box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 1px solid #E0E0E0;
-            }
-            .comparison-table-premium th, .comparison-table-premium td {
-                padding: 1.2rem 1rem; text-align: left; border-bottom: 1px solid #E0E0E0;
-            }
-            .comparison-table-premium th {
-                background-color: #F8F9FA; color: #333; font-weight: 600;
-            }
+            .main { background-color: #FFFFFF; font-family: 'Inter', sans-serif; }
+            .hero-container { padding: 4rem 1rem; text-align: center; }
+            .hero-title { font-size: 3.5rem; font-weight: 700; background: -webkit-linear-gradient(45deg, #004080, #007BFF); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 1rem; }
+            .hero-subtitle { font-size: 1.25rem; color: #555; max-width: 700px; margin: 0 auto 2rem auto; line-height: 1.6; }
+            .how-it-works-card { padding: 1.5rem; text-align: center; }
+            .how-it-works-card .step-number { display: inline-block; width: 40px; height: 40px; line-height: 40px; border-radius: 50%; background-color: #E6F2FF; color: #007BFF; font-weight: 700; font-size: 1.2rem; margin-bottom: 1rem; }
+            .comparison-table-premium { width: 100%; border-collapse: separate; border-spacing: 0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 1px solid #E0E0E0; }
+            .comparison-table-premium th, .comparison-table-premium td { padding: 1.2rem 1rem; text-align: left; border-bottom: 1px solid #E0E0E0; }
+            .comparison-table-premium th { background-color: #F8F9FA; color: #333; font-weight: 600; }
             .comparison-table-premium tbody tr:last-child td { border-bottom: none; }
-            .comparison-table-premium .check {
-                color: #1E90FF; font-weight: bold; text-align: center; font-size: 1.2rem;
-            }
-            .comparison-table-premium .cross {
-                color: #B0B0B0; font-weight: bold; text-align: center; font-size: 1.2rem;
-            }
-            .cta-button a {
-                font-size: 1.1rem !important; font-weight: 600 !important;
-                padding: 0.8rem 2rem !important; border-radius: 8px !important;
-                background-image: linear-gradient(45deg, #007BFF, #0056b3) !important;
-                border: none !important; transition: transform 0.2s, box-shadow 0.2s !important;
-            }
-            .cta-button a:hover {
-                transform: scale(1.05);
-                box-shadow: 0 6px 15px rgba(0, 123, 255, 0.3);
-            }
-            .section-header {
-                text-align: center; color: #004080; font-weight: 700;
-                margin-top: 4rem; margin-bottom: 2rem;
-            }
+            .comparison-table-premium .check { color: #1E90FF; font-weight: bold; text-align: center; font-size: 1.2rem; }
+            .comparison-table-premium .cross { color: #B0B0B0; font-weight: bold; text-align: center; font-size: 1.2rem; }
+            .cta-button a { font-size: 1.1rem !important; font-weight: 600 !important; padding: 0.8rem 2rem !important; border-radius: 8px !important; background-image: linear-gradient(45deg, #007BFF, #0056b3) !important; border: none !important; transition: transform 0.2s, box-shadow 0.2s !important; }
+            .cta-button a:hover { transform: scale(1.05); box-shadow: 0 6px 15px rgba(0, 123, 255, 0.3); }
+            .section-header { text-align: center; color: #004080; font-weight: 700; margin-top: 4rem; margin-bottom: 2rem; }
         </style>
     """, unsafe_allow_html=True)
 
@@ -426,29 +375,11 @@ def show_landing_page(auth_url):
     st.markdown('<h2 class="section-header">Your Path to Mastery in 3 Simple Steps</h2>', unsafe_allow_html=True)
     col1, col2, col3 = st.columns(3, gap="large")
     with col1:
-        st.markdown("""
-            <div class="how-it-works-card">
-                <div class="step-number">1</div>
-                <h3>Aggregate Your Materials</h3>
-                <p>Upload everything—audio lectures, textbook chapters, slide decks, and even whiteboard photos. Consolidate your entire syllabus in one place.</p>
-            </div>
-        """, unsafe_allow_html=True)
+        st.markdown('<div class="how-it-works-card"><div class="step-number">1</div><h3>Aggregate Your Materials</h3><p>Upload everything—audio lectures, textbook chapters, slide decks, and even whiteboard photos. Consolidate your entire syllabus in one place.</p></div>', unsafe_allow_html=True)
     with col2:
-        st.markdown("""
-            <div class="how-it-works-card">
-                <div class="step-number">2</div>
-                <h3>Synthesize & Understand</h3>
-                <p>Vekkam's AI analyzes and structures your content, creating a unified set of clear, editable notes. See the connections you never knew existed.</p>
-            </div>
-        """, unsafe_allow_html=True)
+        st.markdown('<div class="how-it-works-card"><div class="step-number">2</div><h3>Synthesize & Understand</h3><p>Vekkam\'s AI analyzes and structures your content, creating a unified set of clear, editable notes. See the connections you never knew existed.</p></div>', unsafe_allow_html=True)
     with col3:
-        st.markdown("""
-            <div class="how-it-works-card">
-                <div class="step-number">3</div>
-                <h3>Query, Test & Master</h3>
-                <p>Chat with your personal AI tutor and generate mock tests directly from your notes. Turn passive knowledge into active, exam-ready expertise.</p>
-            </div>
-        """, unsafe_allow_html=True)
+        st.markdown('<div class="how-it-works-card"><div class="step-number">3</div><h3>Query, Test & Master</h3><p>Chat with your personal AI tutor and generate mock tests directly from your notes. Turn passive knowledge into active, exam-ready expertise.</p></div>', unsafe_allow_html=True)
     
     st.markdown('<h2 class="section-header">A Knowledge Base That Grows With You</h2>', unsafe_allow_html=True)
     st.markdown("Vekkam isn't just for one-time cramming. Every session you create builds upon the last, creating a personal, searchable library of your entire academic career. Your Personal TA becomes more intelligent about your curriculum over time, making it an indispensable tool for finals, comprehensive exams, and lifelong learning.")
@@ -456,44 +387,12 @@ def show_landing_page(auth_url):
     st.markdown('<h2 class="section-header">The Unfair Advantage Over Other Tools</h2>', unsafe_allow_html=True)
     st.markdown("""
         <table class="comparison-table-premium">
-            <thead>
-                <tr>
-                    <th>Capability</th>
-                    <th>Vekkam</th>
-                    <th>ChatGPT / Gemini</th>
-                    <th>Turbolearn</th>
-                    <th>Perplexity</th>
-                </tr>
-            </thead>
+            <thead><tr><th>Capability</th><th>Vekkam</th><th>ChatGPT / Gemini</th><th>Turbolearn</th><th>Perplexity</th></tr></thead>
             <tbody>
-                <tr>
-                    <td><strong>Multi-Modal Synthesis (Audio, PDF, IMG)</strong></td>
-                    <td class="check">✔</td>
-                    <td class="cross">Partial</td>
-                    <td class="cross">YouTube Only</td>
-                    <td class="cross">URL/Text Only</td>
-                </tr>
-                <tr>
-                    <td><strong>Chat With <u>Your</u> Content Only</strong></td>
-                    <td class="check">✔</td>
-                    <td class="cross">✖ (General)</td>
-                    <td class="check">✔</td>
-                    <td class="cross">✖ (Web Search)</td>
-                </tr>
-                <tr>
-                    <td><strong>Integrated Mock Test Generator</strong></td>
-                    <td class="check">✔</td>
-                    <td class="cross">✖</td>
-                    <td class="cross">✖</td>
-                    <td class="cross">✖</td>
-                </tr>
-                <tr>
-                    <td><strong>Builds a Persistent Knowledge Base</strong></td>
-                    <td class="check">✔</td>
-                    <td class="cross">✖ (Chat History)</td>
-                    <td class="check">✔</td>
-                    <td class="cross">✖</td>
-                </tr>
+                <tr><td><strong>Multi-Modal Synthesis (Audio, PDF, IMG)</strong></td><td class="check">✔</td><td class="cross">Partial</td><td class="cross">YouTube Only</td><td class="cross">URL/Text Only</td></tr>
+                <tr><td><strong>Chat With <u>Your</u> Content Only</strong></td><td class="check">✔</td><td class="cross">✖ (General)</td><td class="check">✔</td><td class="cross">✖ (Web Search)</td></tr>
+                <tr><td><strong>Integrated Mock Test Generator</strong></td><td class="check">✔</td><td class="cross">✖</td><td class="cross">✖</td><td class="cross">✖</td></tr>
+                <tr><td><strong>Builds a Persistent Knowledge Base</strong></td><td class="check">✔</td><td class="cross">✖ (Chat History)</td><td class="check">✔</td><td class="cross">✖</td></tr>
             </tbody>
         </table>
     """, unsafe_allow_html=True)
@@ -541,7 +440,7 @@ def show_workspace_state():
                 with st.spinner("Searching for learning resources and saving to Google Sheets..."):
                     try:
                         spreadsheet_id = st.secrets["google_sheets"]["spreadsheet_id"]
-                        all_rows_to_append = [["Topic", "Type", "Source", "Title", "URL"]] # Header row
+                        all_rows_to_append = [["Topic", "Type", "Source", "Title", "URL"]]
                         for item in st.session_state.outline_data:
                             topic = item['topic']
                             alleles = generate_alleles_from_search(topic)
@@ -714,11 +613,6 @@ def show_mock_test_generator():
     st.header("📝 Mock Test Generator")
 
     st.session_state.setdefault('test_stage', 'start')
-    st.session_state.setdefault('syllabus', "")
-    st.session_state.setdefault('questions', {})
-    st.session_state.setdefault('user_answers', {})
-    st.session_state.setdefault('score', {})
-    st.session_state.setdefault('feedback', {})
     
     stage = st.session_state.test_stage
     if stage == 'start':
@@ -753,7 +647,7 @@ def render_generating_questions():
         questions_json = generate_questions_from_syllabus(st.session_state.syllabus, "MCQ", 10)
         
         if questions_json and "questions" in questions_json:
-            st.session_state.questions['mcq'] = questions_json["questions"]
+            st.session_state.questions = {'mcq': questions_json["questions"]}
             st.session_state.test_stage = 'mcq_test'
             st.rerun()
         else:
@@ -768,11 +662,7 @@ def render_mcq_test():
     mcq_questions = st.session_state.questions.get('mcq', [])
     
     if not mcq_questions:
-        st.error("MCQ questions not found. Please restart the test.")
-        if st.button("Restart"):
-            st.session_state.test_stage = 'start'
-            st.rerun()
-        return
+        st.error("MCQ questions not found. Please restart the test."); st.button("Restart", on_click=lambda: st.session_state.update(test_stage='start')); return
 
     with st.form("mcq_form"):
         user_answers = {}
@@ -789,9 +679,9 @@ def render_mcq_test():
 
         submitted = st.form_submit_button("Submit Answers")
         if submitted:
-            st.session_state.user_answers['mcq'] = user_answers
+            st.session_state.user_answers = {'mcq': user_answers}
             score = sum(1 for q in mcq_questions if user_answers.get(q['question_id']) == q['answer'])
-            st.session_state.score['mcq'] = score
+            st.session_state.score = {'mcq': score}
             st.session_state.test_stage = 'mcq_results'
             st.rerun()
 
@@ -801,16 +691,16 @@ def render_mcq_results():
     total = len(st.session_state.questions.get('mcq', []))
     st.subheader(f"MCQ Results: You scored {score} / {total}")
 
-    if 'mcq' not in st.session_state.feedback:
+    if 'mcq' not in st.session_state.get('feedback', {}):
         with st.spinner("Analyzing your performance and generating feedback..."):
             all_questions = st.session_state.questions.get('mcq', [])
             user_answers = st.session_state.user_answers.get('mcq', {})
             feedback_text = generate_feedback_on_performance(score, total, all_questions, user_answers, st.session_state.syllabus)
-            st.session_state.feedback['mcq'] = feedback_text
+            st.session_state.setdefault('feedback', {})['mcq'] = feedback_text
     
     with st.container(border=True):
         st.subheader("💡 Suggestions for Improvement")
-        st.write(st.session_state.feedback.get('mcq', "No feedback generated."))
+        st.write(st.session_state.get('feedback', {}).get('mcq', "No feedback generated."))
         
     if score >= 7:
         st.success("Congratulations! You've passed this stage.")
@@ -887,7 +777,6 @@ def show_mastery_engine():
     st.header("🏆 Mastery Engine")
 
     st.session_state.setdefault('mastery_stage', 'course_selection')
-    st.session_state.setdefault('user_progress', {})
     
     stage = st.session_state.mastery_stage
     if stage == 'course_selection':
@@ -906,9 +795,8 @@ def render_course_selection():
         st.session_state.current_genome = ECON_101_GENOME
         
         progress = {}
-        genome_nodes = st.session_state.current_genome['nodes']
-        all_node_ids = {node['gene_id'] for node in genome_nodes}
-        destination_nodes = {edge['to'] for edge in st.session_state.current_genome['edges']}
+        all_node_ids = {node['gene_id'] for node in ECON_101_GENOME['nodes']}
+        destination_nodes = {edge['to'] for edge in ECON_101_GENOME['edges']}
         root_nodes = all_node_ids - destination_nodes
 
         for node_id in all_node_ids:
@@ -925,7 +813,7 @@ def render_skill_tree():
     nodes = st.session_state.current_genome['nodes']
     progress = st.session_state.user_progress
 
-    for node in nodes:
+    for i, node in enumerate(nodes):
         node_id, node_name = node['gene_id'], node['gene_name']
         status = progress.get(node_id, 'locked')
         
@@ -936,13 +824,13 @@ def render_skill_tree():
                 st.session_state.selected_node_id = node_id
                 st.session_state.mastery_stage = 'content_viewer'
                 st.rerun()
-        else: # locked
+        else:
             st.info(f"**{node_name}** - 🔒 Locked", icon="🔒")
         
-        if node_id != nodes[-1]['gene_id']:
+        if i < len(nodes) - 1:
              st.markdown('<p style="text-align: center; margin: 0; padding: 0;">↓</p>', unsafe_allow_html=True)
     
-    st.markdown("---")
+    st.divider()
     if st.button("Back to Course Selection"):
         st.session_state.mastery_stage = 'course_selection'
         st.rerun()
