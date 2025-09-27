@@ -12,10 +12,10 @@ import requests
 import tempfile
 from functools import wraps
 from google.api_core import exceptions
-from pathlib import Path # Added import for Path
+from pathlib import Path
 import uuid
 
-# --- GOOGLE OAUTH LIBRARIES ---
+# --- GOOGLE OAUTH & API LIBRARIES ---
 try:
     from google_auth_oauthlib.flow import Flow
     from googleapiclient.discovery import build
@@ -144,7 +144,9 @@ def save_session_to_history(user_id, final_notes):
 
 # --- API SELF-DIAGNOSIS & UTILITIES ---
 def check_gemini_api():
-    try: genai.get_model('models/gemini-2.5-flash-lite'); return "Valid"
+    try:
+        genai.get_model('models/gemini-pro')
+        return "Valid"
     except Exception as e:
         st.sidebar.error(f"Gemini API Key in secrets is invalid: {e}")
         return "Invalid"
@@ -173,18 +175,13 @@ def chunk_text(text, source_id, chunk_size=CHUNK_SIZE, overlap=CHUNK_OVERLAP):
 def process_source(file, source_type):
     try:
         source_id = f"{source_type}:{file.name}"
-        model = genai.GenerativeModel('models/gemini-2.5-flash-lite')
+        model = genai.GenerativeModel('gemini-pro-vision') if source_type in ['image', 'pdf'] else genai.GenerativeModel('gemini-pro')
         if source_type == 'transcript':
             with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(file.name)[1]) as tmp:
                 tmp.write(file.getvalue())
                 tmp_path = tmp.name
             try:
                 audio_file = genai.upload_file(path=tmp_path)
-                while audio_file.state.name == "PROCESSING":
-                    time.sleep(2)
-                    audio_file = genai.get_file(audio_file.name)
-                if audio_file.state.name == "FAILED":
-                    return {"status": "error", "source_id": source_id, "reason": "Gemini file processing failed."}
                 response = model.generate_content(["Transcribe this noisy classroom audio recording. Prioritize capturing all speech, even if faint, over background noise and echo.", audio_file])
                 chunks = chunk_text(response.text, source_id)
                 return {"status": "success", "source_id": source_id, "chunks": chunks}
@@ -206,7 +203,7 @@ def process_source(file, source_type):
 # --- AGENTIC WORKFLOW FUNCTIONS ---
 @gemini_api_call_with_retry
 def generate_content_outline(all_chunks, existing_outline=None):
-    model = genai.GenerativeModel('models/gemini-2.5-flash-lite')
+    model = genai.GenerativeModel('gemini-pro')
     prompt_chunks = [{"chunk_id": c['chunk_id'], "text_snippet": c['text'][:200] + "..."} for c in all_chunks if c.get('text') and len(c['text'].split()) > 10]
     
     if not prompt_chunks:
@@ -236,7 +233,7 @@ def generate_content_outline(all_chunks, existing_outline=None):
 
 @gemini_api_call_with_retry
 def synthesize_note_block(topic, relevant_chunks_text, instructions):
-    model = genai.GenerativeModel('models/gemini-2.5-flash-lite')
+    model = genai.GenerativeModel('gemini-pro')
     prompt = f"""
     You are a world-class note-taker. Synthesize a detailed, clear, and well-structured note block for a single topic: {topic}.
     Your entire response MUST be based STRICTLY and ONLY on the provided source text. Do not introduce any external information.
@@ -255,7 +252,7 @@ def synthesize_note_block(topic, relevant_chunks_text, instructions):
 @gemini_api_call_with_retry
 def answer_from_context(query, context):
     """Answers a user query based ONLY on the provided context."""
-    model = genai.GenerativeModel('models/gemini-2.5-flash-lite')
+    model = genai.GenerativeModel('gemini-pro')
     prompt = f"""
     You are a helpful study assistant. Your task is to answer the user question based strictly and exclusively on the provided study material context.
     Do not use any external knowledge. If the answer is not in the context, clearly state that the information is not available in the provided materials.
@@ -814,7 +811,7 @@ def get_bloom_level_name(level):
 @gemini_api_call_with_retry
 def generate_questions_from_syllabus(syllabus_text, question_type, question_count):
     """Generates test questions from syllabus text using the Gemini API."""
-    model = genai.GenerativeModel('models/gemini-2.5-flash-lite')
+    model = genai.GenerativeModel('gemini-pro')
     
     prompt = f"""
     You are an expert Question Paper Setter and an authority on Bloom's Taxonomy, tasked with creating a high-quality assessment.
@@ -850,7 +847,7 @@ def generate_questions_from_syllabus(syllabus_text, question_type, question_coun
 @gemini_api_call_with_retry
 def generate_feedback_on_performance(score, total, questions, user_answers, syllabus):
     """Generates personalized feedback on test performance using the Gemini API."""
-    model = genai.GenerativeModel('models/gemini-2.5-flash-lite')
+    model = genai.GenerativeModel('gemini-pro')
     
     incorrect_questions = []
     for q in questions:
@@ -887,8 +884,22 @@ def generate_feedback_on_performance(score, total, questions, user_answers, syll
     return response.text
 
 # --- AI & Utility Functions for Mastery Engine ---
+def get_google_search_service():
+    """Initializes and returns the Google Custom Search API service."""
+    try:
+        api_key = st.secrets["google_search"]["api_key"]
+        service = build('customsearch', 'v1', developerKey=api_key)
+        return service
+    except (KeyError, FileNotFoundError):
+        st.error("Google Search API key not configured in st.secrets.toml")
+        return None
+    except Exception as e:
+        st.error(f"Failed to build Google Search service: {e}")
+        return None
+
 def generate_allele_from_query(user_topic):
-    model = genai.GenerativeModel('models/gemini-2.5-flash-lite')
+    """Uses Google Search to find content and constructs a new allele dictionary."""
+    model = genai.GenerativeModel('gemini-pro')
     
     # Generate a descriptive gene_name, ensuring it's concise
     gene_name_response = model.generate_content(f"Provide a concise, 3-5 word conceptual name for the topic: '{user_topic}'. Output only the name.")
@@ -897,27 +908,40 @@ def generate_allele_from_query(user_topic):
     # Generate a unique gene_id
     gene_id = f"USER_{hashlib.md5(user_topic.encode()).hexdigest()[:8].upper()}"
     
-    # Fetch content using Google Search
-    search_queries = [f"{user_topic} explanation", f"{user_topic} simple definition", f"{user_topic} youtube video tutorial"]
-    search_results = google_search.search(queries=search_queries)
-    
+    # Fetch content using Google Custom Search API
+    service = get_google_search_service()
+    if not service:
+        return None  # Stop if service failed to initialize
+
+    cse_id = st.secrets.get("google_search", {}).get("cse_id")
+    if not cse_id:
+        st.error("Google Search CSE ID not configured in st.secrets.toml")
+        return None
+
     text_content = []
     video_url = None
-    
-    for result_set in search_results:
-        for res in result_set.results:
-            if "youtube.com/watch" in res.url and not video_url:
-                video_url = res.url
-            if res.snippet:
-                text_content.append(res.snippet)
-    
+    search_queries = [f"{user_topic} explanation", f"{user_topic} simple definition", f"{user_topic} youtube video tutorial"]
+
+    for query in search_queries:
+        try:
+            res = service.cse().list(q=query, cx=cse_id, num=3).execute()
+            items = res.get('items', [])
+            for item in items:
+                if "youtube.com/watch" in item.get('link', '') and not video_url:
+                    video_url = item.get('link')
+                if item.get('snippet'):
+                    text_content.append(item.get('snippet'))
+        except Exception as e:
+            st.warning(f"Google Search failed for query '{query}': {e}")
+            time.sleep(1)
+            
     # Combine relevant text snippets
     full_text = " ".join(text_content)
     
-    # If text content is too sparse, try to synthesize a better explanation
-    if len(full_text.split()) < 100: # Arbitrary threshold for "sparse"
-        st.write("Generating a more comprehensive text explanation...")
-        synthesis_prompt = f"Based on the following snippets, provide a concise but comprehensive explanation of '{user_topic}':\n\n{full_text}"
+    # If text content is sparse, synthesize a better explanation
+    if len(full_text.split()) < 100:
+        st.write("Synthesizing a more comprehensive explanation...")
+        synthesis_prompt = f"Based on these search snippets, provide a clear, concise but comprehensive explanation of '{user_topic}':\n\n{full_text}"
         synthesis_response = model.generate_content(synthesis_prompt)
         if synthesis_response.text:
             full_text = synthesis_response.text
@@ -927,23 +951,15 @@ def generate_allele_from_query(user_topic):
     if full_text:
         content_alleles.append({"type": "text", "content": full_text})
     if video_url:
-        # Check if youtube API can get info for the video, if not, just use the raw URL
-        try:
-            video_info = youtube.get_video_information(url=video_url, fetch_audio_video_tokens=False)
-            if video_info and video_info.url: # Ensure it's a valid youtube video and not a generic link
-                content_alleles.append({"type": "video", "url": video_info.url})
-        except Exception as e:
-            st.warning(f"Could not retrieve YouTube video info for {video_url}: {e}. Adding raw URL.")
-            content_alleles.append({"type": "video", "url": video_url})
-
+        content_alleles.append({"type": "video", "url": video_url})
 
     if not content_alleles:
-        return None # Failed to generate any content
+        return None  # Failed to generate any content
 
     return {
         "gene_id": gene_id,
         "gene_name": gene_name,
-        "difficulty": 0, # Default difficulty for user-generated alleles
+        "difficulty": 0,  # Default difficulty for user-generated alleles
         "content_alleles": content_alleles
     }
 
@@ -1154,9 +1170,8 @@ def main():
     if 'user_info' not in st.session_state: st.session_state.user_info = None
     try:
         genai.configure(api_key=st.secrets["gemini"]["api_key"])
-        # google_search and youtube APIs are automatically configured by the framework with secrets.toml values.
     except (KeyError, FileNotFoundError) as e:
-        st.error(f"API keys not configured in st.secrets or invalid: {e}"); st.stop()
+        st.error(f"Gemini API key not configured in st.secrets.toml: {e}"); st.stop()
 
     flow = get_google_flow()
     auth_code = st.query_params.get("code")
