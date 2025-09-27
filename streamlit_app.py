@@ -709,13 +709,16 @@ def render_syllabus_input():
             st.rerun()
 
 def render_generating_questions():
-    """Handles the background generation of questions for all stages."""
+    # Ensure st.session_state.questions is initialized before any access
+    if 'questions' not in st.session_state:
+        st.session_state.questions = {}
+
     with st.spinner("Building your test... The AI is analyzing the syllabus and crafting questions based on Bloom's Taxonomy..."):
         questions_json = generate_questions_from_syllabus(st.session_state.syllabus, "MCQ", 10)
         
         if questions_json and "questions" in questions_json:
             st.session_state.questions['mcq'] = questions_json["questions"]
-            st.session_state.questions['fib'] = [] 
+            st.session_state.questions['fib'] = []
             st.session_state.questions['short'] = []
             st.session_state.questions['long'] = []
             st.session_state.test_stage = 'mcq_test'
