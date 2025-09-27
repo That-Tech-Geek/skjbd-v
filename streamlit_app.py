@@ -746,6 +746,34 @@ def render_mcq_test():
         for i, q in enumerate(mcq_questions):
             st.markdown(f"**{i+1}. {q['question_text']}**")
             st.caption(f"Bloom's Taxonomy Level: {q.get('taxonomy_level', 'N/A')} ({get_bloom_level_name(q.get('taxonomy_level'))})")
+            options_keys = sorted(q['options'].keys())
+            options_values = [q['options'][key] for key in options_keys]
+            
+            selected_option_text = st.radio("Select your answer:", options_values, key=q['question_id'], label_visibility="collapsed")
+            if selected_option_text:
+                user_answers[q['question_id']] = options_keys[options_values.index(selected_option_text)]
+            st.divider()
+
+        submitted = st.form_submit_button("Submit Answers")
+        if submitted:
+            # FIX: Ensure 'user_answers' exists before assigning a sub-key
+            if 'user_answers' not in st.session_state:
+                st.session_state.user_answers = {}
+            st.session_state.user_answers['mcq'] = user_answers
+            
+            score = 0
+            for q in mcq_questions:
+                if user_answers.get(q['question_id']) == q['answer']:
+                    score += 1
+            st.session_state.score['mcq'] = score
+            st.session_state.test_stage = 'mcq_results'
+            st.rerun()
+
+    with st.form("mcq_form"):
+        user_answers = {}
+        for i, q in enumerate(mcq_questions):
+            st.markdown(f"**{i+1}. {q['question_text']}**")
+            st.caption(f"Bloom's Taxonomy Level: {q.get('taxonomy_level', 'N/A')} ({get_bloom_level_name(q.get('taxonomy_level'))})")
             # Ensure options are always presented in a consistent order
             options_keys = sorted(q['options'].keys())
             options_values = [q['options'][key] for key in options_keys]
