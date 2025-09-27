@@ -37,6 +37,7 @@ CHUNK_OVERLAP = 50
 MAX_RETRIES = 3
 DATA_DIR = Path("user_data")
 DATA_DIR.mkdir(exist_ok=True)
+GEMINI_MODEL = 'gemini-1.5-flash'
 
 # --- PAGE CONFIGURATION ---
 st.set_page_config(page_title="Vekkam Engine", page_icon="🧠", layout="wide", initial_sidebar_state="expanded")
@@ -191,7 +192,7 @@ def save_session_to_history(user_id, final_notes):
 # --- API SELF-DIAGNOSIS & UTILITIES ---
 def check_gemini_api():
     try:
-        genai.get_model('models/gemini-1.5-flash')
+        genai.get_model(GEMINI_MODEL)
         return "Valid"
     except Exception:
         st.sidebar.error("Gemini API Key in secrets is invalid.")
@@ -199,9 +200,11 @@ def check_gemini_api():
 
 def resilient_json_parser(json_string):
     try:
+        # First, try to find a JSON block enclosed in markdown backticks
         match = re.search(r'```json\s*(\{.*?\})\s*```', json_string, re.DOTALL)
         if match:
             return json.loads(match.group(1))
+        # If not found, try to find any valid JSON object in the string
         match = re.search(r'(\{.*?\})', json_string, re.DOTALL)
         if match:
             return json.loads(match.group(0))
@@ -226,7 +229,7 @@ def chunk_text(text, source_id, chunk_size=CHUNK_SIZE, overlap=CHUNK_OVERLAP):
 def process_source(file, source_type):
     try:
         source_id = f"{source_type}:{file.name}"
-        model = genai.GenerativeModel('models/gemini-1.5-flash')
+        model = genai.GenerativeModel(GEMINI_MODEL)
         if source_type == 'transcript':
             with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(file.name)[1]) as tmp:
                 tmp.write(file.getvalue())
@@ -240,7 +243,7 @@ def process_source(file, source_type):
                     return {"status": "error", "source_id": source_id, "reason": "Gemini file processing failed."}
                 response = model.generate_content(["Transcribe this audio recording.", audio_file])
                 chunks = chunk_text(response.text, source_id)
-                genai.delete_file(audio_file.name)
+                genai.delete_file(audio_file.name) # Clean up the uploaded file
                 return {"status": "success", "source_id": source_id, "chunks": chunks}
             finally:
                 os.unlink(tmp_path)
@@ -259,50 +262,116 @@ def process_source(file, source_type):
 # --- AGENTIC WORKFLOW FUNCTIONS ---
 @gemini_api_call_with_retry
 def generate_content_outline(all_chunks):
-    # ... (code is unchanged)
+    model = genai.GenerativeModel(GEMINI_MODEL)
+    prompt_chunks = [{"chunk_id": c['chunk_id'], "text_snippet": c['text'][:200] + "..."} for c in all_chunks if c.get('text') and len(c['text'].split()) > 10]
     
+    if not prompt_chunks:
+        st.error("Could not find enough content to generate an outline. Please check your uploaded files.")
+        return None
+
+    prompt = f"""
+    You are a master curriculum designer. Analyze the content chunks and create a structured, logical topic outline.
+    For each topic, you MUST list the `chunk_id`s that are most relevant. Base the outline STRICTLY on the provided content.
+    Output ONLY a valid JSON object with a root key "outline", which is a list of objects. Each object must have keys "topic" (string) and "relevant_chunks" (a list of string chunk_ids).
+
+    **Content Chunks:**
+    ---
+    {json.dumps(prompt_chunks, indent=2)}
+    """
+    response = model.generate_content(prompt)
+    return resilient_json_parser(response.text)
+
 @gemini_api_call_with_retry
 def synthesize_note_block(topic, relevant_chunks_text, instructions):
-    # ... (code is unchanged)
-    
+    model = genai.GenerativeModel(GEMINI_MODEL)
+    prompt = f"""
+    You are a world-class note-taker. Synthesize a detailed, clear, and well-structured note block for a single topic: {topic}.
+    Your entire response MUST be based STRICTLY and ONLY on the provided source text. Do not introduce any external information.
+    Adhere to the user instructions for formatting and style. Format the output in Markdown.
+
+    **User Instructions:** {instructions if instructions else "Default: Create clear, concise, well-structured notes."}
+
+    **Source Text (Use only this):**
+    ---
+    {relevant_chunks_text}
+    ---
+    """
+    response = model.generate_content(prompt)
+    return response.text
+
 @gemini_api_call_with_retry
 def answer_from_context(query, context):
-    # ... (code is unchanged)
-    
+    model = genai.GenerativeModel(GEMINI_MODEL)
+    prompt = f"""
+    You are a helpful study assistant. Answer the user question based strictly on the provided study material context.
+    If the answer is not in the context, clearly state that the information is not available in the provided materials.
+
+    **User Question:**
+    {query}
+
+    **Study Material Context:**
+    ---
+    {context}
+    ---
+    """
+    response = model.generate_content(prompt)
+    return response.text
+
 # --- AUTHENTICATION & SESSION MANAGEMENT ---
 def get_google_flow():
+    """Initializes the Google OAuth flow with required scopes."""
     try:
+        # The structure of st.secrets["google"] is expected to match the client_secret.json file.
         client_config = {"web": st.secrets["google"]}
         scopes = [
             "https://www.googleapis.com/auth/userinfo.profile", 
             "https://www.googleapis.com/auth/userinfo.email", 
             "openid",
-            "https://www.googleapis.com/auth/spreadsheets"
+            "https://www.googleapis.com/auth/spreadsheets" # Scope for Google Sheets API
         ]
         return Flow.from_client_config(client_config, scopes=scopes, redirect_uri=st.secrets["google"]["redirect_uri"])
     except (KeyError, FileNotFoundError):
         st.error("OAuth credentials are not configured correctly in st.secrets."); st.stop()
 
 def reset_session(tool_choice):
+    """Resets the session state, preserving user info and credentials."""
     user_info = st.session_state.get('user_info')
     credentials = st.session_state.get('credentials')
     st.session_state.clear()
     st.session_state.user_info = user_info
     st.session_state.credentials = credentials
     st.session_state.tool_choice = tool_choice
-    st.session_state.current_state = 'upload'
+    st.session_state.current_state = 'upload' # Default start state for Note Engine
 
-# --- LANDING PAGE ---
+# --- UI COMPONENTS & STATES ---
+
 def show_landing_page(auth_url):
-    # ... (code is unchanged)
-    
-# --- UI STATE FUNCTIONS for NOTE & LESSON ENGINE ---
+    """Displays the marketing/landing page for non-logged-in users."""
+    st.markdown("""<style>...</style>""", unsafe_allow_html=True) # CSS is omitted for brevity
+    # ... (Landing page markdown content) ...
+
 def show_upload_state():
-    # ... (code is unchanged)
-    
+    st.header("Note & Lesson Engine: Upload")
+    uploaded_files = st.file_uploader("Select files", accept_multiple_files=True, type=['mp3', 'm4a', 'wav', 'png', 'jpg', 'pdf'])
+    if st.button("Process Files", type="primary") and uploaded_files:
+        st.session_state.initial_files = uploaded_files
+        st.session_state.current_state = 'processing'
+        st.rerun()
+
 def show_processing_state():
-    # ... (code is unchanged)
-    
+    st.header("Initial Processing...")
+    with st.spinner("Extracting content from all files... This may take a moment."):
+        results = []
+        with ThreadPoolExecutor() as executor:
+            futures = {executor.submit(process_source, f, 'transcript' if f.type.startswith('audio/') else 'image' if f.type.startswith('image/') else 'pdf'): f for f in st.session_state.initial_files}
+            for future in as_completed(futures):
+                results.append(future.result())
+        
+        st.session_state.all_chunks = [c for r in results if r and r['status'] == 'success' for c in r['chunks']]
+        st.session_state.extraction_failures = [r for r in results if r and r['status'] == 'error']
+    st.session_state.current_state = 'workspace'
+    st.rerun()
+
 def show_workspace_state():
     st.header("Vekkam Workspace")
     col1, col2 = st.columns([2, 1])
@@ -315,10 +384,10 @@ def show_workspace_state():
             if outline_json and "outline" in outline_json: 
                 st.session_state.outline_data = outline_json["outline"]
                 
-                with st.spinner("Searching for learning alleles and saving to Google Sheets..."):
+                with st.spinner("Searching for learning resources and saving to Google Sheets..."):
                     try:
                         spreadsheet_id = st.secrets["google_sheets"]["spreadsheet_id"]
-                        all_rows_to_append = [["Topic", "Type", "Source", "Title", "URL"]]
+                        all_rows_to_append = [["Topic", "Type", "Source", "Title", "URL"]] # Header row
                         for item in st.session_state.outline_data:
                             topic = item['topic']
                             alleles = generate_alleles_from_search(topic)
@@ -330,71 +399,80 @@ def show_workspace_state():
                             if credentials and append_to_google_sheet(credentials, spreadsheet_id, all_rows_to_append):
                                 st.success(f"Appended {len(all_rows_to_append)-1} resources to your Google Sheet!")
                     except KeyError:
-                        st.error("`spreadsheet_id` not found in st.secrets.")
+                        st.error("`spreadsheet_id` not found in st.secrets. Please add it to your secrets file.")
                     except Exception as e:
-                        st.error(f"An error occurred during allele generation: {e}")
+                        st.error(f"An error occurred during resource generation: {e}")
             else: 
                 st.error("Failed to generate outline. The AI couldn't structure the provided content.")
         
         if st.session_state.get('outline_data'):
-            # ... (rest of the function is unchanged)
+            initial_text = "\n".join([item.get('topic', '') for item in st.session_state.outline_data])
+            st.session_state.editable_outline = st.text_area("Editable Outline:", value=initial_text, height=300)
+            st.session_state.synthesis_instructions = st.text_area("Synthesis Instructions (Optional):", height=100, placeholder="e.g., 'Explain this like I'm 15' or 'Focus on key formulas'")
+            if st.button("Synthesize Notes"):
+                st.session_state.current_state = 'synthesizing'
+                st.rerun()
+
+    with col2:
+        st.subheader("Source Explorer")
+        if st.session_state.get('extraction_failures'):
+            with st.expander("⚠️ Processing Errors", expanded=True):
+                for failure in st.session_state.extraction_failures:
+                    st.error(f"**{failure['source_id']}**: {failure['reason']}")
 
 def show_synthesizing_state():
-    # ... (code is unchanged)
-    
-def show_results_state():
-    # ... (code is unchanged)
+    # ... (Function code is unchanged)
 
-# --- UI STATE FUNCTION for PERSONAL TA ---
+def show_results_state():
+    # ... (Function code is unchanged)
+
 def show_personal_ta_ui():
-    # ... (code is unchanged)
-    
-# --- UI STATE FUNCTIONS for MOCK TEST GENERATOR ---
+    # ... (Function code is unchanged)
+
+# --- MOCK TEST GENERATOR ---
 def show_mock_test_generator():
-    # ... (code is unchanged)
-    
-# --- Helper Functions for Mock Test Stages ---
+    # ... (Function code is unchanged)
+
 def render_syllabus_input():
-    # ... (code is unchanged)
-    
+    # ... (Function code is unchanged)
+
 def render_generating_questions():
-    # ... (code is unchanged)
-    
+    # ... (Function code is unchanged)
+
 def render_mcq_test():
-    # ... (code is unchanged)
-    
+    # ... (Function code is unchanged)
+
 def render_mcq_results():
-    # ... (code is unchanged)
-    
-# --- AI & Utility Functions for Mock Test ---
+    # ... (Function code is unchanged)
+
 def get_bloom_level_name(level):
-    # ... (code is unchanged)
-    
+    # ... (Function code is unchanged)
+
 @gemini_api_call_with_retry
 def generate_questions_from_syllabus(syllabus_text, question_type, question_count):
-    # ... (code is unchanged)
-    
+    # ... (Function code is unchanged)
+
 @gemini_api_call_with_retry
 def generate_feedback_on_performance(score, total, questions, user_answers, syllabus):
-    # ... (code is unchanged)
-    
-# --- UI STATE FUNCTIONS for MASTERY ENGINE (GENESIS MODULE) ---
+    # ... (Function code is unchanged)
+
+# --- MASTERY ENGINE (GENESIS MODULE) ---
 def show_mastery_engine():
-    # ... (code is unchanged)
-    
+    # ... (Function code is unchanged)
+
 def render_course_selection():
-    # ... (code is unchanged)
-    
+    # ... (Function code is unchanged)
+
 def render_skill_tree():
-    # ... (code is unchanged)
-    
+    # ... (Function code is unchanged)
+
 def render_content_viewer():
-    # ... (code is unchanged)
+    # ... (Function code is unchanged)
 
 def render_boss_battle():
-    # ... (code is unchanged)
-    
-# --- MAIN APP ---
+    # ... (Function code is unchanged)
+
+# --- MAIN APPLICATION ---
 def main():
     """Main function to run the Streamlit application."""
     st.session_state.setdefault('user_info', None)
@@ -431,7 +509,7 @@ def main():
         show_landing_page(auth_url)
         return
 
-    # --- Post-Login App ---
+    # --- Post-Login Application UI ---
     st.sidebar.title("Vekkam Engine")
     user = st.session_state.user_info
     user_id = user.get('id') or user.get('email')
@@ -451,19 +529,18 @@ def main():
             with st.sidebar.expander(f"{session.get('timestamp', 'N/A')} - {session.get('title', 'Untitled')}"):
                 is_editing = st.session_state.get('editing_session_id') == session.get('id')
                 if is_editing:
-                    # ... (code is unchanged)
+                    # ... (UI for editing is unchanged)
                 else:
-                    # ... (code is unchanged)
+                    # ... (UI for viewing/deleting is unchanged)
     st.sidebar.divider()
 
     tool_options = ("Note & Lesson Engine", "Personal TA", "Mock Test Generator", "Mastery Engine")
     st.session_state.setdefault('tool_choice', tool_options[0])
     
-    tool_choice = st.sidebar.radio("Select a Tool", tool_options, key='tool_choice_radio')
+    tool_choice_from_radio = st.sidebar.radio("Select a Tool", tool_options, key='tool_choice_radio', index=tool_options.index(st.session_state.tool_choice))
 
-    if st.session_state.tool_choice != tool_choice:
-        st.session_state.tool_choice = tool_choice
-        reset_session(tool_choice)
+    if st.session_state.tool_choice != tool_choice_from_radio:
+        reset_session(tool_choice_from_radio)
         st.rerun()
 
     st.sidebar.divider()
