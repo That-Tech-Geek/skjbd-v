@@ -283,93 +283,132 @@ def reset_session(tool_choice):
 
 # --- LANDING PAGE ---
 def show_landing_page(auth_url):
-    """Displays the feature-rich landing page"""
+    """Displays the AARRR-framework-based landing page."""
     st.markdown("""
         <style>
+            @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
             .main {
                 background-color: #FFFFFF;
+                font-family: 'Inter', sans-serif;
             }
-            h1, h2, h3 {
-                color: #004080; /* Dark Blue */
-            }
-            .stButton>button {
-                background-color: #007BFF; /* Bright Blue */
-                color: white;
-                border-radius: 8px;
-                padding: 10px 20px;
-                border: none;
-                font-weight: bold;
-            }
-            .stButton>button:hover {
-                background-color: #0056b3;
-            }
-            .feature-box {
-                background-color: #F0F8FF; /* Alice Blue */
-                padding: 20px;
-                border-radius: 10px;
-                border: 1px solid #B0C4DE; /* Light Steel Blue */
-                height: 100%;
-            }
-            .comparison-table {
-                width: 100%;
-                border-collapse: collapse;
-            }
-            .comparison-table th, .comparison-table td {
-                border: 1px solid #B0C4DE;
-                padding: 12px;
-                text-align: left;
-            }
-            .comparison-table th {
-                background-color: #E6F2FF; /* Lighter Blue */
-                color: #004080;
-            }
-            .comparison-table .check {
-                color: #28a745; /* Green for checkmark */
-                font-weight: bold;
+            .hero-container {
+                padding: 4rem 1rem;
                 text-align: center;
             }
-            .comparison-table .cross {
-                color: #dc3545; /* Red for cross */
-                font-weight: bold;
-                text-align: center;
+            .hero-title {
+                font-size: 3.5rem;
+                font-weight: 700;
+                background: -webkit-linear-gradient(45deg, #004080, #007BFF);
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+                margin-bottom: 1rem;
+            }
+            .hero-subtitle {
+                font-size: 1.25rem;
+                color: #555;
+                max-width: 700px;
+                margin: 0 auto 2rem auto;
+                line-height: 1.6;
+            }
+            .how-it-works-card {
+                padding: 1.5rem; text-align: center;
+            }
+            .how-it-works-card .step-number {
+                display: inline-block; width: 40px; height: 40px; line-height: 40px;
+                border-radius: 50%; background-color: #E6F2FF; color: #007BFF;
+                font-weight: 700; font-size: 1.2rem; margin-bottom: 1rem;
+            }
+            .comparison-table-premium {
+                width: 100%; border-collapse: separate; border-spacing: 0;
+                border-radius: 12px; overflow: hidden;
+                box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 1px solid #E0E0E0;
+            }
+            .comparison-table-premium th, .comparison-table-premium td {
+                padding: 1.2rem 1rem; text-align: left; border-bottom: 1px solid #E0E0E0;
+            }
+            .comparison-table-premium th {
+                background-color: #F8F9FA; color: #333; font-weight: 600;
+            }
+            .comparison-table-premium tbody tr:last-child td { border-bottom: none; }
+            .comparison-table-premium .check {
+                color: #1E90FF; font-weight: bold; text-align: center; font-size: 1.2rem;
+            }
+            .comparison-table-premium .cross {
+                color: #B0B0B0; font-weight: bold; text-align: center; font-size: 1.2rem;
+            }
+            .cta-button a {
+                font-size: 1.1rem !important; font-weight: 600 !important;
+                padding: 0.8rem 2rem !important; border-radius: 8px !important;
+                background-image: linear-gradient(45deg, #007BFF, #0056b3) !important;
+                border: none !important; transition: transform 0.2s, box-shadow 0.2s !important;
+            }
+            .cta-button a:hover {
+                transform: scale(1.05);
+                box-shadow: 0 6px 15px rgba(0, 123, 255, 0.3);
+            }
+            .section-header {
+                text-align: center; color: #004080; font-weight: 700;
+                margin-top: 4rem; margin-bottom: 2rem;
             }
         </style>
     """, unsafe_allow_html=True)
 
-    st.title("🧠 Vekkam: Stop Drowning in Notes. Start Understanding.")
-    st.subheader("Transform your scattered lecture recordings, textbook PDFs, and messy notes into a unified, intelligent study hub.")
+    # --- [A]cquisition & [A]ctivation: Hero Section ---
+    # Goal: Grab attention, state the value prop, and provide an immediate CTA.
+    with st.container():
+        st.markdown('<div class="hero-container">', unsafe_allow_html=True)
+        st.markdown('<h1 class="hero-title">From Classroom Chaos to Concept Clarity</h1>', unsafe_allow_html=True)
+        st.markdown('<p class="hero-subtitle">Stop drowning in disorganized notes and endless lectures. Vekkam transforms your course materials into a powerful, interactive knowledge base that helps you study smarter, not harder.</p>', unsafe_allow_html=True)
+        st.link_button("Activate Your Smart Study Hub", auth_url, type="primary")
+        st.markdown('</div>', unsafe_allow_html=True)
+    
     st.divider()
 
-    st.header("Your All-in-One Study Engine")
+    # --- [A]ctivation: The "Aha!" Moment - How It Works ---
+    # Goal: Show users how easy it is to get value, creating the "Aha!" moment.
+    st.markdown('<h2 class="section-header">Your Path to Mastery in 3 Simple Steps</h2>', unsafe_allow_html=True)
     col1, col2, col3 = st.columns(3, gap="large")
     with col1:
         st.markdown("""
-            <div class="feature-box">
-                <h3>📝 Note & Lesson Engine</h3>
-                <p>Upload anything—audio lectures, PDFs, PowerPoints, even images of a whiteboard. Vekkam intelligently extracts the content, creates a logical outline, and synthesizes everything into clear, editable study notes.</p>
+            <div class="how-it-works-card">
+                <div class="step-number">1</div>
+                <h3>Aggregate Your Materials</h3>
+                <p>Upload everything—audio lectures, textbook chapters, slide decks, and even whiteboard photos. Consolidate your entire syllabus in one place.</p>
             </div>
         """, unsafe_allow_html=True)
     with col2:
         st.markdown("""
-            <div class="feature-box">
-                <h3>🎓 Personal TA</h3>
-                <p>Ask questions and get answers based <strong>only</strong> on your uploaded material. No more generic web results or AI hallucinations. Your personal TA knows your syllabus inside and out because you taught it.</p>
+            <div class="how-it-works-card">
+                <div class="step-number">2</div>
+                <h3>Synthesize & Understand</h3>
+                <p>Vekkam's AI analyzes and structures your content, creating a unified set of clear, editable notes. See the connections you never knew existed.</p>
             </div>
         """, unsafe_allow_html=True)
     with col3:
         st.markdown("""
-            <div class="feature-box">
-                <h3>✍️ Mock Test Generator</h3>
-                <p>Turn passive learning into active recall. Generate multi-stage mock tests (MCQs, fill-in-the-blanks, and more) directly from your course material to solidify your knowledge and ace your exams.</p>
+            <div class="how-it-works-card">
+                <div class="step-number">3</div>
+                <h3>Query, Test & Master</h3>
+                <p>Chat with your personal AI tutor and generate mock tests directly from your notes. Turn passive knowledge into active, exam-ready expertise.</p>
             </div>
         """, unsafe_allow_html=True)
-
-    st.header("How Vekkam Stacks Up")
+    
+    # --- [R]etention: Highlighting Long-Term Value ---
+    # Goal: Hint at why users will want to keep coming back.
+    st.markdown('<h2 class="section-header">A Knowledge Base That Grows With You</h2>', unsafe_allow_html=True)
     st.markdown("""
-        <table class="comparison-table">
+        Vekkam isn't just for one-time cramming. Every session you create builds upon the last, creating a personal, searchable library of your entire academic career. 
+        Your Personal TA becomes more intelligent about your curriculum over time, making it an indispensable tool for finals, comprehensive exams, and lifelong learning.
+    """)
+
+    # --- [A]ctivation: Competitive Advantage ---
+    # Goal: Overcome objections by showing clear superiority over alternatives.
+    st.markdown('<h2 class="section-header">The Unfair Advantage Over Other Tools</h2>', unsafe_allow_html=True)
+    st.markdown("""
+        <table class="comparison-table-premium">
             <thead>
                 <tr>
-                    <th>Feature</th>
+                    <th>Capability</th>
                     <th>Vekkam</th>
                     <th>ChatGPT / Gemini</th>
                     <th>Turbolearn</th>
@@ -378,23 +417,16 @@ def show_landing_page(auth_url):
             </thead>
             <tbody>
                 <tr>
-                    <td><strong>Multi-Modal Input (Audio, PDF, IMG)</strong></td>
+                    <td><strong>Multi-Modal Synthesis (Audio, PDF, IMG)</strong></td>
                     <td class="check">✔</td>
                     <td class="cross">Partial</td>
                     <td class="cross">YouTube Only</td>
                     <td class="cross">URL/Text Only</td>
                 </tr>
                 <tr>
-                    <td><strong>Unified Note Synthesis</strong></td>
+                    <td><strong>Chat With <u>Your</u> Content Only</strong></td>
                     <td class="check">✔</td>
-                    <td class="cross">Manual / Prompt-based</td>
-                    <td class="check">✔</td>
-                    <td class="cross">✖</td>
-                </tr>
-                <tr>
-                    <td><strong>Personal TA on Your Content Only</strong></td>
-                    <td class="check">✔</td>
-                    <td class="cross">✖ (General Knowledge)</td>
+                    <td class="cross">✖ (General)</td>
                     <td class="check">✔</td>
                     <td class="cross">✖ (Web Search)</td>
                 </tr>
@@ -406,16 +438,9 @@ def show_landing_page(auth_url):
                     <td class="cross">✖</td>
                 </tr>
                 <tr>
-                    <td><strong>Editable Topic Outline</strong></td>
+                    <td><strong>Builds a Persistent Knowledge Base</strong></td>
                     <td class="check">✔</td>
-                    <td class="cross">✖</td>
-                    <td class="cross">✖</td>
-                    <td class="cross">✖</td>
-                </tr>
-                <tr>
-                    <td><strong>Persistent Session History</strong></td>
-                    <td class="check">✔</td>
-                    <td class="cross">Chat History Only</td>
+                    <td class="cross">✖ (Chat History)</td>
                     <td class="check">✔</td>
                     <td class="cross">✖</td>
                 </tr>
@@ -423,10 +448,13 @@ def show_landing_page(auth_url):
         </table>
     """, unsafe_allow_html=True)
 
-    st.header("")
-    _, center_col, _ = st.columns([1, 1.5, 1])
-    with center_col:
-        st.link_button("Get Started - Sign in with Google", auth_url, use_container_width=True)
+    # --- [A]ctivation: Final CTA ---
+    # Goal: A final, powerful call to action for users who have scrolled this far.
+    with st.container():
+        st.markdown('<div class="hero-container">', unsafe_allow_html=True)
+        st.markdown('<h2 class="section-header" style="margin-top:2rem;">Ready to Stop Studying Harder and Start Studying Smarter?</h2>', unsafe_allow_html=True)
+        st.link_button("Get Started for Free", auth_url, type="primary")
+        st.markdown('</div>', unsafe_allow_html=True)
 
 
 # --- UI STATE FUNCTIONS for NOTE & LESSON ENGINE ---
