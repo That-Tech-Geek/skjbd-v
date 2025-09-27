@@ -146,7 +146,7 @@ def save_session_to_history(user_id, final_notes):
 # --- API SELF-DIAGNOSIS & UTILITIES ---
 def check_gemini_api():
     try:
-        genai.get_model('models/gemini-2.5-flash-lite')
+        genai.get_model('models/gemini-pro')
         return "Valid"
     except Exception as e:
         st.sidebar.error(f"Gemini API Key in secrets is invalid: {e}")
@@ -154,6 +154,7 @@ def check_gemini_api():
 
 def resilient_json_parser(json_string):
     try:
+        # Relaxed JSON parsing to find JSON object within a string that might contain other text
         match = re.search(r'```(json)?\s*(\{.*?\})\s*```', json_string, re.DOTALL)
         if match:
             return json.loads(match.group(2))
@@ -182,7 +183,7 @@ def chunk_text(text, source_id, chunk_size=CHUNK_SIZE, overlap=CHUNK_OVERLAP):
 def process_source(file, source_type):
     try:
         source_id = f"{source_type}:{file.name}"
-        model_name = 'gemini-2.5-flash-lite-vision' if source_type in ['image', 'pdf'] else 'gemini-2.5-flash-lite'
+        model_name = 'gemini-pro-vision' if source_type in ['image', 'pdf'] else 'gemini-pro'
         model = genai.GenerativeModel(model_name)
         if source_type == 'transcript':
             with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(file.name)[1]) as tmp:
@@ -211,7 +212,7 @@ def process_source(file, source_type):
 # --- AGENTIC WORKFLOW FUNCTIONS ---
 @gemini_api_call_with_retry
 def generate_content_outline(all_chunks, existing_outline=None):
-    model = genai.GenerativeModel('gemini-2.5-flash-lite')
+    model = genai.GenerativeModel('gemini-pro')
     prompt_chunks = [{"chunk_id": c['chunk_id'], "text_snippet": c['text'][:200] + "..."} for c in all_chunks if c.get('text') and len(c['text'].split()) > 10]
     
     if not prompt_chunks:
@@ -241,7 +242,7 @@ def generate_content_outline(all_chunks, existing_outline=None):
 
 @gemini_api_call_with_retry
 def synthesize_note_block(topic, relevant_chunks_text, instructions):
-    model = genai.GenerativeModel('gemini-2.5-flash-lite')
+    model = genai.GenerativeModel('gemini-pro')
     prompt = f"""
     You are a world-class note-taker. Synthesize a detailed, clear, and well-structured note block for a single topic: {topic}.
     Your entire response MUST be based STRICTLY and ONLY on the provided source text. Do not introduce any external information.
@@ -260,7 +261,7 @@ def synthesize_note_block(topic, relevant_chunks_text, instructions):
 @gemini_api_call_with_retry
 def answer_from_context(query, context):
     """Answers a user query based ONLY on the provided context."""
-    model = genai.GenerativeModel('gemini-2.5-flash-lite')
+    model = genai.GenerativeModel('gemini-pro')
     prompt = f"""
     You are a helpful study assistant. Your task is to answer the user question based strictly and exclusively on the provided study material context.
     Do not use any external knowledge. If the answer is not in the context, clearly state that the information is not available in the provided materials.
@@ -310,14 +311,133 @@ def reset_session(tool_choice):
 
 # --- LANDING PAGE ---
 def show_landing_page(auth_url):
-    st.markdown("""<style>...</style>""", unsafe_allow_html=True) # Truncated
+    """Displays the AARRR-framework-based landing page."""
+    st.markdown("""
+        <style>
+            @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+            .main {
+                background-color: #FFFFFF;
+                font-family: 'Inter', sans-serif;
+            }
+            .hero-container {
+                padding: 4rem 1rem;
+                text-align: center;
+            }
+            .hero-title {
+                font-size: 3.5rem;
+                font-weight: 700;
+                background: -webkit-linear-gradient(45deg, #004080, #007BFF);
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+                margin-bottom: 1rem;
+            }
+            .hero-subtitle {
+                font-size: 1.25rem;
+                color: #555;
+                max-width: 700px;
+                margin: 0 auto 2rem auto;
+                line-height: 1.6;
+            }
+            .how-it-works-card {
+                padding: 1.5rem; text-align: center;
+            }
+            .how-it-works-card .step-number {
+                display: inline-block; width: 40px; height: 40px; line-height: 40px;
+                border-radius: 50%; background-color: #E6F2FF; color: #007BFF;
+                font-weight: 700; font-size: 1.2rem; margin-bottom: 1rem;
+            }
+            .comparison-table-premium {
+                width: 100%; border-collapse: separate; border-spacing: 0;
+                border-radius: 12px; overflow: hidden;
+                box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 1px solid #E0E0E0;
+            }
+            .comparison-table-premium th, .comparison-table-premium td {
+                padding: 1.2rem 1rem; text-align: left; border-bottom: 1px solid #E0E0E0;
+            }
+            .comparison-table-premium th {
+                background-color: #F8F9FA; color: #333; font-weight: 600;
+            }
+            .comparison-table-premium tbody tr:last-child td { border-bottom: none; }
+            .comparison-table-premium .check {
+                color: #1E90FF; font-weight: bold; text-align: center; font-size: 1.2rem;
+            }
+            .comparison-table-premium .cross {
+                color: #B0B0B0; font-weight: bold; text-align: center; font-size: 1.2rem;
+            }
+            .cta-button a {
+                font-size: 1.1rem !important; font-weight: 600 !important;
+                padding: 0.8rem 2rem !important; border-radius: 8px !important;
+                background-image: linear-gradient(45deg, #007BFF, #0056b3) !important;
+                border: none !important; transition: transform 0.2s, box-shadow 0.2s !important;
+            }
+            .cta-button a:hover {
+                transform: scale(1.05);
+                box-shadow: 0 6px 15px rgba(0, 123, 255, 0.3);
+            }
+            .section-header {
+                text-align: center; color: #004080; font-weight: 700;
+                margin-top: 4rem; margin-bottom: 2rem;
+            }
+        </style>
+    """, unsafe_allow_html=True)
+
     with st.container():
         st.markdown('<div class="hero-container">', unsafe_allow_html=True)
         st.markdown('<h1 class="hero-title">From Classroom Chaos to Concept Clarity</h1>', unsafe_allow_html=True)
         st.markdown('<p class="hero-subtitle">Stop drowning in disorganized notes and endless lectures. Vekkam transforms your course materials into a powerful, interactive knowledge base that helps you study smarter, not harder.</p>', unsafe_allow_html=True)
         st.link_button("Activate Your Smart Study Hub", auth_url, type="primary")
         st.markdown('</div>', unsafe_allow_html=True)
-    # Rest of landing page is truncated for brevity
+    st.divider()
+    st.markdown('<h2 class="section-header">Your Path to Mastery in 3 Simple Steps</h2>', unsafe_allow_html=True)
+    col1, col2, col3 = st.columns(3, gap="large")
+    with col1:
+        st.markdown("""
+            <div class="how-it-works-card">
+                <div class="step-number">1</div>
+                <h3>Aggregate Your Materials</h3>
+                <p>Upload everything—audio lectures, textbook chapters, slide decks, and even whiteboard photos. Consolidate your entire syllabus in one place.</p>
+            </div>
+        """, unsafe_allow_html=True)
+    with col2:
+        st.markdown("""
+            <div class="how-it-works-card">
+                <div class="step-number">2</div>
+                <h3>Synthesize & Understand</h3>
+                <p>Vekkam's AI analyzes and structures your content, creating a unified set of clear, editable notes. See the connections you never knew existed.</p>
+            </div>
+        """, unsafe_allow_html=True)
+    with col3:
+        st.markdown("""
+            <div class="how-it-works-card">
+                <div class="step-number">3</div>
+                <h3>Query, Test & Master</h3>
+                <p>Chat with your personal AI tutor and generate mock tests directly from your notes. Turn passive knowledge into active, exam-ready expertise.</p>
+            </div>
+        """, unsafe_allow_html=True)
+    st.markdown('<h2 class="section-header">A Knowledge Base That Grows With You</h2>', unsafe_allow_html=True)
+    st.markdown("""
+        Vekkam isn't just for one-time cramming. Every session you create builds upon the last, creating a personal, searchable library of your entire academic career. 
+        Your Personal TA becomes more intelligent about your curriculum over time, making it an indispensable tool for finals, comprehensive exams, and lifelong learning.
+    """)
+    st.markdown('<h2 class="section-header">The Unfair Advantage Over Other Tools</h2>', unsafe_allow_html=True)
+    st.markdown("""
+        <table class="comparison-table-premium">
+            <thead>
+                <tr><th>Capability</th><th>Vekkam</th><th>ChatGPT / Gemini</th><th>Turbolearn</th><th>Perplexity</th></tr>
+            </thead>
+            <tbody>
+                <tr><td><strong>Multi-Modal Synthesis (Audio, PDF, IMG)</strong></td><td class="check">✔</td><td class="cross">Partial</td><td class="cross">YouTube Only</td><td class="cross">URL/Text Only</td></tr>
+                <tr><td><strong>Chat With <u>Your</u> Content Only</strong></td><td class="check">✔</td><td class="cross">✖ (General)</td><td class="check">✔</td><td class="cross">✖ (Web Search)</td></tr>
+                <tr><td><strong>Integrated Mock Test Generator</strong></td><td class="check">✔</td><td class="cross">✖</td><td class="cross">✖</td><td class="cross">✖</td></tr>
+                <tr><td><strong>Builds a Persistent Knowledge Base</strong></td><td class="check">✔</td><td class="cross">✖ (Chat History)</td><td class="check">✔</td><td class="cross">✖</td></tr>
+            </tbody>
+        </table>
+    """, unsafe_allow_html=True)
+    with st.container():
+        st.markdown('<div class="hero-container">', unsafe_allow_html=True)
+        st.markdown('<h2 class="section-header" style="margin-top:2rem;">Ready to Stop Studying Harder and Start Studying Smarter?</h2>', unsafe_allow_html=True)
+        st.link_button("Get Started for Free", auth_url, type="primary")
+        st.markdown('</div>', unsafe_allow_html=True)
 
 # --- UI STATE FUNCTIONS for NOTE & LESSON ENGINE ---
 def show_upload_state():
@@ -335,7 +455,7 @@ def show_processing_state():
         with ThreadPoolExecutor() as executor:
             futures = {executor.submit(process_source, f, 'transcript' if f.type.startswith('audio/') else 'image' if f.type.startswith('image/') else 'pdf'): f for f in st.session_state.initial_files}
             for future in as_completed(futures): results.append(future.result())
-        # Reset chunks before extending
+        # Reset chunks before extending to avoid duplication on re-runs
         st.session_state.all_chunks = []
         st.session_state.all_chunks.extend([c for r in results if r and r['status'] == 'success' for c in r['chunks']])
         st.session_state.extraction_failures = [r for r in results if r and r['status'] == 'error']
@@ -455,23 +575,38 @@ def show_results_state():
 # --- UI STATE FUNCTION for PERSONAL TA ---
 def show_personal_ta_ui():
     st.header("🎓 Your Personal TA")
-    # ... code is unchanged
+    st.markdown("Ask questions and get answers based on the knowledge from all your past study sessions.")
+    user_id = st.session_state.user_info.get('id') or st.session_state.user_info.get('email')
+    user_data = load_user_data(user_id)
+    if not user_data or not user_data["sessions"]:
+        st.warning("You don't have any saved study sessions yet. Create some notes first to power up your TA!")
+        return
+    if "ta_messages" not in st.session_state:
+        st.session_state.ta_messages = []
+    for message in st.session_state.ta_messages:
+        with st.chat_message(message["role"]):
+            st.markdown(message["content"])
+    if prompt := st.chat_input("Ask your Personal TA..."):
+        st.session_state.ta_messages.append({"role": "user", "content": prompt})
+        with st.chat_message("user"):
+            st.markdown(prompt)
+        with st.chat_message("assistant"):
+            with st.spinner("Consulting your past notes..."):
+                full_context = [f"Topic: {note['topic']}\nContent: {note['content']}" for session in user_data["sessions"] for note in session["notes"]]
+                context_str = "\n\n---\n\n".join(full_context)
+                response = answer_from_context(prompt, context_str)
+                st.markdown(response)
+        st.session_state.ta_messages.append({"role": "assistant", "content": response})
 
 # --- UI STATE FUNCTIONS for MOCK TEST GENERATOR ---
 def show_mock_test_generator():
     st.header("📝 Mock Test Generator")
-    if 'test_stage' not in st.session_state:
-        st.session_state.test_stage = 'start'
-    if 'syllabus' not in st.session_state:
-        st.session_state.syllabus = ""
-    if 'questions' not in st.session_state:
-        st.session_state.questions = {}
-    if 'user_answers' not in st.session_state:
-        st.session_state.user_answers = {}
-    if 'score' not in st.session_state:
-        st.session_state.score = {}
-    if 'feedback' not in st.session_state:
-        st.session_state.feedback = {}
+    if 'test_stage' not in st.session_state: st.session_state.test_stage = 'start'
+    if 'syllabus' not in st.session_state: st.session_state.syllabus = ""
+    if 'questions' not in st.session_state: st.session_state.questions = {}
+    if 'user_answers' not in st.session_state: st.session_state.user_answers = {}
+    if 'score' not in st.session_state: st.session_state.score = {}
+    if 'feedback' not in st.session_state: st.session_state.feedback = {}
 
     stage = st.session_state.test_stage
     if stage == 'start':
@@ -498,8 +633,7 @@ def render_syllabus_input():
             st.rerun()
 
 def render_generating_questions():
-    if 'questions' not in st.session_state:
-        st.session_state.questions = {}
+    if 'questions' not in st.session_state: st.session_state.questions = {}
     with st.spinner("Building your test... The AI is analyzing the syllabus and crafting questions..."):
         questions_json = generate_questions_from_syllabus(st.session_state.syllabus, "MCQ", 10)
         if questions_json and "questions" in questions_json:
@@ -579,15 +713,53 @@ def get_bloom_level_name(level):
 
 @gemini_api_call_with_retry
 def generate_questions_from_syllabus(syllabus_text, question_type, question_count):
-    model = genai.GenerativeModel('gemini-2.5-flash-lite')
-    prompt = f"""You are an expert Question Paper Setter...""" # Truncated for brevity
+    model = genai.GenerativeModel('gemini-pro')
+    prompt = f"""
+    You are an expert Question Paper Setter and an authority on Bloom's Taxonomy. Your goal is to generate {question_count} Multiple Choice Questions (MCQs) based STRICTLY on the provided syllabus.
+
+    **Syllabus:**
+    ---
+    {syllabus_text}
+    ---
+
+    **Instructions:**
+    1.  **Strict Syllabus Adherence:** Do NOT include questions on topics outside the syllabus.
+    2.  **Bloom's Taxonomy Distribution:** Aim for a bell-curve distribution across levels 1-5.
+    3.  **High-Quality Options:** Incorrect options (distractors) must be plausible but clearly wrong.
+    4.  **Output Format:** Output a single, valid JSON object with a root key "questions".
+    5.  **Question Object Structure:** Each object must have keys: `question_id`, `taxonomy_level`, `question_text`, `options` (an object with A,B,C,D), and `answer`.
+
+    Generate the JSON now.
+    """
     response = model.generate_content(prompt)
     return resilient_json_parser(response.text)
 
 @gemini_api_call_with_retry
 def generate_feedback_on_performance(score, total, questions, user_answers, syllabus):
-    model = genai.GenerativeModel('gemini-2.5-flash-lite')
-    prompt = f"""You are an encouraging academic coach...""" # Truncated for brevity
+    model = genai.GenerativeModel('gemini-pro')
+    incorrect_questions = []
+    for q in questions:
+        q_id = q['question_id']
+        if user_answers.get(q_id) != q['answer']:
+            incorrect_questions.append({
+                "question": q['question_text'],
+                "correct_answer": q['options'][q['answer']],
+                "user_answer": q['options'].get(user_answers.get(q_id), "Not Answered"),
+                "taxonomy_level": q['taxonomy_level']
+            })
+    prompt = f"""
+    You are an encouraging academic coach. A student scored {score}/{total} on a test covering: {syllabus}.
+    Their incorrect answers were: {json.dumps(incorrect_questions, indent=2)}.
+
+    **Task:**
+    1.  Start with encouragement.
+    2.  Identify patterns (by topic or Bloom's Taxonomy level).
+    3.  Give specific, actionable advice.
+    4.  End on a positive note.
+    5.  Be concise and use bullet points.
+
+    Write the feedback now.
+    """
     response = model.generate_content(prompt)
     return response.text
 
@@ -606,35 +778,227 @@ def get_google_search_service():
         return None
 
 def generate_allele_from_query(user_topic, context_chunks=None):
-    # (This function is unchanged from the previous correct version)
-    model = genai.GenerativeModel('gemini-2.5-flash-lite')
-    # ... code is unchanged
+    """Uses Google Search to find content and constructs a new allele dictionary, with optional context."""
+    model = genai.GenerativeModel('gemini-pro')
+    
+    gene_name_response = model.generate_content(f"Provide a concise, 3-5 word conceptual name for the topic: '{user_topic}'. Output only the name.")
+    gene_name = gene_name_response.text.strip().replace('"', '') if gene_name_response.text else user_topic.title()
+    gene_id = f"USER_{hashlib.md5(user_topic.encode()).hexdigest()[:8].upper()}"
+    
+    service = get_google_search_service()
+    if not service: return None
+
+    try:
+        cse_id = st.secrets["google_search"]["cse_id"]
+    except KeyError:
+        st.error("Google Search CSE ID ('cse_id') not found in st.secrets.toml. Please add it.")
+        return None
+
+    search_queries = []
+    synthesis_prompt_template = ""
+
+    if context_chunks:
+        st.info("Context detected. Generating contextual search queries...")
+        full_context_text = " ".join([chunk.get('text', '') for chunk in context_chunks])
+        # Truncate to avoid exceeding API limits for the summary prompt
+        context_summary_prompt = f"Summarize the key topics and concepts from this course material in 2-3 sentences: {full_context_text[:8000]}"
+        summary_response = model.generate_content(context_summary_prompt)
+        context_summary = summary_response.text
+
+        query_gen_prompt = f"""A student is studying material summarized as: "{context_summary}". They now want to learn about: "{user_topic}". Generate 3 specific Google search queries to find supplementary information that connects their existing knowledge to this new topic. Output ONLY a valid JSON object with a single key "queries" which is a list of 3 strings."""
+        queries_response = model.generate_content(query_gen_prompt)
+        queries_json = resilient_json_parser(queries_response.text)
+        
+        if queries_json and 'queries' in queries_json:
+            search_queries = queries_json['queries']
+        else: # Fallback if JSON parsing fails
+            search_queries = [f"{user_topic} explained in context of {context_summary[:50]}", f"how does {user_topic} relate to concepts in my notes"]
+        
+        synthesis_prompt_template = f"""You are an expert tutor. A student's current study material is about: "{context_summary}". They now want to understand: "{user_topic}". Based ONLY on the provided web search results, synthesize a clear explanation of "{user_topic}". Crucially, you must connect the new topic to the student's existing knowledge. Bridge the concepts and explain it as if you were adding a new, relevant chapter to their study notes. Start by acknowledging the connection (e.g., "Building on what you know about [concept from summary]...").\n\n**Web Search Results to Synthesize:**\n---\n{{search_snippets}}\n---"""
+    else:
+        search_queries = [f"{user_topic} explanation", f"{user_topic} simple definition", f"youtube video tutorial {user_topic}"]
+        synthesis_prompt_template = f"""Based ONLY on the provided web search results, provide a clear, concise, and comprehensive explanation of '{user_topic}'.\n\n**Web Search Results to Synthesize:**\n---\n{{search_snippets}}\n---"""
+
+    text_content, video_url = [], None
+    st.write("Performing targeted web search...")
+    for query in search_queries:
+        try:
+            res = service.cse().list(q=query, cx=cse_id, num=3).execute()
+            items = res.get('items', [])
+            for item in items:
+                if "youtube.com/watch" in item.get('link', '') and not video_url:
+                    video_url = item.get('link')
+                if item.get('snippet'):
+                    text_content.append(item.get('snippet'))
+        except HttpError as e:
+            st.error(f"Google Search API error: {e}. This could be due to an invalid API key, incorrect CSE ID, or exceeding your daily quota.")
+            return None
+        except Exception as e:
+            st.warning(f"Google Search failed for query '{query}': {e}")
+            time.sleep(1)
+
+    if not text_content:
+        st.error(f"Could not find any relevant text content for '{user_topic}'. The topic might be too obscure or the query too broad. Please try again.")
+        return None
+
+    full_text = " ".join(text_content)
+    
+    with st.spinner("Synthesizing explanation from search results..."):
+        synthesis_prompt = synthesis_prompt_template.format(search_snippets=full_text)
+        final_explanation_response = model.generate_content(synthesis_prompt)
+        final_explanation = final_explanation_response.text
+
+    content_alleles = []
+    if final_explanation:
+        content_alleles.append({"type": "text", "content": final_explanation})
+    if video_url:
+        content_alleles.append({"type": "video", "url": video_url})
+
+    return {"gene_id": gene_id, "gene_name": gene_name, "difficulty": 0, "content_alleles": content_alleles}
 
 # --- UI STATE FUNCTIONS for MASTERY ENGINE (GENESIS MODULE) ---
 def show_mastery_engine():
-    # (This function is unchanged)
     st.header("🏆 Mastery Engine")
-    # ... code is unchanged
+    if 'mastery_stage' not in st.session_state: st.session_state.mastery_stage = 'course_selection'
+    if 'user_progress' not in st.session_state: st.session_state.user_progress = {}
+    if 'current_genome' not in st.session_state: st.session_state.current_genome = None
+
+    stage = st.session_state.mastery_stage
+    if stage == 'course_selection':
+        render_course_selection()
+    elif stage == 'skill_tree':
+        render_skill_tree()
+    elif stage == 'content_viewer':
+        render_content_viewer()
+    elif stage == 'boss_battle':
+        render_boss_battle()
 
 def render_course_selection():
-    # (This function is unchanged from the previous correct version)
     st.subheader("Select Your Course or Create a New Concept")
-    # ... code is unchanged
+    
+    st.markdown("### Pre-built Courses")
+    if st.button("Econ 101", use_container_width=True, type="primary"):
+        st.session_state.current_genome = json.loads(json.dumps(ECON_101_GENOME)) # Deep copy
+        progress = {}
+        genome_nodes = st.session_state.current_genome['nodes']
+        all_node_ids = {node['gene_id'] for node in genome_nodes}
+        destination_nodes = {edge['to'] for edge in st.session_state.current_genome['edges']}
+        root_nodes = all_node_ids - destination_nodes
+        for node_id in all_node_ids:
+            progress[node_id] = 'unlocked' if node_id in root_nodes else 'locked'
+        st.session_state.user_progress = progress
+        st.session_state.mastery_stage = 'skill_tree'
+        st.rerun()
+
+    st.markdown("### Create Your Own Concept")
+    user_interest = st.text_input("What concept are you interested in learning about?", key="user_allele_query")
+    
+    use_context = st.checkbox("Use context from 'Note & Lesson Engine' session", key="use_context", value=True)
+    
+    if st.button("Generate Concept Allele", use_container_width=True, disabled=not user_interest):
+        context_chunks = st.session_state.get('all_chunks') if use_context else None
+        if use_context and not context_chunks:
+            st.warning("Contextual generation selected, but no files have been processed. Falling back to non-contextual generation.")
+
+        if st.session_state.current_genome is None:
+            st.session_state.current_genome = {"subject": "My Custom Concepts", "version": "1.0", "nodes": [], "edges": []}
+        
+        with st.spinner(f"Generating concept for '{user_interest}'... This might take a moment."):
+            new_allele = generate_allele_from_query(user_interest, context_chunks=context_chunks)
+            
+            if new_allele:
+                existing_node_ids = {node['gene_id'] for node in st.session_state.current_genome['nodes']}
+                if new_allele['gene_id'] not in existing_node_ids:
+                    st.session_state.current_genome['nodes'].append(new_allele)
+                    st.session_state.user_progress[new_allele['gene_id']] = 'unlocked'
+                    st.success(f"Concept '{new_allele['gene_name']}' generated and unlocked!")
+                else:
+                    st.info(f"Concept '{new_allele['gene_name']}' already exists.")
+                    st.session_state.user_progress[new_allele['gene_id']] = 'unlocked'
+                
+                st.session_state.mastery_stage = 'skill_tree'
+                st.rerun()
 
 def render_skill_tree():
-    # (This function is unchanged)
     st.subheader(f"Skill Tree: {st.session_state.current_genome['subject']}")
-    # ... code is unchanged
+    nodes = st.session_state.current_genome['nodes']
+    progress = st.session_state.user_progress
+    for node in nodes:
+        node_id, node_name = node['gene_id'], node['gene_name']
+        status = progress.get(node_id, 'locked')
+        if status == 'mastered':
+            st.success(f"**{node_name}** - ✅ Mastered!", icon="✅")
+        elif status == 'unlocked':
+            if st.button(f"🧠 Learn: {node_name}", key=node_id, use_container_width=True, type="primary"):
+                st.session_state.selected_node_id = node_id
+                st.session_state.mastery_stage = 'content_viewer'
+                st.rerun()
+        else:
+            st.info(f"**{node_name}** - 🔒 Locked", icon="🔒")
+        st.markdown('<p style="text-align: center; margin: 0; padding: 0;">↓</p>', unsafe_allow_html=True)
+    st.markdown("---")
+    if st.button("Back to Course Selection"):
+        st.session_state.mastery_stage = 'course_selection'
+        st.rerun()
 
 def render_content_viewer():
-    # (This function is unchanged)
+    node_id = st.session_state.selected_node_id
+    node_data = next((n for n in st.session_state.current_genome['nodes'] if n['gene_id'] == node_id), None)
+    if not node_data:
+        st.error("Error: Could not load node data.")
+        st.session_state.mastery_stage = 'skill_tree'
+        st.rerun()
+        return
     st.subheader(f"Learning: {node_data['gene_name']}")
-    # ... code is unchanged
+    st.markdown("---")
+    for allele in node_data['content_alleles']:
+        if allele['type'] == 'text':
+            st.markdown(allele['content'])
+        elif allele['type'] == 'video':
+            st.video(allele['url'])
+    st.markdown("---")
+    col1, col2 = st.columns([1, 1])
+    if col1.button("Back to Skill Tree"):
+        st.session_state.mastery_stage = 'skill_tree'
+        st.rerun()
+    if col2.button(f"⚔️ Challenge Boss: {node_data['gene_name']}", type="primary"):
+        st.session_state.mastery_stage = 'boss_battle'
+        syllabus_parts = [a['content'] for a in node_data['content_alleles'] if a['type'] == 'text']
+        st.session_state.syllabus = f"Topic: {node_data['gene_name']}. Content: {' '.join(syllabus_parts)}"
+        st.session_state.test_stage = 'generating'
+        for key in ['questions', 'user_answers', 'score', 'feedback']:
+            if key in st.session_state: del st.session_state[key]
+        st.rerun()
 
 def render_boss_battle():
-    # (This function is unchanged)
+    node_id = st.session_state.selected_node_id
+    node_data = next((n for n in st.session_state.current_genome['nodes'] if n['gene_id'] == node_id), None)
     st.subheader(f"Boss Battle: {node_data['gene_name']}")
-    # ... code is unchanged
+    stage = st.session_state.get('test_stage', 'generating')
+    if stage == 'generating':
+        render_generating_questions()
+    elif stage == 'mcq_test':
+        render_mcq_test()
+    elif stage == 'mcq_results':
+        score = st.session_state.score.get('mcq', 0)
+        total = len(st.session_state.questions.get('mcq', []))
+        st.subheader(f"Battle Results: You scored {score} / {total}")
+        if score >= 7:
+            st.balloons()
+            st.success("Victory! You have mastered this concept.")
+            st.session_state.user_progress[node_id] = 'mastered'
+            edges = st.session_state.current_genome['edges']
+            for edge in edges:
+                if edge['from'] == node_id:
+                    st.session_state.user_progress[edge['to']] = 'unlocked'
+            if st.button("Return to Skill Tree", type="primary"):
+                st.session_state.mastery_stage = 'skill_tree'
+                st.rerun()
+        else:
+            st.error("Defeated. The concept is not yet mastered. Review the material and try again.")
+            if st.button("Return to Learning"):
+                st.session_state.mastery_stage = 'content_viewer'
+                st.rerun()
 
 # --- MAIN APP ---
 def main():
@@ -662,7 +1026,6 @@ def main():
         show_landing_page(auth_url)
         return
 
-    # --- Post-Login App ---
     st.sidebar.title("Vekkam Engine")
     user = st.session_state.user_info
     user_id = user.get('id') or user.get('email')
@@ -719,7 +1082,7 @@ def main():
     
     if st.session_state.last_tool_choice != tool_choice:
         st.session_state.last_tool_choice = tool_choice
-        reset_session(tool_choice) # This will preserve all_chunks
+        reset_session(tool_choice)
         st.rerun()
 
     st.sidebar.divider()
@@ -728,8 +1091,7 @@ def main():
 
     # --- Tool Routing ---
     if tool_choice == "Note & Lesson Engine":
-        if 'current_state' not in st.session_state:
-            st.session_state.current_state = 'upload'
+        if 'current_state' not in st.session_state: st.session_state.current_state = 'upload'
         state_map = { 'upload': show_upload_state, 'processing': show_processing_state, 'workspace': show_workspace_state, 'synthesizing': show_synthesizing_state, 'results': show_results_state }
         state_function = state_map.get(st.session_state.current_state, show_upload_state)
         state_function()
