@@ -292,23 +292,18 @@ def get_google_flow():
 
 def reset_session():
     """
-    Resets the state of the current tool, while preserving essential global state
-    like user information and processed file context (`all_chunks`).
+    Resets the state of the current tool by surgically removing tool-specific keys,
+    preserving global state like user_info and all_chunks.
     """
-    preserved_state = {
-        'user_info': st.session_state.get('user_info'),
-        'all_chunks': st.session_state.get('all_chunks', []),
-        'tool_choice': st.session_state.get('tool_choice'),
-        'last_tool_choice': st.session_state.get('last_tool_choice')
-    }
+    # Keys to preserve globally across all tools
+    keys_to_preserve = ['user_info', 'all_chunks', 'tool_choice', 'last_tool_choice']
     
-    # Clear the entire session state
-    st.session_state.clear()
+    # Find all keys to delete (i.e., not in the preserve list)
+    keys_to_delete = [key for key in st.session_state.keys() if key not in keys_to_preserve]
     
-    # Restore the preserved state
-    for key, value in preserved_state.items():
-        if value is not None:
-            st.session_state[key] = value
+    # Delete the tool-specific keys
+    for key in keys_to_delete:
+        del st.session_state[key]
 
 
 # --- LANDING PAGE ---
@@ -920,6 +915,9 @@ def render_boss_battle():
     if 'selected_node_id' not in st.session_state:
         st.warning("No concept selected for the boss battle. Redirecting to skill tree.")
         st.session_state.mastery_stage = 'skill_tree'
+        # Also clean up any lingering test state to be safe
+        for key in ['test_stage', 'syllabus', 'questions', 'user_answers', 'score', 'feedback']:
+            if key in st.session_state: del st.session_state[key]
         st.rerun()
         return
 
