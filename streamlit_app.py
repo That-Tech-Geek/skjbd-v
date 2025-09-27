@@ -104,7 +104,7 @@ def save_session_to_history(user_id, final_notes):
 
 # --- API SELF-DIAGNOSIS & UTILITIES ---
 def check_gemini_api():
-    try: genai.get_model('models/gemini-1.5-flash'); return "Valid"
+    try: genai.get_model('models/gemini-2.5-flash-lite'); return "Valid"
     except Exception as e:
         st.sidebar.error(f"Gemini API Key in secrets is invalid: {e}")
         return "Invalid"
@@ -133,7 +133,7 @@ def chunk_text(text, source_id, chunk_size=CHUNK_SIZE, overlap=CHUNK_OVERLAP):
 def process_source(file, source_type):
     try:
         source_id = f"{source_type}:{file.name}"
-        model = genai.GenerativeModel('models/gemini-1.5-flash')
+        model = genai.GenerativeModel('models/gemini-2.5-flash-lite')
         if source_type == 'transcript':
             with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(file.name)[1]) as tmp:
                 tmp.write(file.getvalue())
@@ -166,7 +166,7 @@ def process_source(file, source_type):
 # --- AGENTIC WORKFLOW FUNCTIONS ---
 @gemini_api_call_with_retry
 def generate_content_outline(all_chunks, existing_outline=None):
-    model = genai.GenerativeModel('models/gemini-1.5-flash')
+    model = genai.GenerativeModel('models/gemini-2.5-flash-lite')
     prompt_chunks = [{"chunk_id": c['chunk_id'], "text_snippet": c['text'][:200] + "..."} for c in all_chunks if c.get('text') and len(c['text'].split()) > 10]
     
     if not prompt_chunks:
@@ -196,7 +196,7 @@ def generate_content_outline(all_chunks, existing_outline=None):
 
 @gemini_api_call_with_retry
 def synthesize_note_block(topic, relevant_chunks_text, instructions):
-    model = genai.GenerativeModel('models/gemini-1.5-flash')
+    model = genai.GenerativeModel('models/gemini-2.5-flash-lite')
     prompt = f"""
     You are a world-class note-taker. Synthesize a detailed, clear, and well-structured note block for a single topic: {topic}.
     Your entire response MUST be based STRICTLY and ONLY on the provided source text. Do not introduce any external information.
@@ -214,7 +214,7 @@ def synthesize_note_block(topic, relevant_chunks_text, instructions):
 
 @gemini_api_call_with_retry
 def generate_lesson_plan(outline, all_chunks):
-    model = genai.GenerativeModel('models/gemini-1.5-flash')
+    model = genai.GenerativeModel('models/gemini-2.5-flash-lite')
     chunk_context_map = {c['chunk_id']: c['text'][:200] + "..." for c in all_chunks}
     prompt = f"""
     You are a world-class educator. Design a detailed, step-by-step lesson plan based on the provided outline and source material.
@@ -240,7 +240,7 @@ def generate_lesson_plan(outline, all_chunks):
 @gemini_api_call_with_retry
 def answer_from_context(query, context):
     """Answers a user query based ONLY on the provided context."""
-    model = genai.GenerativeModel('models/gemini-1.5-flash')
+    model = genai.GenerativeModel('models/gemini-2.5-flash-lite')
     prompt = f"""
     You are a helpful study assistant. Your task is to answer the user question based strictly and exclusively on the provided study material context.
     Do not use any external knowledge. If the answer is not in the context, clearly state that the information is not available in the provided materials.
@@ -455,7 +455,6 @@ def show_landing_page(auth_url):
         st.markdown('<h2 class="section-header" style="margin-top:2rem;">Ready to Stop Studying Harder and Start Studying Smarter?</h2>', unsafe_allow_html=True)
         st.link_button("Get Started for Free", auth_url, type="primary")
         st.markdown('</div>', unsafe_allow_html=True)
-
 
 # --- UI STATE FUNCTIONS for NOTE & LESSON ENGINE ---
 def show_upload_state():
@@ -697,17 +696,17 @@ def render_syllabus_input():
 def render_generating_questions():
     """Handles the background generation of questions for all stages."""
     with st.spinner("Building your test... The AI is analyzing the syllabus and crafting questions based on Bloom's Taxonomy..."):
-        mcq_questions = generate_questions_from_syllabus(st.session_state.syllabus, "MCQ", 10)
-        st.session_state.questions['mcq'] = mcq_questions
-        st.session_state.questions['fib'] = [] 
-        st.session_state.questions['short'] = []
-        st.session_state.questions['long'] = []
-
-        if mcq_questions:
+        questions_json = generate_questions_from_syllabus(st.session_state.syllabus, "MCQ", 10)
+        
+        if questions_json and "questions" in questions_json:
+            st.session_state.questions['mcq'] = questions_json["questions"]
+            st.session_state.questions['fib'] = [] 
+            st.session_state.questions['short'] = []
+            st.session_state.questions['long'] = []
             st.session_state.test_stage = 'mcq_test'
             st.rerun()
         else:
-            st.error("Failed to generate questions. Please try again with a different syllabus.")
+            st.error("Failed to generate questions. The AI could not create a test from the provided syllabus. Please try again with a more detailed or different syllabus.")
             st.session_state.test_stage = 'start'
             st.rerun()
 
@@ -728,11 +727,14 @@ def render_mcq_test():
         user_answers = {}
         for i, q in enumerate(mcq_questions):
             st.markdown(f"**{i+1}. {q['question_text']}**")
-            st.caption(f"Bloom's Taxonomy Level: {q['taxonomy_level']} ({get_bloom_level_name(q['taxonomy_level'])})")
-            options = list(q['options'].values())
-            option_keys = list(q['options'].keys())
-            selected_option_text = st.radio("Select your answer:", options, key=q['question_id'], label_visibility="collapsed")
-            user_answers[q['question_id']] = option_keys[options.index(selected_option_text)]
+            st.caption(f"Bloom's Taxonomy Level: {q.get('taxonomy_level', 'N/A')} ({get_bloom_level_name(q.get('taxonomy_level'))})")
+            # Ensure options are always presented in a consistent order
+            options_keys = sorted(q['options'].keys())
+            options_values = [q['options'][key] for key in options_keys]
+            
+            selected_option_text = st.radio("Select your answer:", options_values, key=q['question_id'], label_visibility="collapsed")
+            if selected_option_text:
+                user_answers[q['question_id']] = options_keys[options_values.index(selected_option_text)]
             st.divider()
 
         submitted = st.form_submit_button("Submit Answers")
@@ -752,12 +754,18 @@ def render_mcq_results():
     total = len(st.session_state.questions.get('mcq', []))
     st.subheader(f"MCQ Results: You scored {score} / {total}")
 
-    feedback_text = f"Based on your score of {score}, you have a good foundational knowledge. Consider reviewing topics related to questions you got wrong, especially those at the 'Analyzing' and 'Evaluating' levels of Bloom's Taxonomy." # Placeholder
-    st.session_state.feedback['mcq'] = feedback_text
+    if 'feedback' not in st.session_state or 'mcq' not in st.session_state.feedback:
+        with st.spinner("Analyzing your performance and generating feedback..."):
+            all_questions = st.session_state.questions.get('mcq', [])
+            user_answers = st.session_state.user_answers.get('mcq', {})
+            syllabus = st.session_state.syllabus
+            
+            feedback_text = generate_feedback_on_performance(score, total, all_questions, user_answers, syllabus)
+            st.session_state.feedback['mcq'] = feedback_text
     
     with st.container(border=True):
         st.subheader("💡 Suggestions for Improvement")
-        st.write(st.session_state.feedback['mcq'])
+        st.write(st.session_state.feedback.get('mcq', "No feedback generated."))
         
     if score >= 7:
         st.success("Congratulations! You've passed this stage.")
@@ -772,35 +780,88 @@ def render_mcq_results():
                     del st.session_state[key]
             st.rerun()
 
-# --- Placeholder AI & Utility Functions ---
+# --- AI & Utility Functions for Mock Test ---
 def get_bloom_level_name(level):
     """Maps a Bloom's Taxonomy level number to its name."""
+    if level is None: return "N/A"
     levels = {1: "Remembering", 2: "Understanding", 3: "Applying", 4: "Analyzing", 5: "Evaluating"}
     return levels.get(level, "Unknown")
 
+@gemini_api_call_with_retry
 def generate_questions_from_syllabus(syllabus_text, question_type, question_count):
-    """Placeholder for the AI call to generate questions."""
-    st.info(f"Simulating AI call to generate {question_count} {question_type} questions...")
-    if question_type == "MCQ":
-        # This structure should be generated by the AI based on the prompt.
-        # It follows the requested normal-like distribution of Bloom's Taxonomy levels.
-        placeholder_mcqs = [
-            {"question_id": "mcq_1", "taxonomy_level": 1, "question_text": "What is the capital of France?", "options": {"A": "London", "B": "Berlin", "C": "Paris", "D": "Madrid"}, "answer": "C"},
-            {"question_id": "mcq_2", "taxonomy_level": 2, "question_text": "Explain the main difference between a stock and a bond.", "options": {"A": "Stocks represent ownership, bonds represent debt.", "B": "Bonds represent ownership, stocks represent debt.", "C": "They are identical.", "D": "Stocks are only issued by governments."}, "answer": "A"},
-            {"question_id": "mcq_3", "taxonomy_level": 2, "question_text": "Summarize the plot of 'Hamlet'.", "options": {"A": "A comedy about mistaken identity.", "B": "A tragedy about revenge and madness.", "C": "A historical play about a king.", "D": "A romance about forbidden love."}, "answer": "B"},
-            {"question_id": "mcq_4", "taxonomy_level": 3, "question_text": "If a company has a high P/E ratio, what investment strategy does this suggest?", "options": {"A": "Value investing", "B": "Growth investing", "C": "Income investing", "D": "Index investing"}, "answer": "B"},
-            {"question_id": "mcq_5", "taxonomy_level": 3, "question_text": "Which of these is a direct application of Newton's Third Law?", "options": {"A": "A ball falling to the ground", "B": "The orbit of the moon", "C": "A rocket accelerating in space", "D": "A book resting on a table"}, "answer": "C"},
-            {"question_id": "mcq_6", "taxonomy_level": 3, "question_text": "Given a list [2, 7, 11, 15] and a target of 9, which pair adds up to the target?", "options": {"A": "[7, 11]", "B": "[2, 15]", "C": "[2, 7]", "D": "[11, 15]"}, "answer": "C"},
-            {"question_id": "mcq_7", "taxonomy_level": 3, "question_text": "Which of these is an application of Python dictionaries?", "options": {"A": "Storing ordered items", "B": "Implementing a LIFO stack", "C": "Storing key-value pairs for fast lookup", "D": "Performing complex math"}, "answer": "C"},
-            {"question_id": "mcq_8", "taxonomy_level": 4, "question_text": "Analyze the components of a laptop to determine the most critical factor for video editing performance.", "options": {"A": "Hard drive size", "B": "Screen resolution", "C": "RAM and GPU", "D": "Number of USB ports"}, "answer": "C"},
-            {"question_id": "mcq_9", "taxonomy_level": 4, "question_text": "Compare and contrast the economic policies of Keynesianism and Monetarism.", "options": {"A": "Both focus on tax cuts.", "B": "Keynesianism focuses on government spending, Monetarism on money supply.", "C": "They are the same.", "D": "Monetarism advocates for more government intervention."}, "answer": "B"},
-            {"question_id": "mcq_10", "taxonomy_level": 5, "question_text": "Evaluate the ethical implications of using AI in hiring processes.", "options": {"A": "It is always fair.", "B": "It has no ethical implications.", "C": "It removes all human bias.", "D": "It risks amplifying existing biases from training data."}, "answer": "D"}
-        ]
-        return placeholder_mcqs
-    return []
+    """Generates test questions from syllabus text using the Gemini API."""
+    model = genai.GenerativeModel('models/gemini-2.5-flash-lite')
+    
+    prompt = f"""
+    You are an expert Question Paper Setter and an authority on Bloom's Taxonomy, tasked with creating a high-quality assessment.
+    Your goal is to generate {question_count} Multiple Choice Questions (MCQs) based STRICTLY and EXCLUSIVELY on the provided syllabus.
 
-# --- MAIN APP ---
-# --- MAIN APP ---
+    **Syllabus:**
+    ---
+    {syllabus_text}
+    ---
+
+    **Instructions:**
+    1.  **Strict Syllabus Adherence:** Do NOT include any questions on topics outside the provided syllabus. Every question must be directly answerable from the concepts mentioned.
+    2.  **Bloom's Taxonomy:** Distribute the questions across Bloom's Taxonomy levels to test for a range of cognitive skills. Aim for a bell-curve distribution:
+        - 1-2 questions for Level 1 (Remembering - e.g., definitions, lists).
+        - 3-4 questions for Level 2 (Understanding - e.g., explaining concepts, summarizing).
+        - 3-4 questions for Level 3 (Applying - e.g., using knowledge in new situations, solving problems).
+        - 1-2 questions for Level 4 (Analyzing - e.g., comparing, contrasting, differentiating).
+        - 0-1 questions for Level 5 (Evaluating - e.g., justifying a stand or decision).
+    3.  **High-Quality Options:** The incorrect options (distractors) should be plausible but clearly wrong. Avoid trick questions.
+    4.  **Output Format:** Your entire output must be a single, valid JSON object. Do not include any text or markdown before or after the JSON. The JSON object must have a single root key "questions", which is a list of question objects.
+    5.  **Question Object Structure:** Each object in the "questions" list must have the following keys:
+        - `question_id`: A unique string identifier (e.g., "mcq_1", "mcq_2").
+        - `taxonomy_level`: An integer from 1 to 5 representing the Bloom's Taxonomy level.
+        - `question_text`: The string containing the question itself.
+        - `options`: A JSON object with four keys: "A", "B", "C", and "D". The value for each key is the option text.
+        - `answer`: A string containing the key of the correct option (e.g., "C").
+
+    Generate the JSON now.
+    """
+    response = model.generate_content(prompt)
+    return resilient_json_parser(response.text)
+
+@gemini_api_call_with_retry
+def generate_feedback_on_performance(score, total, questions, user_answers, syllabus):
+    """Generates personalized feedback on test performance using the Gemini API."""
+    model = genai.GenerativeModel('models/gemini-2.5-flash-lite')
+    
+    incorrect_questions = []
+    for q in questions:
+        q_id = q['question_id']
+        if user_answers.get(q_id) != q['answer']:
+            incorrect_q_info = {
+                "question": q['question_text'],
+                "correct_answer": q['options'][q['answer']],
+                "user_answer": q['options'].get(user_answers.get(q_id), "Not Answered"),
+                "taxonomy_level": q['taxonomy_level']
+            }
+            incorrect_questions.append(incorrect_q_info)
+
+    prompt = f"""
+    You are an encouraging and insightful academic coach. A student has just completed a mock test. Your task is to provide constructive, personalized feedback to help them improve.
+
+    **Student's Performance:**
+    - Score: {score} out of {total}
+    - Syllabus Tested: {syllabus}
+    - Questions they got wrong: {json.dumps(incorrect_questions, indent=2)}
+
+    **Your Task:**
+    1.  **Start with Encouragement:** Begin by acknowledging their score in a positive and motivating tone, regardless of the result.
+    2.  **Identify Patterns:** Analyze the incorrect answers. Is there a pattern? Are they struggling with a specific topic from the syllabus? Or are they struggling with a specific cognitive skill level from Bloom's Taxonomy (e.g., Level 4 'Analyzing' questions)?
+    3.  **Provide Actionable Advice:** Give specific, actionable suggestions for improvement.
+        - Instead of "study more," say "It seems you had trouble with questions related to [Specific Topic]. A good strategy would be to re-read that chapter and try to summarize the key points in your own words."
+        - If they struggled with a taxonomy level, say "Many of the questions you missed were at the 'Applying' level. This suggests you know the definitions but might need more practice using the concepts to solve problems. Try working through some practical examples for the topics you found difficult."
+    4.  **Maintain a Positive Tone:** End on a high note, reinforcing that this test is a learning tool and that they can improve with focused effort.
+    5.  **Be Concise:** Keep the feedback focused and easy to digest. Use bullet points if helpful.
+
+    Write the feedback now.
+    """
+    response = model.generate_content(prompt)
+    return response.text
+
 # --- MAIN APP ---
 def main():
     if 'user_info' not in st.session_state: st.session_state.user_info = None
