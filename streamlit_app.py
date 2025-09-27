@@ -104,7 +104,7 @@ def save_session_to_history(user_id, final_notes):
 
 # --- API SELF-DIAGNOSIS & UTILITIES ---
 def check_gemini_api():
-    try: genai.get_model('models/gemini-2.5-flash-lite'); return "Valid"
+    try: genai.get_model('models/gemini-1.5-flash'); return "Valid"
     except Exception as e:
         st.sidebar.error(f"Gemini API Key in secrets is invalid: {e}")
         return "Invalid"
@@ -133,7 +133,7 @@ def chunk_text(text, source_id, chunk_size=CHUNK_SIZE, overlap=CHUNK_OVERLAP):
 def process_source(file, source_type):
     try:
         source_id = f"{source_type}:{file.name}"
-        model = genai.GenerativeModel('models/gemini-2.5-flash-lite')
+        model = genai.GenerativeModel('models/gemini-1.5-flash')
         if source_type == 'transcript':
             with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(file.name)[1]) as tmp:
                 tmp.write(file.getvalue())
@@ -166,7 +166,7 @@ def process_source(file, source_type):
 # --- AGENTIC WORKFLOW FUNCTIONS ---
 @gemini_api_call_with_retry
 def generate_content_outline(all_chunks, existing_outline=None):
-    model = genai.GenerativeModel('models/gemini-2.5-flash-lite')
+    model = genai.GenerativeModel('models/gemini-1.5-flash')
     prompt_chunks = [{"chunk_id": c['chunk_id'], "text_snippet": c['text'][:200] + "..."} for c in all_chunks if c.get('text') and len(c['text'].split()) > 10]
     
     if not prompt_chunks:
@@ -196,7 +196,7 @@ def generate_content_outline(all_chunks, existing_outline=None):
 
 @gemini_api_call_with_retry
 def synthesize_note_block(topic, relevant_chunks_text, instructions):
-    model = genai.GenerativeModel('models/gemini-2.5-flash-lite')
+    model = genai.GenerativeModel('models/gemini-1.5-flash')
     prompt = f"""
     You are a world-class note-taker. Synthesize a detailed, clear, and well-structured note block for a single topic: {topic}.
     Your entire response MUST be based STRICTLY and ONLY on the provided source text. Do not introduce any external information.
@@ -214,7 +214,7 @@ def synthesize_note_block(topic, relevant_chunks_text, instructions):
 
 @gemini_api_call_with_retry
 def generate_lesson_plan(outline, all_chunks):
-    model = genai.GenerativeModel('models/gemini-2.5-flash-lite')
+    model = genai.GenerativeModel('models/gemini-1.5-flash')
     chunk_context_map = {c['chunk_id']: c['text'][:200] + "..." for c in all_chunks}
     prompt = f"""
     You are a world-class educator. Design a detailed, step-by-step lesson plan based on the provided outline and source material.
@@ -240,12 +240,12 @@ def generate_lesson_plan(outline, all_chunks):
 @gemini_api_call_with_retry
 def answer_from_context(query, context):
     """Answers a user query based ONLY on the provided context."""
-    model = genai.GenerativeModel('models/gemini-2.5-flash-lite')
+    model = genai.GenerativeModel('models/gemini-1.5-flash')
     prompt = f"""
     You are a helpful study assistant. Your task is to answer the user question based strictly and exclusively on the provided study material context.
     Do not use any external knowledge. If the answer is not in the context, clearly state that the information is not available in the provided materials.
 
-    **user Question:**
+    **User Question:**
     {query}
 
     **Study Material Context:**
@@ -284,8 +284,150 @@ def reset_session(tool_choice):
 # --- LANDING PAGE ---
 def show_landing_page(auth_url):
     """Displays the feature-rich landing page"""
-    st.markdown("<h1>Landing Page Placeholder</h1>", unsafe_allow_html=True)
-    st.link_button("Get Started - Sign in with Google", auth_url, type="primary")
+    st.markdown("""
+        <style>
+            .main {
+                background-color: #FFFFFF;
+            }
+            h1, h2, h3 {
+                color: #004080; /* Dark Blue */
+            }
+            .stButton>button {
+                background-color: #007BFF; /* Bright Blue */
+                color: white;
+                border-radius: 8px;
+                padding: 10px 20px;
+                border: none;
+                font-weight: bold;
+            }
+            .stButton>button:hover {
+                background-color: #0056b3;
+            }
+            .feature-box {
+                background-color: #F0F8FF; /* Alice Blue */
+                padding: 20px;
+                border-radius: 10px;
+                border: 1px solid #B0C4DE; /* Light Steel Blue */
+                height: 100%;
+            }
+            .comparison-table {
+                width: 100%;
+                border-collapse: collapse;
+            }
+            .comparison-table th, .comparison-table td {
+                border: 1px solid #B0C4DE;
+                padding: 12px;
+                text-align: left;
+            }
+            .comparison-table th {
+                background-color: #E6F2FF; /* Lighter Blue */
+                color: #004080;
+            }
+            .comparison-table .check {
+                color: #28a745; /* Green for checkmark */
+                font-weight: bold;
+                text-align: center;
+            }
+            .comparison-table .cross {
+                color: #dc3545; /* Red for cross */
+                font-weight: bold;
+                text-align: center;
+            }
+        </style>
+    """, unsafe_allow_html=True)
+
+    st.title("🧠 Vekkam: Stop Drowning in Notes. Start Understanding.")
+    st.subheader("Transform your scattered lecture recordings, textbook PDFs, and messy notes into a unified, intelligent study hub.")
+    st.divider()
+
+    st.header("Your All-in-One Study Engine")
+    col1, col2, col3 = st.columns(3, gap="large")
+    with col1:
+        st.markdown("""
+            <div class="feature-box">
+                <h3>📝 Note & Lesson Engine</h3>
+                <p>Upload anything—audio lectures, PDFs, PowerPoints, even images of a whiteboard. Vekkam intelligently extracts the content, creates a logical outline, and synthesizes everything into clear, editable study notes.</p>
+            </div>
+        """, unsafe_allow_html=True)
+    with col2:
+        st.markdown("""
+            <div class="feature-box">
+                <h3>🎓 Personal TA</h3>
+                <p>Ask questions and get answers based <strong>only</strong> on your uploaded material. No more generic web results or AI hallucinations. Your personal TA knows your syllabus inside and out because you taught it.</p>
+            </div>
+        """, unsafe_allow_html=True)
+    with col3:
+        st.markdown("""
+            <div class="feature-box">
+                <h3>✍️ Mock Test Generator</h3>
+                <p>Turn passive learning into active recall. Generate multi-stage mock tests (MCQs, fill-in-the-blanks, and more) directly from your course material to solidify your knowledge and ace your exams.</p>
+            </div>
+        """, unsafe_allow_html=True)
+
+    st.header("How Vekkam Stacks Up")
+    st.markdown("""
+        <table class="comparison-table">
+            <thead>
+                <tr>
+                    <th>Feature</th>
+                    <th>Vekkam</th>
+                    <th>ChatGPT / Gemini</th>
+                    <th>Turbolearn</th>
+                    <th>Perplexity</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Multi-Modal Input (Audio, PDF, IMG)</strong></td>
+                    <td class="check">✔</td>
+                    <td class="cross">Partial</td>
+                    <td class="cross">YouTube Only</td>
+                    <td class="cross">URL/Text Only</td>
+                </tr>
+                <tr>
+                    <td><strong>Unified Note Synthesis</strong></td>
+                    <td class="check">✔</td>
+                    <td class="cross">Manual / Prompt-based</td>
+                    <td class="check">✔</td>
+                    <td class="cross">✖</td>
+                </tr>
+                <tr>
+                    <td><strong>Personal TA on Your Content Only</strong></td>
+                    <td class="check">✔</td>
+                    <td class="cross">✖ (General Knowledge)</td>
+                    <td class="check">✔</td>
+                    <td class="cross">✖ (Web Search)</td>
+                </tr>
+                <tr>
+                    <td><strong>Integrated Mock Test Generator</strong></td>
+                    <td class="check">✔</td>
+                    <td class="cross">✖</td>
+                    <td class="cross">✖</td>
+                    <td class="cross">✖</td>
+                </tr>
+                <tr>
+                    <td><strong>Editable Topic Outline</strong></td>
+                    <td class="check">✔</td>
+                    <td class="cross">✖</td>
+                    <td class="cross">✖</td>
+                    <td class="cross">✖</td>
+                </tr>
+                <tr>
+                    <td><strong>Persistent Session History</strong></td>
+                    <td class="check">✔</td>
+                    <td class="cross">Chat History Only</td>
+                    <td class="check">✔</td>
+                    <td class="cross">✖</td>
+                </tr>
+            </tbody>
+        </table>
+    """, unsafe_allow_html=True)
+
+    st.header("")
+    _, center_col, _ = st.columns([1, 1.5, 1])
+    with center_col:
+        st.link_button("Get Started - Sign in with Google", auth_url, use_container_width=True)
+
 
 # --- UI STATE FUNCTIONS for NOTE & LESSON ENGINE ---
 def show_upload_state():
