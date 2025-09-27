@@ -449,28 +449,28 @@ def get_bloom_level_name(level):
     # ... (Function code is unchanged)
 
 @gemini_api_call_with_retry
-def generate_questions_from_syllabus(syllabus_text, question_type, question_count):
+    def generate_questions_from_syllabus(syllabus_text, question_type, question_count):
     # ... (Function code is unchanged)
 
 @gemini_api_call_with_retry
-def generate_feedback_on_performance(score, total, questions, user_answers, syllabus):
-    # ... (Function code is unchanged)
-
-# --- MASTERY ENGINE (GENESIS MODULE) ---
-def show_mastery_engine():
-    # ... (Function code is unchanged)
-
-def render_course_selection():
-    # ... (Function code is unchanged)
-
-def render_skill_tree():
-    # ... (Function code is unchanged)
-
-def render_content_viewer():
-    # ... (Function code is unchanged)
-
-def render_boss_battle():
-    # ... (Function code is unchanged)
+    def generate_feedback_on_performance(score, total, questions, user_answers, syllabus):
+        # ... (Function code is unchanged)
+    
+    # --- MASTERY ENGINE (GENESIS MODULE) ---
+    def show_mastery_engine():
+        # ... (Function code is unchanged)
+    
+    def render_course_selection():
+        # ... (Function code is unchanged)
+    
+    def render_skill_tree():
+        # ... (Function code is unchanged)
+    
+    def render_content_viewer():
+        # ... (Function code is unchanged)
+    
+    def render_boss_battle():
+        # ... (Function code is unchanged)
 
 # --- MAIN APPLICATION ---
 def main():
