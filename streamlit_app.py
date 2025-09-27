@@ -295,36 +295,20 @@ def reset_session():
     Resets the state of the current tool, while preserving essential global state
     like user information and processed file context (`all_chunks`).
     """
-    # Preserve essential state that persists across all tools
-    user_info = st.session_state.get('user_info')
-    all_chunks = st.session_state.get('all_chunks', [])
-    tool_choice = st.session_state.get('tool_choice')
-    last_tool_choice = st.session_state.get('last_tool_choice')
-
-    # List of all keys that are specific to a tool's state and should be cleared
-    tool_specific_keys = [
-        # Note & Lesson Engine state
-        'current_state', 'initial_files', 'extraction_failures', 'outline_data', 
-        'editable_outline', 'synthesis_instructions', 'final_notes', 
-        'selected_note_index', 'messages',
-
-        # Personal TA state
-        'ta_messages',
-
-        # Mock Test Generator state
-        'test_stage', 'syllabus', 'questions', 'user_answers', 'score', 'feedback',
-        
-        # Mastery Engine state
-        'mastery_stage', 'user_progress', 'current_genome', 'selected_node_id',
-        
-        # Other transient keys
-        'editing_session_id'
-    ]
-
-    # Delete only the tool-specific keys, preserving the rest
-    for key in tool_specific_keys:
-        if key in st.session_state:
-            del st.session_state[key]
+    preserved_state = {
+        'user_info': st.session_state.get('user_info'),
+        'all_chunks': st.session_state.get('all_chunks', []),
+        'tool_choice': st.session_state.get('tool_choice'),
+        'last_tool_choice': st.session_state.get('last_tool_choice')
+    }
+    
+    # Clear the entire session state
+    st.session_state.clear()
+    
+    # Restore the preserved state
+    for key, value in preserved_state.items():
+        if value is not None:
+            st.session_state[key] = value
 
 
 # --- LANDING PAGE ---
@@ -696,7 +680,6 @@ def render_subjective_results(q_type, pass_mark_percent, next_stage):
         st.error(f"You need to score at least {pass_mark_percent}% to proceed. Please review the feedback and try again.")
         if st.button(f"Restart {type_map[q_type]} Test"):
             st.session_state.test_stage = f"{q_type}_generating"
-            # Clear previous answers for this stage
             if q_type in st.session_state.user_answers: del st.session_state.user_answers[q_type]
             if q_type in st.session_state.score: del st.session_state.score[q_type]
             if q_type in st.session_state.feedback: del st.session_state.feedback[q_type]
@@ -708,7 +691,6 @@ def render_final_results():
     st.markdown("You have demonstrated a strong understanding of the material across multiple cognitive levels.")
 
     st.subheader("Final Score Summary")
-    # Display scores for all stages
     
     if st.button("Take a New Test", type="primary"):
         for key in ['test_stage', 'syllabus', 'questions', 'user_answers', 'score', 'feedback']:
@@ -934,6 +916,13 @@ def render_content_viewer():
         st.rerun()
 
 def render_boss_battle():
+    # Guardrail to prevent crash if state is lost
+    if 'selected_node_id' not in st.session_state:
+        st.warning("No concept selected for the boss battle. Redirecting to skill tree.")
+        st.session_state.mastery_stage = 'skill_tree'
+        st.rerun()
+        return
+
     node_id = st.session_state.selected_node_id
     node_data = next((n for n in st.session_state.current_genome['nodes'] if n['gene_id'] == node_id), None)
     st.subheader(f"Boss Battle: {node_data['gene_name']}")
