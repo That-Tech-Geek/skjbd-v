@@ -1,5 +1,3 @@
-# app.py
-
 import streamlit as st
 import time
 import os
@@ -347,8 +345,164 @@ def reset_session(tool_choice):
 
 def show_landing_page(auth_url):
     """Displays the marketing/landing page for non-logged-in users."""
-    st.markdown("""<style>...</style>""", unsafe_allow_html=True) # CSS is omitted for brevity
-    # ... (Landing page markdown content) ...
+    st.markdown("""
+        <style>
+            @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+            .main {
+                background-color: #FFFFFF;
+                font-family: 'Inter', sans-serif;
+            }
+            .hero-container {
+                padding: 4rem 1rem;
+                text-align: center;
+            }
+            .hero-title {
+                font-size: 3.5rem;
+                font-weight: 700;
+                background: -webkit-linear-gradient(45deg, #004080, #007BFF);
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+                margin-bottom: 1rem;
+            }
+            .hero-subtitle {
+                font-size: 1.25rem;
+                color: #555;
+                max-width: 700px;
+                margin: 0 auto 2rem auto;
+                line-height: 1.6;
+            }
+            .how-it-works-card {
+                padding: 1.5rem; text-align: center;
+            }
+            .how-it-works-card .step-number {
+                display: inline-block; width: 40px; height: 40px; line-height: 40px;
+                border-radius: 50%; background-color: #E6F2FF; color: #007BFF;
+                font-weight: 700; font-size: 1.2rem; margin-bottom: 1rem;
+            }
+            .comparison-table-premium {
+                width: 100%; border-collapse: separate; border-spacing: 0;
+                border-radius: 12px; overflow: hidden;
+                box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 1px solid #E0E0E0;
+            }
+            .comparison-table-premium th, .comparison-table-premium td {
+                padding: 1.2rem 1rem; text-align: left; border-bottom: 1px solid #E0E0E0;
+            }
+            .comparison-table-premium th {
+                background-color: #F8F9FA; color: #333; font-weight: 600;
+            }
+            .comparison-table-premium tbody tr:last-child td { border-bottom: none; }
+            .comparison-table-premium .check {
+                color: #1E90FF; font-weight: bold; text-align: center; font-size: 1.2rem;
+            }
+            .comparison-table-premium .cross {
+                color: #B0B0B0; font-weight: bold; text-align: center; font-size: 1.2rem;
+            }
+            .cta-button a {
+                font-size: 1.1rem !important; font-weight: 600 !important;
+                padding: 0.8rem 2rem !important; border-radius: 8px !important;
+                background-image: linear-gradient(45deg, #007BFF, #0056b3) !important;
+                border: none !important; transition: transform 0.2s, box-shadow 0.2s !important;
+            }
+            .cta-button a:hover {
+                transform: scale(1.05);
+                box-shadow: 0 6px 15px rgba(0, 123, 255, 0.3);
+            }
+            .section-header {
+                text-align: center; color: #004080; font-weight: 700;
+                margin-top: 4rem; margin-bottom: 2rem;
+            }
+        </style>
+    """, unsafe_allow_html=True)
+
+    with st.container():
+        st.markdown('<div class="hero-container">', unsafe_allow_html=True)
+        st.markdown('<h1 class="hero-title">From Classroom Chaos to Concept Clarity</h1>', unsafe_allow_html=True)
+        st.markdown('<p class="hero-subtitle">Stop drowning in disorganized notes and endless lectures. Vekkam transforms your course materials into a powerful, interactive knowledge base that helps you study smarter, not harder.</p>', unsafe_allow_html=True)
+        st.link_button("Activate Your Smart Study Hub", auth_url, type="primary")
+        st.markdown('</div>', unsafe_allow_html=True)
+    
+    st.divider()
+
+    st.markdown('<h2 class="section-header">Your Path to Mastery in 3 Simple Steps</h2>', unsafe_allow_html=True)
+    col1, col2, col3 = st.columns(3, gap="large")
+    with col1:
+        st.markdown("""
+            <div class="how-it-works-card">
+                <div class="step-number">1</div>
+                <h3>Aggregate Your Materials</h3>
+                <p>Upload everything—audio lectures, textbook chapters, slide decks, and even whiteboard photos. Consolidate your entire syllabus in one place.</p>
+            </div>
+        """, unsafe_allow_html=True)
+    with col2:
+        st.markdown("""
+            <div class="how-it-works-card">
+                <div class="step-number">2</div>
+                <h3>Synthesize & Understand</h3>
+                <p>Vekkam's AI analyzes and structures your content, creating a unified set of clear, editable notes. See the connections you never knew existed.</p>
+            </div>
+        """, unsafe_allow_html=True)
+    with col3:
+        st.markdown("""
+            <div class="how-it-works-card">
+                <div class="step-number">3</div>
+                <h3>Query, Test & Master</h3>
+                <p>Chat with your personal AI tutor and generate mock tests directly from your notes. Turn passive knowledge into active, exam-ready expertise.</p>
+            </div>
+        """, unsafe_allow_html=True)
+    
+    st.markdown('<h2 class="section-header">A Knowledge Base That Grows With You</h2>', unsafe_allow_html=True)
+    st.markdown("Vekkam isn't just for one-time cramming. Every session you create builds upon the last, creating a personal, searchable library of your entire academic career. Your Personal TA becomes more intelligent about your curriculum over time, making it an indispensable tool for finals, comprehensive exams, and lifelong learning.")
+
+    st.markdown('<h2 class="section-header">The Unfair Advantage Over Other Tools</h2>', unsafe_allow_html=True)
+    st.markdown("""
+        <table class="comparison-table-premium">
+            <thead>
+                <tr>
+                    <th>Capability</th>
+                    <th>Vekkam</th>
+                    <th>ChatGPT / Gemini</th>
+                    <th>Turbolearn</th>
+                    <th>Perplexity</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Multi-Modal Synthesis (Audio, PDF, IMG)</strong></td>
+                    <td class="check">✔</td>
+                    <td class="cross">Partial</td>
+                    <td class="cross">YouTube Only</td>
+                    <td class="cross">URL/Text Only</td>
+                </tr>
+                <tr>
+                    <td><strong>Chat With <u>Your</u> Content Only</strong></td>
+                    <td class="check">✔</td>
+                    <td class="cross">✖ (General)</td>
+                    <td class="check">✔</td>
+                    <td class="cross">✖ (Web Search)</td>
+                </tr>
+                <tr>
+                    <td><strong>Integrated Mock Test Generator</strong></td>
+                    <td class="check">✔</td>
+                    <td class="cross">✖</td>
+                    <td class="cross">✖</td>
+                    <td class="cross">✖</td>
+                </tr>
+                <tr>
+                    <td><strong>Builds a Persistent Knowledge Base</strong></td>
+                    <td class="check">✔</td>
+                    <td class="cross">✖ (Chat History)</td>
+                    <td class="check">✔</td>
+                    <td class="cross">✖</td>
+                </tr>
+            </tbody>
+        </table>
+    """, unsafe_allow_html=True)
+
+    with st.container():
+        st.markdown('<div class="hero-container">', unsafe_allow_html=True)
+        st.markdown('<h2 class="section-header" style="margin-top:2rem;">Ready to Stop Studying Harder and Start Studying Smarter?</h2>', unsafe_allow_html=True)
+        st.link_button("Get Started for Free", auth_url, type="primary")
+        st.markdown('</div>', unsafe_allow_html=True)
 
 def show_upload_state():
     st.header("Note & Lesson Engine: Upload")
@@ -419,58 +573,441 @@ def show_workspace_state():
             with st.expander("⚠️ Processing Errors", expanded=True):
                 for failure in st.session_state.extraction_failures:
                     st.error(f"**{failure['source_id']}**: {failure['reason']}")
+        with st.expander("Add More Files"):
+            new_files = st.file_uploader("Upload more files", accept_multiple_files=True, key=f"uploader_{int(time.time())}")
+            if new_files:
+                st.info("File adding logic to be implemented.")
 
 def show_synthesizing_state():
-    # ... (Function code is unchanged)
+    st.header("Synthesizing Note Blocks...")
+    st.session_state.final_notes = []
+    topics = [line.strip() for line in st.session_state.editable_outline.split('\n') if line.strip()]
+    chunks_map = {c['chunk_id']: c['text'] for c in st.session_state.all_chunks}
+    
+    original_outline_map = {item['topic']: item.get('relevant_chunks', []) for item in st.session_state.outline_data}
+    
+    bar = st.progress(0, "Starting synthesis...")
+    for i, topic in enumerate(topics):
+        bar.progress((i + 1) / len(topics), f"Synthesizing: {topic}")
+        matched_chunks = original_outline_map.get(topic, [])
+        if not matched_chunks:
+            for original_topic, chunk_ids in original_outline_map.items():
+                if topic in original_topic:
+                    matched_chunks = chunk_ids
+                    break
+        
+        text_to_synthesize = "\n\n---\n\n".join([chunks_map.get(cid, "") for cid in matched_chunks if cid in chunks_map])
+        
+        if not text_to_synthesize.strip():
+            content = "Could not find source text for this topic. It might have been edited or removed."
+        else:
+            content = synthesize_note_block(topic, text_to_synthesize, st.session_state.synthesis_instructions)
+            
+        st.session_state.final_notes.append({"topic": topic, "content": content, "source_chunks": matched_chunks})
+    
+    if st.session_state.get('user_info') and st.session_state.final_notes:
+        user_id = st.session_state.user_info.get('id') or st.session_state.user_info.get('email')
+        save_session_to_history(user_id, st.session_state.final_notes)
+
+    st.session_state.current_state = 'results'
+    st.rerun()
 
 def show_results_state():
-    # ... (Function code is unchanged)
+    st.header("Your Unified Notes")
+    
+    col_actions1, col_actions2, _ = st.columns([1, 1, 3])
+    with col_actions1:
+        if st.button("Go to Workspace"): 
+            st.session_state.current_state = 'workspace'
+            st.rerun()
+    with col_actions2:
+        if st.button("Start New Session"): 
+            reset_session(st.session_state.tool_choice)
+            st.rerun()
+
+    st.divider()
+
+    st.session_state.setdefault('selected_note_index', None)
+
+    col1, col2 = st.columns([1, 2], gap="large")
+
+    with col1:
+        st.subheader("Topics")
+        for i, block in enumerate(st.session_state.final_notes):
+            if st.button(block['topic'], key=f"topic_{i}", use_container_width=True):
+                st.session_state.selected_note_index = i
+
+    with col2:
+        st.subheader("Content Viewer")
+        if st.session_state.selected_note_index is not None:
+            selected_note = st.session_state.final_notes[st.session_state.selected_note_index]
+            
+            tab1, tab2 = st.tabs(["Formatted Output", "Source Chunks"])
+
+            with tab1:
+                st.markdown(f"### {selected_note['topic']}")
+                st.markdown(selected_note['content'])
+
+            with tab2:
+                st.markdown("These are the raw text chunks from your source files that the AI used to generate the note.")
+                st.code('\n\n'.join(selected_note['source_chunks']))
+        else:
+            st.info("👆 Select a topic from the left to view its details.")
+    
+    st.divider()
+    st.subheader("Communicate with these Notes")
+    
+    st.session_state.setdefault("messages", [])
+    
+    for message in st.session_state.messages:
+        with st.chat_message(message["role"]):
+            st.markdown(message["content"])
+
+    if prompt := st.chat_input("Ask a question about the notes you just generated..."):
+        st.session_state.messages.append({"role": "user", "content": prompt})
+        with st.chat_message("user"):
+            st.markdown(prompt)
+
+        with st.chat_message("assistant"):
+            with st.spinner("Thinking..."):
+                current_notes_context = "\n\n".join([note['content'] for note in st.session_state.final_notes])
+                response = answer_from_context(prompt, current_notes_context)
+                st.markdown(response)
+        st.session_state.messages.append({"role": "assistant", "content": response})
 
 def show_personal_ta_ui():
-    # ... (Function code is unchanged)
+    st.header("🎓 Your Personal TA")
+    st.markdown("Ask questions and get answers based on the knowledge from all your past study sessions.")
+    user_id = st.session_state.user_info.get('id') or st.session_state.user_info.get('email')
+    user_data = load_user_data(user_id)
 
-# --- MOCK TEST GENERATOR ---
+    if not user_data or not user_data["sessions"]:
+        st.warning("You don't have any saved study sessions yet. Create some notes first to power up your TA!")
+        return
+
+    st.session_state.setdefault("ta_messages", [])
+
+    for message in st.session_state.ta_messages:
+        with st.chat_message(message["role"]):
+            st.markdown(message["content"])
+
+    if prompt := st.chat_input("Ask your Personal TA..."):
+        st.session_state.ta_messages.append({"role": "user", "content": prompt})
+        with st.chat_message("user"):
+            st.markdown(prompt)
+
+        with st.chat_message("assistant"):
+            with st.spinner("Consulting your past notes..."):
+                full_context = []
+                for session in user_data["sessions"]:
+                    for note in session["notes"]:
+                        full_context.append(f"Topic: {note['topic']}\nContent: {note['content']}")
+                
+                context_str = "\n\n---\n\n".join(full_context)
+                response = answer_from_context(prompt, context_str)
+                st.markdown(response)
+        
+        st.session_state.ta_messages.append({"role": "assistant", "content": response})
+
 def show_mock_test_generator():
-    # ... (Function code is unchanged)
+    """Main function to handle the multi-stage mock test generation and execution."""
+    st.header("📝 Mock Test Generator")
+
+    st.session_state.setdefault('test_stage', 'start')
+    st.session_state.setdefault('syllabus', "")
+    st.session_state.setdefault('questions', {})
+    st.session_state.setdefault('user_answers', {})
+    st.session_state.setdefault('score', {})
+    st.session_state.setdefault('feedback', {})
+    
+    stage = st.session_state.test_stage
+    if stage == 'start':
+        render_syllabus_input()
+    elif stage == 'generating':
+        render_generating_questions()
+    elif stage == 'mcq_test':
+        render_mcq_test()
+    elif stage == 'mcq_results':
+        render_mcq_results()
+    else:
+        st.info("Further test stages (e.g., Fill-in-the-Blanks) are under development.")
 
 def render_syllabus_input():
-    # ... (Function code is unchanged)
+    """Renders the UI for the user to input their syllabus."""
+    st.subheader("Step 1: Provide Your Syllabus")
+    st.write("Paste the syllabus or topic outline you want to be tested on. The more detail you provide, the better the questions will be.")
+    
+    syllabus_text = st.text_area("Syllabus / Topics", height=250, key="syllabus_input_area")
+    
+    if st.button("Generate My Test", type="primary"):
+        if len(syllabus_text) < 50:
+            st.warning("Please provide a more detailed syllabus for best results.")
+        else:
+            st.session_state.syllabus = syllabus_text
+            st.session_state.test_stage = 'generating'
+            st.rerun()
 
 def render_generating_questions():
-    # ... (Function code is unchanged)
+    """Handles the background generation of questions for all stages."""
+    with st.spinner("Building your test... The AI is analyzing the syllabus and crafting questions..."):
+        questions_json = generate_questions_from_syllabus(st.session_state.syllabus, "MCQ", 10)
+        
+        if questions_json and "questions" in questions_json:
+            st.session_state.questions['mcq'] = questions_json["questions"]
+            st.session_state.test_stage = 'mcq_test'
+            st.rerun()
+        else:
+            st.error("Failed to generate questions. The AI could not create a test from the provided syllabus. Please try again with a more detailed or different syllabus.")
+            st.session_state.test_stage = 'start'
+            st.rerun()
 
 def render_mcq_test():
-    # ... (Function code is unchanged)
+    """Renders the MCQ test form."""
+    st.subheader("Stage 1: Multiple Choice Questions")
+    st.write("Answer at least 7 out of 10 questions correctly to advance to the next stage.")
+    mcq_questions = st.session_state.questions.get('mcq', [])
+    
+    if not mcq_questions:
+        st.error("MCQ questions not found. Please restart the test.")
+        if st.button("Restart"):
+            st.session_state.test_stage = 'start'
+            st.rerun()
+        return
+
+    with st.form("mcq_form"):
+        user_answers = {}
+        for i, q in enumerate(mcq_questions):
+            st.markdown(f"**{i+1}. {q['question_text']}**")
+            st.caption(f"Bloom's Taxonomy Level: {q.get('taxonomy_level', 'N/A')} ({get_bloom_level_name(q.get('taxonomy_level'))})")
+            options_keys = sorted(q['options'].keys())
+            options_values = [q['options'][key] for key in options_keys]
+            
+            selected_option_text = st.radio("Select your answer:", options_values, key=q['question_id'], label_visibility="collapsed")
+            if selected_option_text:
+                user_answers[q['question_id']] = options_keys[options_values.index(selected_option_text)]
+            st.divider()
+
+        submitted = st.form_submit_button("Submit Answers")
+        if submitted:
+            st.session_state.user_answers['mcq'] = user_answers
+            score = sum(1 for q in mcq_questions if user_answers.get(q['question_id']) == q['answer'])
+            st.session_state.score['mcq'] = score
+            st.session_state.test_stage = 'mcq_results'
+            st.rerun()
 
 def render_mcq_results():
-    # ... (Function code is unchanged)
+    """Displays the results of the MCQ test and provides feedback."""
+    score = st.session_state.score.get('mcq', 0)
+    total = len(st.session_state.questions.get('mcq', []))
+    st.subheader(f"MCQ Results: You scored {score} / {total}")
+
+    if 'mcq' not in st.session_state.feedback:
+        with st.spinner("Analyzing your performance and generating feedback..."):
+            all_questions = st.session_state.questions.get('mcq', [])
+            user_answers = st.session_state.user_answers.get('mcq', {})
+            feedback_text = generate_feedback_on_performance(score, total, all_questions, user_answers, st.session_state.syllabus)
+            st.session_state.feedback['mcq'] = feedback_text
+    
+    with st.container(border=True):
+        st.subheader("💡 Suggestions for Improvement")
+        st.write(st.session_state.feedback.get('mcq', "No feedback generated."))
+        
+    if score >= 7:
+        st.success("Congratulations! You've passed this stage.")
+        if st.button("Proceed to Next Stage", type="primary"):
+            st.info("Further stages are under development.")
+    else:
+        st.error("You need a score of 7/10 to proceed. Please review the material and try again.")
+        if st.button("Restart Test"):
+            for key in ['test_stage', 'syllabus', 'questions', 'user_answers', 'score', 'feedback']:
+                if key in st.session_state:
+                    del st.session_state[key]
+            st.rerun()
+
+@gemini_api_call_with_retry
+def generate_questions_from_syllabus(syllabus_text, question_type, question_count):
+    model = genai.GenerativeModel(GEMINI_MODEL)
+    prompt = f"""
+    You are an expert Question Paper Setter and an authority on Bloom's Taxonomy. Generate {question_count} Multiple Choice Questions (MCQs) based STRICTLY on the provided syllabus.
+
+    **Syllabus:**
+    ---
+    {syllabus_text}
+    ---
+
+    **Instructions:**
+    1.  **Strict Syllabus Adherence:** Do NOT ask about topics outside the syllabus.
+    2.  **Bloom's Taxonomy:** Distribute questions across cognitive skills (Remembering, Understanding, Applying, Analyzing).
+    3.  **High-Quality Options:** Incorrect options (distractors) must be plausible but clearly wrong.
+    4.  **Output Format:** Output a single, valid JSON object with a root key "questions", which is a list of question objects.
+    5.  **Question Object Structure:** Each object must have: `question_id` (string), `taxonomy_level` (integer 1-5), `question_text` (string), `options` (object with keys "A", "B", "C", "D"), and `answer` (string key like "C").
+
+    Generate the JSON now.
+    """
+    response = model.generate_content(prompt)
+    return resilient_json_parser(response.text)
 
 def get_bloom_level_name(level):
-    # ... (Function code is unchanged)
+    """Maps a Bloom's Taxonomy level number to its name."""
+    if level is None: return "N/A"
+    levels = {1: "Remembering", 2: "Understanding", 3: "Applying", 4: "Analyzing", 5: "Evaluating"}
+    return levels.get(level, "Unknown")
 
 @gemini_api_call_with_retry
-    def generate_questions_from_syllabus(syllabus_text, question_type, question_count):
-    # ... (Function code is unchanged)
+def generate_feedback_on_performance(score, total, questions, user_answers, syllabus):
+    model = genai.GenerativeModel(GEMINI_MODEL)
+    incorrect_questions = []
+    for q in questions:
+        q_id = q['question_id']
+        if user_answers.get(q_id) != q['answer']:
+            incorrect_questions.append({
+                "question": q['question_text'],
+                "correct_answer": q['options'][q['answer']],
+                "user_answer": q['options'].get(user_answers.get(q_id), "Not Answered"),
+                "taxonomy_level": q['taxonomy_level']
+            })
 
-@gemini_api_call_with_retry
-    def generate_feedback_on_performance(score, total, questions, user_answers, syllabus):
-        # ... (Function code is unchanged)
+    prompt = f"""
+    You are an encouraging academic coach. A student scored {score}/{total} on a test for this syllabus: {syllabus}.
+    Here are the questions they got wrong: {json.dumps(incorrect_questions, indent=2)}
+
+    **Your Task:**
+    1.  Start with encouragement.
+    2.  Identify patterns in their mistakes (specific topics or cognitive skills like 'Applying' vs 'Remembering').
+    3.  Provide specific, actionable advice for improvement.
+    4.  Maintain a positive, motivating tone. Be concise and use bullet points.
+
+    Write the feedback now.
+    """
+    response = model.generate_content(prompt)
+    return response.text
+
+def show_mastery_engine():
+    """Renders the entire Genesis Module feature."""
+    st.header("🏆 Mastery Engine")
+
+    st.session_state.setdefault('mastery_stage', 'course_selection')
+    st.session_state.setdefault('user_progress', {})
     
-    # --- MASTERY ENGINE (GENESIS MODULE) ---
-    def show_mastery_engine():
-        # ... (Function code is unchanged)
+    stage = st.session_state.mastery_stage
+    if stage == 'course_selection':
+        render_course_selection()
+    elif stage == 'skill_tree':
+        render_skill_tree()
+    elif stage == 'content_viewer':
+        render_content_viewer()
+    elif stage == 'boss_battle':
+        render_boss_battle()
+
+def render_course_selection():
+    """Allows the user to select a course to begin."""
+    st.subheader("Select Your Course")
+    if st.button("Econ 101", use_container_width=True, type="primary"):
+        st.session_state.current_genome = ECON_101_GENOME
+        
+        progress = {}
+        genome_nodes = st.session_state.current_genome['nodes']
+        all_node_ids = {node['gene_id'] for node in genome_nodes}
+        destination_nodes = {edge['to'] for edge in st.session_state.current_genome['edges']}
+        root_nodes = all_node_ids - destination_nodes
+
+        for node_id in all_node_ids:
+            progress[node_id] = 'unlocked' if node_id in root_nodes else 'locked'
+        
+        st.session_state.user_progress = progress
+        st.session_state.mastery_stage = 'skill_tree'
+        st.rerun()
+
+def render_skill_tree():
+    """Renders the interactive skill tree UI based on user progress."""
+    st.subheader(f"Skill Tree: {st.session_state.current_genome['subject']}")
+
+    nodes = st.session_state.current_genome['nodes']
+    progress = st.session_state.user_progress
+
+    for node in nodes:
+        node_id, node_name = node['gene_id'], node['gene_name']
+        status = progress.get(node_id, 'locked')
+        
+        if status == 'mastered':
+            st.success(f"**{node_name}** - ✅ Mastered!", icon="✅")
+        elif status == 'unlocked':
+            if st.button(f"🧠 Learn: {node_name}", key=node_id, use_container_width=True, type="primary"):
+                st.session_state.selected_node_id = node_id
+                st.session_state.mastery_stage = 'content_viewer'
+                st.rerun()
+        else: # locked
+            st.info(f"**{node_name}** - 🔒 Locked", icon="🔒")
+        
+        if node_id != nodes[-1]['gene_id']:
+             st.markdown('<p style="text-align: center; margin: 0; padding: 0;">↓</p>', unsafe_allow_html=True)
     
-    def render_course_selection():
-        # ... (Function code is unchanged)
+    st.markdown("---")
+    if st.button("Back to Course Selection"):
+        st.session_state.mastery_stage = 'course_selection'
+        st.rerun()
+
+def render_content_viewer():
+    """Displays the learning content for a selected node."""
+    node_id = st.session_state.selected_node_id
+    node_data = next((n for n in st.session_state.current_genome['nodes'] if n['gene_id'] == node_id), None)
+
+    if not node_data:
+        st.error("Error: Could not load node data."); st.session_state.mastery_stage = 'skill_tree'; st.rerun(); return
+
+    st.subheader(f"Learning: {node_data['gene_name']}")
+    st.divider()
     
-    def render_skill_tree():
-        # ... (Function code is unchanged)
+    for allele in node_data['content_alleles']:
+        if allele['type'] == 'text': st.markdown(allele['content'])
+        elif allele['type'] == 'video': st.video(allele['url'])
     
-    def render_content_viewer():
-        # ... (Function code is unchanged)
+    st.divider()
+    col1, col2 = st.columns([1, 1])
+    if col1.button("Back to Skill Tree"):
+        st.session_state.mastery_stage = 'skill_tree'
+        st.rerun()
+    if col2.button(f"⚔️ Challenge Boss: {node_data['gene_name']}", type="primary"):
+        st.session_state.mastery_stage = 'boss_battle'
+        st.session_state.syllabus = f"Topic: {node_data['gene_name']}. Content: {next(a['content'] for a in node_data['content_alleles'] if a['type'] == 'text')}"
+        st.session_state.test_stage = 'generating'
+        for key in ['questions', 'user_answers', 'score', 'feedback']:
+            if key in st.session_state: del st.session_state[key]
+        st.rerun()
+
+def render_boss_battle():
+    """Repurposes the mock test generator as a boss battle."""
+    node_id = st.session_state.selected_node_id
+    node_data = next((n for n in st.session_state.current_genome['nodes'] if n['gene_id'] == node_id), None)
     
-    def render_boss_battle():
-        # ... (Function code is unchanged)
+    st.subheader(f"Boss Battle: {node_data['gene_name']}")
+    
+    stage = st.session_state.get('test_stage', 'generating')
+    
+    if stage == 'generating': render_generating_questions()
+    elif stage == 'mcq_test': render_mcq_test()
+    elif stage == 'mcq_results':
+        score = st.session_state.score.get('mcq', 0)
+        total = len(st.session_state.questions.get('mcq', []))
+        st.subheader(f"Battle Results: You scored {score} / {total}")
+        
+        if score >= 7:
+            st.balloons()
+            st.success("Victory! You have mastered this concept.")
+            st.session_state.user_progress[node_id] = 'mastered'
+            
+            for edge in st.session_state.current_genome['edges']:
+                if edge['from'] == node_id:
+                    st.session_state.user_progress[edge['to']] = 'unlocked'
+            
+            if st.button("Return to Skill Tree", type="primary"):
+                st.session_state.mastery_stage = 'skill_tree'
+                st.rerun()
+        else:
+            st.error("Defeated. The concept is not yet mastered. Review the material and try again.")
+            if st.button("Return to Learning"):
+                st.session_state.mastery_stage = 'content_viewer'
+                st.rerun()
 
 # --- MAIN APPLICATION ---
 def main():
@@ -529,9 +1066,34 @@ def main():
             with st.sidebar.expander(f"{session.get('timestamp', 'N/A')} - {session.get('title', 'Untitled')}"):
                 is_editing = st.session_state.get('editing_session_id') == session.get('id')
                 if is_editing:
-                    # ... (UI for editing is unchanged)
+                    new_title = st.text_input("Edit Title", value=session['title'], key=f"edit_title_{session['id']}", label_visibility="collapsed")
+                    col1, col2 = st.columns(2)
+                    if col1.button("Save", key=f"save_{session['id']}", type="primary", use_container_width=True):
+                        user_data["sessions"][i]['title'] = new_title
+                        save_user_data(user_id, user_data)
+                        st.session_state.editing_session_id = None
+                        st.rerun()
+                    if col2.button("Cancel", key=f"cancel_{session['id']}", use_container_width=True):
+                        st.session_state.editing_session_id = None
+                        st.rerun()
                 else:
-                    # ... (UI for viewing/deleting is unchanged)
+                    for note in session.get('notes', []):
+                        st.write(f"• {note['topic']}")
+                    st.divider()
+                    col1, col2, col3 = st.columns(3)
+                    if col1.button("👁️ View", key=f"view_{session['id']}", use_container_width=True):
+                        reset_session("Note & Lesson Engine")
+                        st.session_state.final_notes = session.get('notes', [])
+                        st.session_state.current_state = 'results'
+                        st.session_state.messages = []
+                        st.rerun()
+                    if col2.button("✏️ Edit", key=f"edit_{session['id']}", use_container_width=True):
+                        st.session_state.editing_session_id = session['id']
+                        st.rerun()
+                    if col3.button("🗑️ Delete", key=f"del_{session['id']}", type="secondary", use_container_width=True):
+                        user_data["sessions"].pop(i)
+                        save_user_data(user_id, user_data)
+                        st.rerun()
     st.sidebar.divider()
 
     tool_options = ("Note & Lesson Engine", "Personal TA", "Mock Test Generator", "Mastery Engine")
