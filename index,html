@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vekkam Engine</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div id="app-container">
+        <div id="landing-view" class="view active-view">
+            <div class="landing-content">
+                <div class="logo">🧠 Vekkam</div>
+                <h1>Unlock Your Study Potential</h1>
+                <p>Transform any material—lectures, notes, and textbooks—into clear, concise, and unified study guides.</p>
+                <button id="login-button" class="btn btn-primary">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" alt="Google Logo"/>
+                    Sign in with Google
+                </button>
+            </div>
+        </div>
+
+        <div id="main-app-view" class="view">
+            <aside id="sidebar">
+                <div class="sidebar-header">
+                    <div class="logo">🧠 Vekkam</div>
+                    <div id="user-profile">
+                        <img id="user-avatar" src="" alt="User Avatar">
+                        <span id="user-name"></span>
+                    </div>
+                    <button id="logout-button" class="btn-logout">Logout</button>
+                </div>
+                <div class="sidebar-tools">
+                    <label><input type="radio" name="tool" value="engine" checked> Note & Lesson Engine</label>
+                    <label><input type="radio" name="tool" value="ta"> Personal TA</label>
+                    <label><input type="radio" name="tool" value="test"> Mock Test Generator</label>
+                </div>
+                <div class="sidebar-history">
+                    <h3>Study History</h3>
+                    <div id="history-list">
+                        </div>
+                </div>
+            </aside>
+
+            <main id="main-content">
+                <div id="engine-tool" class="tool-content active-tool">
+                    <div id="upload-state" class="state active-state">
+                        <h2>1. Upload Your Materials</h2>
+                        <p>Add audio lectures, PDFs, or images. Max 20 files, 150MB total.</p>
+                        <div id="drop-zone">
+                            <p>Drag & drop files here or click to select</p>
+                            <input type="file" id="file-input" multiple hidden>
+                        </div>
+                        <div id="file-preview-list"></div>
+                        <button id="process-files-button" class="btn btn-primary" disabled>Process Files</button>
+                    </div>
+
+                    <div id="workspace-state" class="state">
+                        <h2>2. Curate Your Outline</h2>
+                        <p>The AI has generated a topic outline. Feel free to edit it before synthesizing your notes.</p>
+                        <div class="workspace-grid">
+                            <div class="outline-editor">
+                                <textarea id="outline-textarea" placeholder="Your topics will appear here..."></textarea>
+                                <textarea id="synthesis-instructions" placeholder="Optional: Add instructions like 'Explain this for a beginner' or 'Focus on key formulas'"></textarea>
+                                <button id="synthesize-button" class="btn btn-primary">Synthesize Notes</button>
+                            </div>
+                            <div class="source-explorer">
+                                <h4>Processing Status</h4>
+                                <div id="error-log"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="results-state" class="state">
+                        <h2>Your Unified Notes</h2>
+                         <div class="results-actions">
+                            <button id="back-to-workspace-button" class="btn btn-secondary">Go to Workspace</button>
+                            <button id="new-session-button" class="btn btn-secondary">Start New Session</button>
+                        </div>
+                        <div class="results-grid">
+                            <div id="results-topics-list"></div>
+                            <div id="results-content-viewer">
+                                <div class="tabs">
+                                    <button class="tab-button active" data-tab="formatted">Formatted Output</button>
+                                    <button class="tab-button" data-tab="source">Source Chunks</button>
+                                </div>
+                                <div id="formatted-content" class="tab-content active"></div>
+                                <div id="source-content" class="tab-content"></div>
+                            </div>
+                        </div>
+                        <div class="chat-container">
+                            <h3>Ask About These Notes</h3>
+                            <div id="chat-box"></div>
+                            <div class="chat-input-area">
+                                <input type="text" id="chat-input" placeholder="Ask a question...">
+                                <button id="chat-send-button" class="btn">Send</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div id="ta-tool" class="tool-content">
+                    <h2>🎓 Personal TA</h2>
+                    <p>Ask questions based on all your past study sessions.</p>
+                    <div class="chat-container">
+                        <div id="ta-chat-box"></div>
+                        <div class="chat-input-area">
+                            <input type="text" id="ta-chat-input" placeholder="Ask your personal TA...">
+                            <button id="ta-chat-send-button" class="btn">Send</button>
+                        </div>
+                    </div>
+                </div>
+                <div id="test-tool" class="tool-content">
+                     <h2>📝 Mock Test Generator</h2>
+                     <p>This feature is coming soon!</p>
+                </div>
+            </main>
+        </div>
+
+        <div id="loader" class="hidden">
+            <div class="spinner"></div>
+            <p id="loader-message">Processing...</p>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
