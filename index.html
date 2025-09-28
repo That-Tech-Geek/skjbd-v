@@ -26,19 +26,6 @@
         .modal-content {
             transition: transform 0.25s ease;
         }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        th, td {
-            border: 1px solid #e2e8f0;
-            padding: 8px 12px;
-            text-align: left;
-        }
-        th {
-            background-color: #f8fafc;
-            font-weight: 600;
-        }
         pre {
             white-space: pre-wrap;
             word-wrap: break-word;
@@ -68,10 +55,10 @@
             <section id="corporate">
                 <h2 class="text-2xl font-semibold border-l-4 border-blue-600 pl-4 mb-6">Corporate</h2>
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <div onclick="openModal('modal-deck')" class="data-room-card block bg-white p-6 rounded-lg border border-gray-200">
+                    <a href="https://drive.google.com/file/d/1hEwuE7PmTYjOPIvQTCmKj_m97NYeBhuJ/view?usp=sharing" target="_blank" class="data-room-card block bg-white p-6 rounded-lg border border-gray-200">
                         <h3 class="font-semibold text-lg text-gray-900">Investor Pitch Deck</h3>
                         <p class="text-gray-500 mt-2">The complete investment presentation.</p>
-                    </div>
+                    </a>
                     <div onclick="openModal('modal-exec-summary')" class="data-room-card block bg-white p-6 rounded-lg border border-gray-200">
                         <h3 class="font-semibold text-lg text-gray-900">Executive Summary</h3>
                         <p class="text-gray-500 mt-2">A one-page overview of the business.</p>
@@ -121,14 +108,14 @@
             <section id="financials">
                 <h2 class="text-2xl font-semibold border-l-4 border-yellow-500 pl-4 mb-6">Financials</h2>
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <div onclick="openModal('modal-financial-model')" class="data-room-card block bg-white p-6 rounded-lg border border-gray-200">
+                    <a href="https://docs.google.com/spreadsheets/d/1LpikXQOWiKzX3HV4NE89aWXqJz1ef2yfx-iWkP4ZtD0/edit?usp=sharing" target="_blank" class="data-room-card block bg-white p-6 rounded-lg border border-gray-200">
                         <h3 class="font-semibold text-lg text-gray-900">Financial Model</h3>
                         <p class="text-gray-500 mt-2">The complete financial projections.</p>
-                    </div>
-                    <div onclick="openModal('modal-monte-carlo')" class="data-room-card block bg-white p-6 rounded-lg border border-gray-200">
+                    </a>
+                    <a href="https://drive.google.com/file/d/1gzjD-osSsNUxZOp3DEcdTsWe02BG1bgz/view?usp=sharing" target="_blank" class="data-room-card block bg-white p-6 rounded-lg border border-gray-200">
                         <h3 class="font-semibold text-lg text-gray-900">Monte Carlo Simulation</h3>
                         <p class="text-gray-500 mt-2">1,000-iteration simulation results.</p>
-                    </div>
+                    </a>
                 </div>
             </section>
         </main>
@@ -140,19 +127,6 @@
     </div>
 
     <!-- Modals -->
-    <div id="modal-deck" class="modal fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center p-4">
-        <div class="modal-content bg-white w-full max-w-4xl max-h-[90vh] rounded-lg shadow-xl transform scale-95">
-             <div class="p-6 border-b flex justify-between items-center">
-                <h2 class="text-xl font-semibold">Investor Pitch Deck</h2>
-                <button onclick="closeModal('modal-deck')" class="text-gray-500 hover:text-gray-800">&times;</button>
-            </div>
-            <div class="p-6 overflow-y-auto h-[calc(90vh-140px)]">
-                 <p class="text-center">The investor deck is a PDF. Please click the link to open it in a new tab.</p>
-                 <a href="https://storage.googleapis.com/gemini-prod-us-west1-884803361594/rest/v1/files/VEKKAM%20(5).pdf?alt=media" target="_blank" class="mt-4 w-full text-center block bg-blue-600 text-white font-bold py-2 px-4 rounded hover:bg-blue-700">Open Pitch Deck (PDF)</a>
-            </div>
-        </div>
-    </div>
-    
     <div id="modal-exec-summary" class="modal fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center p-4">
         <div class="modal-content bg-white w-full max-w-4xl max-h-[90vh] rounded-lg shadow-xl transform scale-95">
              <div class="p-6 border-b flex justify-between items-center">
@@ -401,29 +375,6 @@ This flywheel is repeatable and scalable. The D2C "Land Grab" funds itself while
         </div>
     </div>
     
-    <div id="modal-financial-model" class="modal fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center p-4">
-        <div class="modal-content bg-white w-full max-w-4xl max-h-[90vh] rounded-lg shadow-xl transform scale-95">
-             <div class="p-6 border-b flex justify-between items-center">
-                <h2 class="text-xl font-semibold">Financial Model</h2>
-                <button onclick="closeModal('modal-financial-model')" class="text-gray-500 hover:text-gray-800">&times;</button>
-            </div>
-            <div class="p-6 overflow-y-auto h-[calc(90vh-140px)]">
-                <div id="financial-model-table"></div>
-            </div>
-        </div>
-    </div>
-    
-    <div id="modal-monte-carlo" class="modal fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center p-4">
-        <div class="modal-content bg-white w-full max-w-4xl max-h-[90vh] rounded-lg shadow-xl transform scale-95">
-             <div class="p-6 border-b flex justify-between items-center">
-                <h2 class="text-xl font-semibold">Monte Carlo Simulation Results</h2>
-                <button onclick="closeModal('modal-monte-carlo')" class="text-gray-500 hover:text-gray-800">&times;</button>
-            </div>
-            <div class="p-6 overflow-y-auto h-[calc(90vh-140px)]">
-                <div id="monte-carlo-table"></div>
-            </div>
-        </div>
-    </div>
 
     <script>
         function openModal(modalId) {
@@ -439,42 +390,6 @@ This flywheel is repeatable and scalable. The D2C "Land Grab" funds itself while
                 document.getElementById(modalId).classList.add('hidden');
             }, 250);
         }
-
-        // CSV Data
-        const financialModelCSV = `Year,Quarter,Free Tier User Headcount,Paid Tier User Headcount,Revenue,5 Years Projection,,,,3 years Average Projection (Basis Monte Carlo Simulation)
-2025,Q1,20,5,"₹5,952.00",QoQ user growth decay,1.50%,,,Average Growth Rate,11.67%
-2025,Q2,28,7,"₹8,458.29",QoQ user growth,50%,,1,Average Conversion Rate,3.20%
-2025,Q3,40,10,"₹11,842.30",Free to Paid Conversion,24.80%,,2,Average Churn Rate,9.86%
-2025,Q4,55,14,"₹16,335.18",User Churn,5.76%,,3
-2026,Q1,75,18,"₹22,199.61",ARPU,"₹1,200.00",,4`;
-
-        const monteCarloCSV = `simulation_id,total_revenue_36_months,final_monthly_revenue,final_paid_users,growth_rate_used,conversion_rate_used,churn_rate_used
-0,2037775.24,142718.33,118.93,0.11,0.03,0.10
-1,1480970.83,86575.40,72.15,0.09,0.03,0.12
-...`; // Abridged for brevity
-
-        function csvToHtmlTable(csv) {
-            const rows = csv.split('\\n');
-            let html = '<table>';
-            rows.forEach((row, index) => {
-                const tag = index === 0 ? 'th' : 'td';
-                const cells = row.split(',');
-                html += '<tr>';
-                cells.forEach(cell => {
-                    html += `<${tag}>${cell.replace(/"/g, '')}</${tag}>`;
-                });
-                html += '</tr>';
-            });
-            html += '</table>';
-            return html;
-        }
-        
-        document.addEventListener('DOMContentLoaded', () => {
-             document.getElementById('financial-model-table').innerHTML = csvToHtmlTable(financialModelCSV.replace(/\\r/g, ''));
-             document.getElementById('monte-carlo-table').innerHTML = csvToHtmlTable(monteCarloCSV.replace(/\\r/g, ''));
-        });
-
     </script>
 </body>
 </html>
-
