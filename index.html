@@ -3,742 +3,215 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vekkam // Secure Data Holo-Archive</title>
+    <title>Vekkam | AI-Powered Learning for Higher Education</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
     <style>
-        :root {
-            --bg-color: #010409;
-            --primary-accent: #00f2ff;
-            --secondary-accent: #ff00c1;
-            --text-primary: #e6f1ff;
-            --text-secondary: #8b949e;
-            --border-color: rgba(0, 242, 255, 0.2);
-            --card-bg: rgba(10, 15, 30, 0.7);
-            --header-brand-font: 'Orbitron', sans-serif;
-            --heading-font: 'Share Tech Mono', monospace;
-            --body-font: 'Roboto Mono', monospace;
-        }
-
-        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@900&family=Roboto+Mono:wght@400;600&family=Share+Tech+Mono&display=swap');
-
-        * {
-            box-sizing: border-box;
-            -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
-        }
-        
-        #preloader {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: var(--bg-color);
-            z-index: 1000;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-family: var(--body-font);
-            color: var(--primary-accent);
-            font-size: 1.2rem;
-            letter-spacing: 2px;
-            opacity: 1;
-            transition: opacity 0.5s ease-out 1s; /* Added delay */
-        }
-        #preloader.loaded {
-            opacity: 0;
-            pointer-events: none;
-        }
-        .loader-text::after {
-            content: '_';
-            animation: blink 1s infinite;
-        }
-        @keyframes blink {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0; }
-        }
-
         body {
-            font-family: var(--body-font);
-            background-color: var(--bg-color);
-            color: var(--text-secondary);
-            margin: 0;
-            padding: 0;
-            line-height: 1.7;
-            overflow-x: hidden;
-            font-size: 18px;
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc; /* light grey background */
         }
-        
-        #background-canvas {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: -1;
+        .gradient-text {
+            background: linear-gradient(to right, #1e40af, #3b82f6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
         }
-        
-        .scan-line {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 3px;
-            background: linear-gradient(90deg, transparent, var(--primary-accent), transparent);
-            opacity: 0.5;
-            z-index: 10;
-            animation: scan 8s linear infinite;
+        .section-title {
+            font-size: 2.25rem; /* 36px */
+            font-weight: 800;
+            color: #1e293b; /* slate-800 */
         }
-        @keyframes scan {
-            0% { top: 0%; }
-            100% { top: 100%; }
+        .section-subtitle {
+            font-size: 1.125rem; /* 18px */
+            color: #64748b; /* slate-500 */
+            max-width: 60ch;
+            margin: 1rem auto 0 auto;
         }
-
-        .container {
-            max-width: 1100px;
-            margin: auto;
-            padding: 0 2rem;
-            position: relative;
-            z-index: 2;
+        .stat-card {
+            background-color: white;
+            border-radius: 0.75rem;
+            padding: 2rem;
+            border: 1px solid #e2e8f0; /* slate-200 */
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
         }
-
-        header.main-header {
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-            position: relative;
-            overflow: hidden;
-        }
-
-        header.main-header h1 {
-            font-family: var(--header-brand-font);
-            font-size: clamp(3.5rem, 12vw, 8rem);
-            color: var(--text-primary);
-            margin: 0;
-            letter-spacing: 3px;
-            font-weight: 900;
-            text-shadow: 0 0 15px var(--primary-accent), 0 0 30px var(--primary-accent), 0 0 50px rgba(0, 242, 255, 0.7);
-            animation: text-flicker 4s infinite alternate;
-        }
-        @keyframes text-flicker {
-            0% { opacity: 0.8; }
-            5% { opacity: 1; text-shadow: 0 0 15px var(--primary-accent), 0 0 30px var(--primary-accent), 0 0 50px rgba(0, 242, 255, 0.7); }
-            10% { opacity: 0.9; }
-            15% { opacity: 1; }
-            20% { opacity: 0.8; }
-            25% { opacity: 1; }
-            80% { opacity: 1; text-shadow: 0 0 15px var(--primary-accent), 0 0 30px var(--primary-accent), 0 0 50px rgba(0, 242, 255, 0.7); }
-            85% { opacity: 0.7; text-shadow: 0 0 15px var(--primary-accent), 0 0 20px var(--primary-accent), 0 0 30px rgba(0, 242, 255, 0.5); }
-            100% { opacity: 1; }
-        }
-
-        header.main-header p {
-            font-size: clamp(1rem, 3vw, 1.25rem);
-            color: var(--primary-accent);
-            margin-top: 1rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 3px;
-        }
-        
-        .scroll-down-indicator {
-            position: absolute;
-            bottom: 40px;
-            left: 50%;
-            transform: translateX(-50%);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            color: var(--primary-accent);
-            text-transform: uppercase;
-            font-size: 0.8rem;
-            letter-spacing: 1px;
-        }
-        .chevron {
-            width: 20px;
-            height: 20px;
-            margin-top: 10px;
-        }
-        .chevron path {
-            stroke: var(--primary-accent);
-            fill: none;
-            stroke-width: 2;
-            animation: chevron-pulse 2s infinite;
-        }
-        @keyframes chevron-pulse {
-            0% { opacity: 0; transform: translateY(-10px); }
-            50% { opacity: 1; transform: translateY(0); }
-            100% { opacity: 0; transform: translateY(10px); }
-        }
-        .chevron path:nth-child(2) { animation-delay: 0.2s; }
-        .chevron path:nth-child(3) { animation-delay: 0.4s; }
-
-
-        section {
-            padding: 8rem 0;
-            position: relative;
-        }
-        section::before, section::after {
-            content: '';
-            position: absolute;
-            left: 0;
-            width: 100%;
-            height: 1px;
-            background: linear-gradient(90deg, transparent, var(--primary-accent), transparent);
-            opacity: 0.3;
-        }
-        section::before { top: 0; }
-        section::after { bottom: 0; }
-
-        h2 {
-            font-family: var(--heading-font);
-            font-size: clamp(2.5rem, 5vw, 3.5rem);
-            color: var(--text-primary);
-            margin-bottom: 3.5rem;
-            text-align: center;
-            font-weight: 700;
-            position: relative;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-        }
-        h2 .type-cursor {
-            display: inline-block;
-            width: 1.5rem;
-            height: 3.5rem;
-            background: var(--secondary-accent);
-            margin-left: 10px;
-            animation: blink 1s infinite;
-            vertical-align: bottom;
-        }
-        
         .fade-in {
             opacity: 0;
-            transform: translateY(30px);
-            transition: opacity 0.8s ease-out, transform 0.8s ease-out;
+            transform: translateY(20px);
+            transition: opacity 0.6s ease-out, transform 0.6s ease-out;
         }
         .fade-in.visible {
             opacity: 1;
             transform: translateY(0);
         }
-
-        .grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-            gap: 2.5rem;
-        }
-
-        .card {
-            background: var(--card-bg);
-            padding: 2.5rem;
-            border: 1px solid var(--border-color);
-            transition: background 0.4s ease, border-color 0.4s ease;
-            backdrop-filter: blur(15px);
-            -webkit-backdrop-filter: blur(15px);
-            position: relative;
-            overflow: hidden;
-            clip-path: polygon(0 15px, 15px 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%);
-        }
-        .card:hover {
-            border-color: var(--primary-accent);
-            background: rgba(10, 15, 30, 0.9);
-        }
-        .card-glow {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            background: radial-gradient(circle at var(--mouse-x) var(--mouse-y), rgba(0, 242, 255, 0.2), transparent 40%);
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
-        .card:hover .card-glow {
-            opacity: 1;
-        }
-
-        .card h3 {
-            font-family: var(--heading-font);
-            color: var(--primary-accent);
-            font-size: 1.8rem;
-            margin-top: 0;
-            margin-bottom: 1rem;
-            font-weight: 700;
-        }
-
-        .button {
-            display: inline-block;
-            background: transparent;
-            color: var(--primary-accent);
-            padding: 1rem 2rem;
-            text-decoration: none;
-            font-family: var(--heading-font);
-            font-weight: 700;
-            transition: all 0.3s ease;
-            border: 2px solid var(--primary-accent);
-            cursor: pointer;
-            font-size: 1rem;
-            position: relative;
-            overflow: hidden;
-            z-index: 1;
-            clip-path: polygon(0 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%);
-        }
-        .button:hover {
-            color: var(--bg-color);
-            text-shadow: none;
-            transform: scale(1.05);
-            box-shadow: 0 0 20px var(--primary-accent);
-        }
-        .button::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background-color: var(--primary-accent);
-            transition: left 0.3s ease;
-            z-index: -1;
-        }
-        .button:hover::before {
-            left: 0;
-        }
-
-        .quote {
-            font-size: 1.3rem;
-            margin: 3rem auto;
-            max-width: 700px;
-            padding: 2rem;
-            border: 1px solid rgba(255, 0, 193, 0.3);
-            background: rgba(255, 0, 193, 0.05);
-            font-weight: 600;
-            color: var(--text-primary);
-            position: relative;
-            font-style: italic;
-        }
-        .quote::before, .quote::after {
-            content: '“';
-            font-family: var(--heading-font);
-            position: absolute;
-            color: var(--secondary-accent);
-            font-size: 4rem;
-            opacity: 0.3;
-        }
-        .quote::before { top: -1rem; left: 0.5rem; }
-        .quote::after { content: '”'; bottom: -2rem; right: 0.5rem; }
-        
-        .stat-highlight {
-            color: var(--secondary-accent);
-            font-weight: 700;
-            font-size: 1.5em;
-            text-shadow: 0 0 8px var(--secondary-accent);
-        }
-
-        .team-link {
-            color: inherit;
-            text-decoration: none;
-            transition: color 0.3s ease;
-        }
-        .team-link:hover {
-            color: var(--secondary-accent);
-            text-decoration: underline;
-        }
-
-        .survey-link {
-            color: var(--text-secondary);
-            text-decoration: underline;
-            text-decoration-style: dotted;
-            transition: color 0.3s ease;
-        }
-        .survey-link:hover {
-            color: var(--primary-accent);
-        }
-
-        .ask-vekkam-btn {
-            position: fixed;
-            bottom: 40px;
-            right: 40px;
-            z-index: 500;
-            background-color: var(--primary-accent);
-            color: var(--bg-color);
-            font-family: var(--heading-font);
-            padding: 1rem 1.5rem;
-            border-radius: 50px;
-            text-decoration: none;
-            font-weight: 700;
-            box-shadow: 0 0 25px rgba(0, 242, 255, 0.5);
-            transition: all 0.3s ease;
-            animation: pulse-glow 2s infinite alternate;
-        }
-
-        .ask-vekkam-btn:hover {
-            transform: scale(1.1);
-            box-shadow: 0 0 35px rgba(0, 242, 255, 0.8);
-        }
-
-        @keyframes pulse-glow {
-            from {
-                box-shadow: 0 0 20px rgba(0, 242, 255, 0.4);
-                transform: scale(1);
-            }
-            to {
-                box-shadow: 0 0 35px rgba(0, 242, 255, 0.7);
-                transform: scale(1.03);
-            }
-        }
-        
-        footer {
-            text-align: center;
-            padding: 4rem 0 2rem;
-            font-size: 1rem;
-            color: var(--text-secondary);
-            border-top: 1px solid var(--border-color);
-            letter-spacing: 2px;
-            text-transform: uppercase;
-        }
     </style>
 </head>
-<body>
-    <div id="preloader"><div class="loader-text">ESTABLISHING SECURE CONNECTION</div></div>
-    <div class="scan-line"></div>
-    <canvas id="background-canvas"></canvas>
+<body class="text-slate-700">
 
-    <header class="main-header">
-        <div class="container">
-            <h1>VEKKAM</h1>
-            <p>// SECURE DATA HOLO-ARCHIVE //</p>
-        </div>
-        <div class="scroll-down-indicator">
-            INITIATE SCROLL
-            <svg class="chevron" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-                <path d="M12 15.586l-4.293-4.293-1.414 1.414L12 18.414l5.707-5.707-1.414-1.414z"/>
-                <path d="M12 8.586l-4.293-4.293-1.414 1.414L12 11.414l5.707-5.707-1.414-1.414z"/>
-            </svg>
-        </div>
+    <!-- Header -->
+    <header class="bg-white/80 backdrop-blur-md sticky top-0 z-50 border-b border-slate-200">
+        <nav class="container mx-auto px-6 py-4 flex justify-between items-center">
+            <a href="#" class="text-2xl font-bold text-slate-800">Vekkam</a>
+            <a href="https://drive.google.com/file/d/1Pw_WF-Ph423Vfj8w3VRnRIlRSiAZk22Q/view?usp=sharing" target="_blank" class="bg-blue-600 text-white font-semibold px-5 py-2 rounded-lg hover:bg-blue-700 transition-colors">View Pitch Deck</a>
+        </nav>
     </header>
 
-    <main class="container">
-        <section id="opportunity">
-            <h2 class="typewriter">Signal Detected: The Opportunity</h2>
-            <p class="fade-in">For the 80%+ of students operating in high-stress, last-minute crunch cycles (<a href="https://docs.google.com/spreadsheets/d/1zcOmF4UggzCPdmfqDFroWh4XnTromZCP9qxWRr3W-N0/edit?usp=sharing" target="_blank" class="survey-link">based on our survey of 100 students</a>), Vekkam is a tactical advantage. An AI-powered learning platform engineered for peak efficiency. We don't just manage chaos; we weaponize it, turning academic panic into strategic performance.</p>
-            <p class="quote fade-in">"This isn't a student problem. It's an institutional vulnerability. Poor academic performance signals attrition risk. For a mid-sized university, a fractional increase in dropouts means millions in lost revenue. We provide the countermeasure."</p>
-        </section>
-
-        <section id="solution">
-            <h2 class="typewriter">Core Architecture: The Knowledge Genome</h2>
-            <p class="fade-in">Consumer-grade LLMs process text; our "Knowledge Genome Project" deciphers curriculum. It's a proprietary system that deconstructs subject matter into a relational graph of core concepts. It doesn't just return information—it delivers a pedagogical advantage. This is our strategic moat.</p>
-            <div class="grid">
-                <div class="card fade-in">
-                    <div class="card-glow"></div>
-                    <h3>Phase I: Ingest & Synthesize</h3>
-                    <p>Multimodal data ingestion—audio lectures, dense PDFs, chaotic notes, visual data. Our engine cross-references and synthesizes this input into a unified, structured knowledge base in under 5 seconds.</p>
-                </div>
-                <div class="card fade-in">
-                    <div class="card-glow"></div>
-                    <h3>Phase II: Master & Execute</h3>
-                    <p>Engage a hybrid active-passive learning protocol. Users query a personalized Tactical AI trained exclusively on their course data, ensuring zero-hallucination, perfectly contextualized support.</p>
+    <!-- Hero Section -->
+    <main>
+        <section class="py-20 md:py-32">
+            <div class="container mx-auto px-6 text-center">
+                <h1 class="text-4xl md:text-6xl font-extrabold text-slate-900 leading-tight">
+                    Turn Student Panic into <br class="hidden md:block"> <span class="gradient-text">High-Efficiency Performance</span>
+                </h1>
+                <p class="mt-6 max-w-2xl mx-auto text-lg text-slate-600">
+                    Vekkam is an AI-powered learning platform engineered for the reality of modern education: the last-minute crunch. We upgrade student prep velocity, turning high-stress cramming into effective learning sprints.
+                </p>
+                <div class="mt-10 flex justify-center gap-4">
+                    <a href="#traction" class="bg-blue-600 text-white font-semibold px-8 py-3 rounded-lg hover:bg-blue-700 transition-colors">See the Results</a>
+                    <a href="#solution" class="bg-white text-slate-700 font-semibold px-8 py-3 rounded-lg border border-slate-300 hover:bg-slate-50 transition-colors">Learn More</a>
                 </div>
             </div>
         </section>
 
-        <section id="traction">
-            <h2 class="typewriter">Field Data: Initial Validation</h2>
-            <p class="fade-in" style="text-align: center; font-size: 1.3rem; font-weight: 600;">Beta protocol with XIM University operatives yielded a <strong class="stat-highlight" data-count="40">0</strong>% reduction in prep-time and a <strong class="stat-highlight" data-count="25">0</strong>% performance uplift in unit assessments. Early monetization confirmed: operatives will allocate resources for a superior workflow.</p>
-        </section>
-
-        <section id="market">
-            <h2 class="typewriter">Target Zone: Market Trajectory</h2>
-            <p class="fade-in">Initial deployment: the Indian EdTech sector, a $7.5B market projected to hit $29B by 2030. Our beachhead is the $68B higher-ed segment. The mission is total market penetration, followed by global expansion.</p>
-        </section>
-        
-        <section id="documents">
-            <h2 class="typewriter">Intel Packet: Due Diligence</h2>
-            <p class="fade-in">Core schematics and projections are available for your review. Full transparency is standard operating procedure.</p>
-            <div class="grid">
-                <div class="card fade-in">
-                    <div class="card-glow"></div>
-                    <h3>Strategic Briefing [Pitch Deck]</h3>
-                    <p>The complete mission overview, outlining vision, strategy, and projected operational impact.</p>
-                    <a href="https://drive.google.com/file/d/1Pw_WF-Ph423Vfj8w3VRnRIlRSiAZk22Q/view?usp=sharing" target="_blank" class="button">Access Deck</a>
+        <!-- Traction / Key Results -->
+        <section id="traction" class="py-20 bg-white">
+            <div class="container mx-auto px-6">
+                <div class="text-center">
+                    <h2 class="section-title">Validated by Real-World Results</h2>
+                    <p class="section-subtitle">Our beta protocol at XIM University demonstrated significant, measurable improvements in academic performance and efficiency.</p>
                 </div>
-                <div class="card fade-in">
-                    <div class="card-glow"></div>
-                    <h3>Economic Model [Financials]</h3>
-                    <p>Interactive projections detailing growth vectors, revenue streams, and long-term profitability.</p>
-                    <a href="https://drive.google.com/open?id=1LpikXQOWiKzX3HV4NE89aWXqJz1ef2yfx-iWkP4ZtD0" target="_blank" class="button">Access Model</a>
-                </div>
-                <div class="card fade-in">
-                    <div class="card-glow"></div>
-                    <h3>Threat Analysis [Simulations]</h3>
-                    <p>1M-iteration Monte Carlo stress test of our D2C protocol against market volatility. Confirms model resilience and massive upside.</p>
-                    <a href="https://drive.google.com/open?id=1gzjD-osSsNUxZOp3DEcdTsWe02BG1bgz" target="_blank" class="button">Access Sims</a>
+                <div class="mt-16 grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+                    <div class="stat-card text-center fade-in">
+                        <p class="text-6xl font-extrabold gradient-text" data-count="40">0%</p>
+                        <p class="mt-2 text-xl font-bold text-slate-800">Reduction in Prep Time</p>
+                        <p class="mt-2 text-slate-500">Operatives were able to achieve their learning objectives in significantly less time, freeing up valuable resources.</p>
+                    </div>
+                    <div class="stat-card text-center fade-in">
+                        <p class="text-6xl font-extrabold gradient-text" data-count="25">0%</p>
+                        <p class="mt-2 text-xl font-bold text-slate-800">Uplift in Assessment Scores</p>
+                        <p class="mt-2 text-slate-500">More efficient preparation translated directly into superior academic performance and higher average scores.</p>
+                    </div>
                 </div>
             </div>
         </section>
         
-        <section id="team">
-            <h2 class="typewriter">The Architects</h2>
-            <div class="grid">
-                <div class="card team-member fade-in">
-                    <div class="card-glow"></div>
-                    <h3><a href="https://linkedin.com/in/thattechgeek" target="_blank" class="team-link">Sambit Mishra // Mission Lead</a></h3>
-                    <p>Economics student, XIM. Demonstrated history of execution. Closed ₹1.2 Cr in corporate sponsorships. National runner-up, IIM Ahmedabad case competition.</p>
+        <!-- Problem Section -->
+        <section class="py-24">
+            <div class="container mx-auto px-6 text-center">
+                <h2 class="section-title">The Institutional Vulnerability</h2>
+                <p class="section-subtitle">
+                    For students, last-minute preparation is stressful and ineffective. For universities, poor performance is a leading indicator of student attrition, translating to millions in lost revenue. Vekkam provides the countermeasure.
+                </p>
+            </div>
+        </section>
+
+        <!-- Solution Section -->
+        <section id="solution" class="py-24 bg-white">
+            <div class="container mx-auto px-6 grid md:grid-cols-2 gap-12 items-center">
+                <div class="fade-in">
+                    <h2 class="section-title text-left !text-3xl">Our Strategic Moat: <br>The Knowledge Genome</h2>
+                    <p class="mt-4 text-slate-600">
+                        Generic LLMs process text; our proprietary "Knowledge Genome Project" deciphers curriculum. It deconstructs subject matter into a relational graph of core concepts, delivering a pedagogical advantage that general-purpose AI cannot replicate.
+                    </p>
+                    <ul class="mt-6 space-y-4">
+                        <li class="flex items-start">
+                            <svg class="w-6 h-6 text-blue-500 mr-3 flex-shrink-0 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            <span><strong>Unified Knowledge Base:</strong> Ingests and synthesizes multimodal data—lectures, PDFs, notes—into a structured, queryable asset in seconds.</span>
+                        </li>
+                        <li class="flex items-start">
+                            <svg class="w-6 h-6 text-blue-500 mr-3 flex-shrink-0 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            <span><strong>Zero-Hallucination Support:</strong> Provides a tactical AI trained exclusively on course data for perfectly contextualized, accurate academic support.</span>
+                        </li>
+                    </ul>
                 </div>
-                <div class="card team-member fade-in">
-                    <div class="card-glow"></div>
-                    <h3> Sambit Mishra // R&D Command</h3>
-                    <p>Professional developer. Architect of the 'Knowledge Genome Project.' Specializes in applying addictive learning loops to complex systems.</p>
+                <div class="fade-in">
+                    <div class="bg-slate-800 rounded-lg p-8 shadow-2xl">
+                        <img src="https://placehold.co/600x400/0f172a/3b82f6?text=Knowledge+Graph+Viz" alt="A visual representation of the Knowledge Genome graph" class="rounded-md">
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Founder Section -->
+        <section class="py-24">
+            <div class="container mx-auto px-6 text-center">
+                <h2 class="section-title">The Founder</h2>
+                <div class="mt-12 max-w-xl mx-auto">
+                    <div class="bg-white p-8 rounded-xl shadow-lg border border-slate-200">
+                        <img src="https://placehold.co/128x128/e2e8f0/334155?text=SM" alt="Sambit Mishra Headshot" class="w-32 h-32 rounded-full mx-auto">
+                        <h3 class="mt-6 text-2xl font-bold text-slate-900">Sambit Mishra</h3>
+                        <p class="mt-1 text-blue-600 font-semibold">Founder & CEO</p>
+                        <p class="mt-4 text-slate-600">
+                            Economics student at XIM University with a demonstrated history of execution. Previously closed ₹1.2 Cr in corporate sponsorships and achieved national runner-up in IIM Ahmedabad's case competition.
+                        </p>
+                    </div>
                 </div>
             </div>
         </section>
 
     </main>
 
-    <a href="https://gemini.google.com/gem/1TMfiB7floXOrjkysgE48aO-vo7cebsLz?usp=sharing" target="_blank" class="ask-vekkam-btn">
-        Ask Vekkam
-    </a>
-
-    <footer>
-        <div class="container">
-            <p>VEKKAM // END TRANSMISSION //</p>
+    <!-- Footer -->
+    <footer class="border-t border-slate-200">
+        <div class="container mx-auto px-6 py-8 text-center text-slate-500">
+            <p>&copy; 2025 Vekkam. All Rights Reserved.</p>
         </div>
     </footer>
 
     <script>
-        // --- PRELOADER ---
-        window.addEventListener('load', () => {
-            const preloader = document.getElementById('preloader');
-            setTimeout(() => {
-                preloader.classList.add('loaded');
-            }, 500);
-        });
-
-        // --- BACKGROUND CANVAS PARTICLES ---
-        const canvas = document.getElementById('background-canvas');
-        const ctx = canvas.getContext('2d');
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-
-        let particlesArray;
-
-        const mouse = {
-            x: null,
-            y: null,
-            radius: (canvas.height / 120) * (canvas.width / 120)
-        }
-
-        window.addEventListener('mousemove', event => {
-            mouse.x = event.x;
-            mouse.y = event.y;
-        });
-        window.addEventListener('mouseout', () => {
-            mouse.x = null;
-            mouse.y = null;
-        });
-
-
-        class Particle {
-            constructor(x, y, directionX, directionY, size, color) {
-                this.x = x;
-                this.y = y;
-                this.directionX = directionX;
-                this.directionY = directionY;
-                this.size = size;
-                this.color = color;
-            }
-            draw() {
-                ctx.beginPath();
-                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2, false);
-                ctx.fillStyle = 'rgba(0, 242, 255, 0.3)';
-                ctx.fill();
-            }
-            update() {
-                if (this.x > canvas.width || this.x < 0) {
-                    this.directionX = -this.directionX;
-                }
-                if (this.y > canvas.height || this.y < 0) {
-                    this.directionY = -this.directionY;
-                }
-                let dx = mouse.x - this.x;
-                let dy = mouse.y - this.y;
-                let distance = Math.sqrt(dx * dx + dy * dy);
-                if (distance < mouse.radius + this.size) {
-                    if (mouse.x < this.x && this.x < canvas.width - this.size * 10) {
-                        this.x += 5;
-                    }
-                    if (mouse.x > this.x && this.x > this.size * 10) {
-                        this.x -= 5;
-                    }
-                    if (mouse.y < this.y && this.y < canvas.height - this.size * 10) {
-                        this.y += 5;
-                    }
-                    if (mouse.y > this.y && this.y > this.size * 10) {
-                        this.y -= 5;
-                    }
-                }
-                this.x += this.directionX;
-                this.y += this.directionY;
-                this.draw();
-            }
-        }
-
-        function init() {
-            particlesArray = [];
-            let numberOfParticles = (canvas.height * canvas.width) / 15000;
-            for (let i = 0; i < numberOfParticles; i++) {
-                let size = (Math.random() * 2) + 1;
-                let x = (Math.random() * ((innerWidth - size * 2) - (size * 2)) + size * 2);
-                let y = (Math.random() * ((innerHeight - size * 2) - (size * 2)) + size * 2);
-                let directionX = (Math.random() * 0.4) - 0.2;
-                let directionY = (Math.random() * 0.4) - 0.2;
-                let color = 'rgba(0, 242, 255, 0.3)';
-                particlesArray.push(new Particle(x, y, directionX, directionY, size, color));
-            }
-        }
-
-        function connect() {
-            let opacityValue = 1;
-            for (let a = 0; a < particlesArray.length; a++) {
-                for (let b = a; b < particlesArray.length; b++) {
-                    let distance = ((particlesArray[a].x - particlesArray[b].x) * (particlesArray[a].x - particlesArray[b].x)) +
-                        ((particlesArray[a].y - particlesArray[b].y) * (particlesArray[a].y - particlesArray[b].y));
-                    if (distance < (canvas.width / 7) * (canvas.height / 7)) {
-                        opacityValue = 1 - (distance / 20000);
-                        ctx.strokeStyle = `rgba(0, 242, 255, ${opacityValue * 0.3})`;
-                        ctx.lineWidth = 1;
-                        ctx.beginPath();
-                        ctx.moveTo(particlesArray[a].x, particlesArray[a].y);
-                        ctx.lineTo(particlesArray[b].x, particlesArray[b].y);
-                        ctx.stroke();
-                    }
-                }
-            }
-        }
-
-        function animate() {
-            requestAnimationFrame(animate);
-            ctx.clearRect(0, 0, innerWidth, innerHeight);
-            for (let i = 0; i < particlesArray.length; i++) {
-                particlesArray[i].update();
-            }
-            connect();
-        }
-        
-        window.addEventListener('resize', () => {
-            canvas.width = innerWidth;
-            canvas.height = innerHeight;
-            mouse.radius = (canvas.height / 120) * (canvas.width / 120);
-            init();
-        });
-
-        init();
-        animate();
-
-
-        // --- ON SCROLL EFFECTS & ADVANCED UI ---
         document.addEventListener('DOMContentLoaded', function() {
-            // Typewriter effect
-            function typeWriter(element) {
-                const text = element.getAttribute('data-text');
-                element.innerHTML = '';
-                let i = 0;
-                const cursor = document.createElement('span');
-                cursor.className = 'type-cursor';
-                element.appendChild(cursor);
-                
-                function type() {
-                    if (i < text.length) {
-                        element.insertBefore(document.createTextNode(text.charAt(i)), cursor);
-                        i++;
-                        setTimeout(type, 70);
-                    } else {
-                        cursor.style.animation = 'blink 1s infinite';
+            // Intersection Observer for fade-in animations
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('visible');
                     }
-                }
-                type();
-            }
-            
+                });
+            }, {
+                threshold: 0.1
+            });
+
+            const elementsToAnimate = document.querySelectorAll('.fade-in');
+            elementsToAnimate.forEach(el => observer.observe(el));
+
             // Number counting animation
             function countUp(element) {
-                const target = +element.getAttribute('data-count');
+                const target = parseInt(element.getAttribute('data-count'), 10);
                 let current = 0;
-                const duration = 2000; // 2 seconds
-                const stepTime = Math.abs(Math.floor(duration / target));
-
+                const increment = target / 100; // Animate over ~100 frames
+                
                 function updateCount() {
-                    current++;
-                    element.innerText = current;
                     if (current < target) {
-                        setTimeout(updateCount, stepTime);
+                        current += increment;
+                        element.innerText = Math.ceil(current) + '%';
+                        requestAnimationFrame(updateCount);
+                    } else {
+                        element.innerText = target + '%';
                     }
                 }
                 updateCount();
             }
 
-            // General scroll observer
-            const observer = new IntersectionObserver((entries) => {
+            const statObserver = new IntersectionObserver((entries, statObserver) => {
                 entries.forEach(entry => {
                     if (entry.isIntersecting) {
-                        entry.target.classList.add('visible');
-                        
-                        if (entry.target.classList.contains('typewriter') && !entry.target.hasAttribute('data-typed')) {
-                             entry.target.setAttribute('data-text', entry.target.textContent.trim());
-                             entry.target.setAttribute('data-typed', 'true');
-                             typeWriter(entry.target);
+                        const statElement = entry.target.querySelector('[data-count]');
+                        if (statElement && !statElement.hasAttribute('data-counted')) {
+                            statElement.setAttribute('data-counted', 'true');
+                            countUp(statElement);
+                            statObserver.unobserve(entry.target);
                         }
-                        
-                        const statElements = entry.target.querySelectorAll('.stat-highlight[data-count]');
-                        statElements.forEach(statEl => {
-                            if (!statEl.hasAttribute('data-counted')) {
-                                statEl.setAttribute('data-counted', 'true');
-                                countUp(statEl);
-                            }
-                        });
-                        
                     }
                 });
-            }, {
-                threshold: 0.25
-            });
-
-            const elementsToAnimate = document.querySelectorAll('.fade-in, h2.typewriter');
-            elementsToAnimate.forEach(el => observer.observe(el));
-            
-             const tractionSectionObserver = new IntersectionObserver((entries) => {
-                entries.forEach(entry => {
-                    if (entry.isIntersecting) {
-                        const statElements = entry.target.querySelectorAll('.stat-highlight[data-count]');
-                        statElements.forEach(statEl => {
-                            if (!statEl.hasAttribute('data-counted')) {
-                                statEl.setAttribute('data-counted', 'true');
-                                countUp(statEl);
-                            }
-                        });
-                        tractionSectionObserver.unobserve(entry.target);
-                    }
-                });
-            }, { threshold: 0.5 });
+            }, { threshold: 0.8 });
 
             const tractionSection = document.getElementById('traction');
             if(tractionSection) {
-                tractionSectionObserver.observe(tractionSection);
+                 statObserver.observe(tractionSection);
             }
-
-            // Card mouse follow glow
-            const cards = document.querySelectorAll('.card');
-            cards.forEach(card => {
-                card.addEventListener('mousemove', (e) => {
-                    const rect = card.getBoundingClientRect();
-                    const x = e.clientX - rect.left;
-                    const y = e.clientY - rect.top;
-                    card.style.setProperty('--mouse-x', `${x}px`);
-                    card.style.setProperty('--mouse-y', `${y}px`);
-                });
-            });
         });
     </script>
+
 </body>
 </html>
-
