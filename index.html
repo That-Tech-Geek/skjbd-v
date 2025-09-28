@@ -26,16 +26,59 @@
         .modal-content {
             transition: transform 0.25s ease;
         }
-        pre {
-            white-space: pre-wrap;
-            word-wrap: break-word;
-            background-color: #f7fafc;
-            padding: 1rem;
-            border-radius: 0.5rem;
-            font-family: monospace;
+        .content-area h1 {
+            font-size: 1.875rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
         }
-        h1, h2, h3 {
-           font-weight: bold;
+        .content-area h3 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+            border-bottom: 1px solid #e5e7eb;
+            padding-bottom: 0.5rem;
+        }
+        .content-area p {
+            line-height: 1.6;
+            margin-bottom: 1rem;
+        }
+        .content-area ul {
+            list-style-type: disc;
+            padding-left: 1.5rem;
+            margin-bottom: 1rem;
+        }
+        .content-area ol {
+            list-style-type: decimal;
+            padding-left: 1.5rem;
+            margin-bottom: 1rem;
+        }
+        .content-area li {
+            margin-bottom: 0.5rem;
+        }
+        .content-area strong {
+            font-weight: 600;
+            color: #111827;
+        }
+        .content-area blockquote {
+            border-left: 4px solid #d1d5db;
+            padding-left: 1rem;
+            margin: 1.5rem 0;
+            font-style: italic;
+            color: #4b5563;
+        }
+        .content-area table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 1.5rem;
+        }
+        .content-area th, .content-area td {
+            border: 1px solid #e5e7eb;
+            padding: 0.75rem;
+            text-align: left;
+        }
+        .content-area th {
+            background-color: #f9fafb;
         }
     </style>
 </head>
@@ -131,33 +174,28 @@
         <div class="modal-content bg-white w-full max-w-4xl max-h-[90vh] rounded-lg shadow-xl transform scale-95">
              <div class="p-6 border-b flex justify-between items-center">
                 <h2 class="text-xl font-semibold">Executive Summary</h2>
-                <button onclick="closeModal('modal-exec-summary')" class="text-gray-500 hover:text-gray-800">&times;</button>
+                <button onclick="closeModal('modal-exec-summary')" class="text-gray-500 hover:text-gray-800 text-3xl">&times;</button>
             </div>
-            <div class="p-6 overflow-y-auto h-[calc(90vh-140px)]">
-                <pre class="text-sm"># Vekkam: Executive Summary
-
-**One-Liner:** Vekkam is a B2B2C EdTech platform that uses a strategically priced D2C product as a Trojan Horse to capture the multi-crore Indian higher education market.
-
-### The Problem
-For students, last-minute exam prep is a high-stress, inefficient scramble of disorganized notes, lectures, and PDFs. For universities, this poor performance is a leading indicator of student attrition, a multi-crore problem in lost tuition revenue.
-
-### The Solution
-Vekkam is an AI-powered academic operating system that transforms chaotic study materials into a focused, interactive knowledge base in seconds. Our core IP, the "Knowledge Genome Project," goes beyond summarization to map the pedagogical relationships between concepts, enabling true, curriculum-aware learning.
-
-### The "Trojan Horse" Go-to-Market
-Our GTM is a two-phase flywheel.
-
-1. **Land (D2C):** We use a hyper-efficient Campus Ambassador program to drive mass adoption of our freemium D2C product, priced for zero friction. The goal is not profit; it is ubiquity.
-
-2. **Expand (B2B2C):** With critical mass on a campus, we leverage our unique data on student engagement to sell high-margin, multi-year institutional contracts to universities, providing them with a powerful tool to reduce attrition.
-
-### The Team
-* **Sambit Mishra (CEO):** An Economics student at XIMB who lived the problem. Proven GTM and fundraising execution (closed ₹1.2 Cr in sponsorships). Experience building a native AI-powered stock analysis engine using the same core principles as our tech.
-
-* **Thamizharasan S. (R&D Lead):** The architect of our tech moat. A professional game developer applying principles of addictive design to learning. Leads the development of our Knowledge Genome using a stack including Python and graph databases (Neo4j).
-
-### The Ask
-We are raising a pre-seed round of **₹50 Lakhs** to scale our campus capture program to 5 more universities, fully develop the B2B analytics dashboard, and hire one dedicated B2B sales lead.</pre>
+            <div class="p-6 overflow-y-auto h-[calc(90vh-70px)] content-area">
+                <h1>Vekkam: Executive Summary</h1>
+                <p><strong>One-Liner:</strong> Vekkam is a B2B2C EdTech platform that uses a strategically priced D2C product as a Trojan Horse to capture the multi-crore Indian higher education market.</p>
+                <h3>The Problem</h3>
+                <p>For students, last-minute exam prep is a high-stress, inefficient scramble of disorganized notes, lectures, and PDFs. For universities, this poor performance is a leading indicator of student attrition, a multi-crore problem in lost tuition revenue.</p>
+                <h3>The Solution</h3>
+                <p>Vekkam is an AI-powered academic operating system that transforms chaotic study materials into a focused, interactive knowledge base in seconds. Our core IP, the "Knowledge Genome Project," goes beyond summarization to map the pedagogical relationships between concepts, enabling true, curriculum-aware learning.</p>
+                <h3>The "Trojan Horse" Go-to-Market</h3>
+                <p>Our GTM is a two-phase flywheel.</p>
+                <ol>
+                    <li><strong>Land (D2C):</strong> We use a hyper-efficient Campus Ambassador program to drive mass adoption of our freemium D2C product, priced for zero friction. The goal is not profit; it is ubiquity.</li>
+                    <li><strong>Expand (B2B2C):</strong> With critical mass on a campus, we leverage our unique data on student engagement to sell high-margin, multi-year institutional contracts to universities, providing them with a powerful tool to reduce attrition.</li>
+                </ol>
+                <h3>The Team</h3>
+                <ul>
+                    <li><strong>Sambit Mishra (CEO):</strong> An Economics student at XIMB who lived the problem. Proven GTM and fundraising execution (closed ₹1.2 Cr in sponsorships). Experience building a native AI-powered stock analysis engine using the same core principles as our tech.</li>
+                    <li><strong>Thamizharasan S. (R&D Lead):</strong> The architect of our tech moat. A professional game developer applying principles of addictive design to learning. Leads the development of our Knowledge Genome using a stack including Python and graph databases (Neo4j).</li>
+                </ul>
+                <h3>The Ask</h3>
+                <p>We are raising a pre-seed round of <strong>₹50 Lakhs</strong> to scale our campus capture program to 5 more universities, fully develop the B2B analytics dashboard, and hire one dedicated B2B sales lead.</p>
             </div>
         </div>
     </div>
@@ -166,28 +204,26 @@ We are raising a pre-seed round of **₹50 Lakhs** to scale our campus capture p
         <div class="modal-content bg-white w-full max-w-4xl max-h-[90vh] rounded-lg shadow-xl transform scale-95">
              <div class="p-6 border-b flex justify-between items-center">
                 <h2 class="text-xl font-semibold">Founder Bios</h2>
-                <button onclick="closeModal('modal-bios')" class="text-gray-500 hover:text-gray-800">&times;</button>
+                <button onclick="closeModal('modal-bios')" class="text-gray-500 hover:text-gray-800 text-3xl">&times;</button>
             </div>
-            <div class="p-6 overflow-y-auto h-[calc(90vh-140px)]">
-                <pre class="text-sm"># Founder Biographies
-
-### Sambit Mishra - Co-Founder & CEO
-**(Vision, Go-to-Market, Fundraising)**
-
-Sambit is the driving force behind Vekkam's vision and business strategy. As an Economics student at XIM University, he personally experienced the pain point of inefficient, high-stress exam preparation and built the initial Vekkam workflow to solve it. His unique blend of financial acumen, GTM execution, and technical insight makes him uniquely suited to lead Vekkam's "Trojan Horse" strategy.
-
-* **Proven Fundraising & GTM:** As a Fundraising Intern at the Buddha CEO Quantum Foundation, Sambit single-handedly closed **₹1.2 Cr in sponsorships** from over 100 corporate leads, demonstrating a rare ability to execute a B2B sales motion as a student. This experience is directly applicable to Vekkam's B2B2C pivot.
-* **Deep Financial & Strategic Acumen:** Sambit has reverse-engineered dozens of investment memos across Seed, Series A, and Series B rounds to build his own investment decision model. He built Vekkam's financial projections and Monte Carlo simulation from the ground up.
-* **Applied AI Experience:** Beyond Vekkam, Sambit developed a native **AI-powered stock analysis engine** for peer-based investment recommendations and an **adaptive intraday trading engine**. This work involved applying predictive modeling and NLP to complex, unstructured data—the same core skills required to architect the Knowledge Genome Project.
-
-### Thamizharasan S. - Co-Founder & Head of R&D
-**(Product, Technology, & The "Knowledge Genome")**
-
-Thamiz is the architect of Vekkam's defensible technology moat. His background as a professional game developer is Vekkam's secret weapon, allowing the team to build an addictive, high-retention product that students genuinely want to use. He leads the development of the core IP, the "Knowledge Genome Project."
-
-* **Expertise in Complex Systems:** Game development requires building and managing complex neural patterns for player behavior and game logic. Thamiz applies this expertise to map the relationships between academic concepts, creating a system that understands pedagogy, not just text.
-* **Technical Stack:** Thamiz is proficient in the full stack required to execute the Vekkam vision, including **Python**, backend development, and, crucially, **graph databases (Neo4j)** for relational mapping. He leads the deployment of the **proprietary NLP/NER models** that form our core IP.
-* **User-Centric Product Design:** His experience in gamifying learning is essential for driving the high engagement rates needed for our freemium model to succeed and generate the data that fuels our B2B sales engine.</pre>
+            <div class="p-6 overflow-y-auto h-[calc(90vh-70px)] content-area">
+                <h1>Founder Biographies</h1>
+                <h3>Sambit Mishra - Co-Founder & CEO</h3>
+                <p class="text-gray-600 -mt-3 mb-4">(Vision, Go-to-Market, Fundraising)</p>
+                <p>Sambit is the driving force behind Vekkam's vision and business strategy. As an Economics student at XIM University, he personally experienced the pain point of inefficient, high-stress exam preparation and built the initial Vekkam workflow to solve it. His unique blend of financial acumen, GTM execution, and technical insight makes him uniquely suited to lead Vekkam's "Trojan Horse" strategy.</p>
+                <ul>
+                    <li><strong>Proven Fundraising & GTM:</strong> As a Fundraising Intern at the Buddha CEO Quantum Foundation, Sambit single-handedly closed <strong>₹1.2 Cr in sponsorships</strong> from over 100 corporate leads, demonstrating a rare ability to execute a B2B sales motion as a student. This experience is directly applicable to Vekkam's B2B2C pivot.</li>
+                    <li><strong>Deep Financial & Strategic Acumen:</strong> Sambit has reverse-engineered dozens of investment memos across Seed, Series A, and Series B rounds to build his own investment decision model. He built Vekkam's financial projections and Monte Carlo simulation from the ground up.</li>
+                    <li><strong>Applied AI Experience:</strong> Beyond Vekkam, Sambit developed a native <strong>AI-powered stock analysis engine</strong> for peer-based investment recommendations and an <strong>adaptive intraday trading engine</strong>. This work involved applying predictive modeling and NLP to complex, unstructured data—the same core skills required to architect the Knowledge Genome Project.</li>
+                </ul>
+                <h3>Thamizharasan S. - Co-Founder & Head of R&D</h3>
+                <p class="text-gray-600 -mt-3 mb-4">(Product, Technology, & The "Knowledge Genome")</p>
+                <p>Thamiz is the architect of Vekkam's defensible technology moat. His background as a professional game developer is Vekkam's secret weapon, allowing the team to build an addictive, high-retention product that students genuinely want to use. He leads the development of the core IP, the "Knowledge Genome Project."</p>
+                <ul>
+                    <li><strong>Expertise in Complex Systems:</strong> Game development requires building and managing complex neural patterns for player behavior and game logic. Thamiz applies this expertise to map the relationships between academic concepts, creating a system that understands pedagogy, not just text.</li>
+                    <li><strong>Technical Stack:</strong> Thamiz is proficient in the full stack required to execute the Vekkam vision, including <strong>Python</strong>, backend development, and, crucially, <strong>graph databases (Neo4j)</strong> for relational mapping. He leads the deployment of the <strong>proprietary NLP/NER models</strong> that form our core IP.</li>
+                    <li><strong>User-Centric Product Design:</strong> His experience in gamifying learning is essential for driving the high engagement rates needed for our freemium model to succeed and generate the data that fuels our B2B sales engine.</li>
+                </ul>
             </div>
         </div>
     </div>
@@ -196,20 +232,42 @@ Thamiz is the architect of Vekkam's defensible technology moat. His background a
         <div class="modal-content bg-white w-full max-w-4xl max-h-[90vh] rounded-lg shadow-xl transform scale-95">
              <div class="p-6 border-b flex justify-between items-center">
                 <h2 class="text-xl font-semibold">Capitalization Table</h2>
-                <button onclick="closeModal('modal-cap-table')" class="text-gray-500 hover:text-gray-800">&times;</button>
+                <button onclick="closeModal('modal-cap-table')" class="text-gray-500 hover:text-gray-800 text-3xl">&times;</button>
             </div>
-            <div class="p-6 overflow-y-auto h-[calc(90vh-140px)]">
-                <pre class="text-sm"># Capitalization Table (Pre-Seed)
-
-This table reflects the current ownership structure of Vekkam prior to the pre-seed investment round.
-
-| Shareholder         | Role              | Common Shares | Ownership |
-| ------------------- | ----------------- | ------------- | --------- |
-| Sambit Mishra       | Co-Founder & CEO  | 5,000,000     | 50%       |
-| Thamizharasan S.    | Co-Founder & R&D  | 5,000,000     | 50%       |
-| **Total** |                   | **10,000,000** | **100%** |
-
-**Note:** This is a simplified pre-seed cap table. An ESOP (Employee Stock Ownership Plan) will be established from the post-money valuation.</pre>
+            <div class="p-6 overflow-y-auto h-[calc(90vh-70px)] content-area">
+                <h1>Capitalization Table (Pre-Seed)</h1>
+                <p>This table reflects the current ownership structure of Vekkam prior to the pre-seed investment round.</p>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Shareholder</th>
+                            <th>Role</th>
+                            <th>Common Shares</th>
+                            <th>Ownership</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Sambit Mishra</td>
+                            <td>Co-Founder & CEO</td>
+                            <td>5,000,000</td>
+                            <td>50%</td>
+                        </tr>
+                        <tr>
+                            <td>Thamizharasan S.</td>
+                            <td>Co-Founder & R&D</td>
+                            <td>5,000,000</td>
+                            <td>50%</td>
+                        </tr>
+                        <tr class="font-bold">
+                            <td>Total</td>
+                            <td></td>
+                            <td>10,000,000</td>
+                            <td>100%</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <p><strong>Note:</strong> This is a simplified pre-seed cap table. An ESOP (Employee Stock Ownership Plan) will be established from the post-money valuation.</p>
             </div>
         </div>
     </div>
@@ -218,41 +276,52 @@ This table reflects the current ownership structure of Vekkam prior to the pre-s
         <div class="modal-content bg-white w-full max-w-4xl max-h-[90vh] rounded-lg shadow-xl transform scale-95">
              <div class="p-6 border-b flex justify-between items-center">
                 <h2 class="text-xl font-semibold">Technical Memo: Knowledge Genome</h2>
-                <button onclick="closeModal('modal-tech-memo')" class="text-gray-500 hover:text-gray-800">&times;</button>
+                <button onclick="closeModal('modal-tech-memo')" class="text-gray-500 hover:text-gray-800 text-3xl">&times;</button>
             </div>
-            <div class="p-6 overflow-y-auto h-[calc(90vh-140px)]">
-                <pre class="text-sm"># Technical Memo: The Vekkam "Knowledge Genome"
-
-### 1. Overview
-The "Knowledge Genome Project" is Vekkam's core intellectual property and primary defensible moat. It is a proprietary system designed to deconstruct unstructured academic content and map it into a structured, relational graph of pedagogical knowledge. This allows us to deliver a learning experience that is fundamentally superior to generic AI tools which rely on simple summarization or keyword-based retrieval.
-
-### 2. System Architecture
-The architecture is a three-stage pipeline:
-
-**Stage 1: Ingestion & Deconstruction**
-* **Input:** Multi-modal, unstructured data (PDF textbooks, audio lecture files, raw text notes, presentation slides).
-* **Process:**
-    * Content is run through a multi-modal parsing engine.
-    * Audio is transcribed using fine-tuned ASR (Automatic Speech Recognition) models optimized for academic terminology and accents to ensure high accuracy.
-    * All content is standardized into a clean, raw text format.
-
-**Stage 2: Concept Tagging & Relational Mapping (The Moat)**
-* **Process:**
-    1.  **Concept Tagging:** The clean text is fed into our proprietary **Natural Language Processing (NLP)** model. We utilize **Named Entity Recognition (NER)**, specifically trained on a corpus of Indian university textbooks across various subjects, to identify and tag core academic concepts (e.g., 'Opportunity Cost,' 'Market Equilibrium,' 'Nash Equilibrium').
-    2.  **Relational Mapping:** These tagged concepts are then ingested into a **graph database (Neo4j)**. We don't just store the concept; we create nodes and define the relationships (edges) between them, such as `'Scarcity' -> IS_A_PREREQUISITE_FOR -> 'Opportunity Cost'`. This creates the "genome."
-
-**Stage 3: Pedagogical Output**
-* **Process:** When a user interacts with their study material, our application queries the Knowledge Genome, not just the raw text.
-* **Output:** This enables unique, high-value features that generic tools cannot replicate:
-    * **Curriculum-Aware Quizzes:** Generate practice questions that test the relationships between concepts, not just definitions.
-    * **Root Cause Analysis:** Identify student knowledge gaps. We can tell a user *why* they are struggling with a complex topic by highlighting their weak foundation in a prerequisite concept.
-    * **Personalized Learning Paths:** Dynamically generate a study plan that prioritizes foundational concepts before moving to more advanced topics.
-
-### 3. Defensibility
-Our moat is not just one component, but the entire, integrated system:
-* **Proprietary Data:** Our NER model's accuracy is a direct function of the unique academic data we train it on.
-* **Graph Structure:** The relational graph itself is a complex asset that becomes more powerful and accurate with every user interaction.
-* **Network Effects:** More users mean more data, which improves the genome's accuracy, which creates a better product, which attracts more users.</pre>
+            <div class="p-6 overflow-y-auto h-[calc(90vh-70px)] content-area">
+                <h1>Technical Memo: The Vekkam "Knowledge Genome"</h1>
+                <h3>1. Overview</h3>
+                <p>The "Knowledge Genome Project" is Vekkam's core intellectual property and primary defensible moat. It is a proprietary system designed to deconstruct unstructured academic content and map it into a structured, relational graph of pedagogical knowledge. This allows us to deliver a learning experience that is fundamentally superior to generic AI tools which rely on simple summarization or keyword-based retrieval.</p>
+                <h3>2. System Architecture</h3>
+                <p>The architecture is a three-stage pipeline:</p>
+                <p><strong>Stage 1: Ingestion & Deconstruction</strong></p>
+                <ul>
+                    <li><strong>Input:</strong> Multi-modal, unstructured data (PDF textbooks, audio lecture files, raw text notes, presentation slides).</li>
+                    <li><strong>Process:</strong>
+                        <ul class="pl-4">
+                            <li>Content is run through a multi-modal parsing engine.</li>
+                            <li>Audio is transcribed using fine-tuned ASR (Automatic Speech Recognition) models optimized for academic terminology and accents to ensure high accuracy.</li>
+                            <li>All content is standardized into a clean, raw text format.</li>
+                        </ul>
+                    </li>
+                </ul>
+                <p><strong>Stage 2: Concept Tagging & Relational Mapping (The Moat)</strong></p>
+                <ul>
+                    <li><strong>Process:</strong>
+                        <ol class="pl-4">
+                            <li><strong>Concept Tagging:</strong> The clean text is fed into our proprietary <strong>Natural Language Processing (NLP)</strong> model. We utilize <strong>Named Entity Recognition (NER)</strong>, specifically trained on a corpus of Indian university textbooks across various subjects, to identify and tag core academic concepts (e.g., 'Opportunity Cost,' 'Market Equilibrium,' 'Nash Equilibrium').</li>
+                            <li><strong>Relational Mapping:</strong> These tagged concepts are then ingested into a <strong>graph database (Neo4j)</strong>. We don't just store the concept; we create nodes and define the relationships (edges) between them, such as <code>'Scarcity' -> IS_A_PREREQUISITE_FOR -> 'Opportunity Cost'</code>. This creates the "genome."</li>
+                        </ol>
+                    </li>
+                </ul>
+                 <p><strong>Stage 3: Pedagogical Output</strong></p>
+                 <ul>
+                    <li><strong>Process:</strong> When a user interacts with their study material, our application queries the Knowledge Genome, not just the raw text.</li>
+                    <li><strong>Output:</strong> This enables unique, high-value features that generic tools cannot replicate:
+                        <ul class="pl-4">
+                            <li><strong>Curriculum-Aware Quizzes:</strong> Generate practice questions that test the relationships between concepts, not just definitions.</li>
+                            <li><strong>Root Cause Analysis:</strong> Identify student knowledge gaps. We can tell a user <em>why</em> they are struggling with a complex topic by highlighting their weak foundation in a prerequisite concept.</li>
+                            <li><strong>Personalized Learning Paths:</strong> Dynamically generate a study plan that prioritizes foundational concepts before moving to more advanced topics.</li>
+                        </ul>
+                    </li>
+                </ul>
+                <h3>3. Defensibility</h3>
+                <p>Our moat is not just one component, but the entire, integrated system:</p>
+                <ul>
+                    <li><strong>Proprietary Data:</strong> Our NER model's accuracy is a direct function of the unique academic data we train it on.</li>
+                    <li><strong>Graph Structure:</strong> The relational graph itself is a complex asset that becomes more powerful and accurate with every user interaction.</li>
+                    <li><strong>Network Effects:</strong> More users mean more data, which improves the genome's accuracy, which creates a better product, which attracts more users.</li>
+                </ul>
             </div>
         </div>
     </div>
@@ -261,45 +330,62 @@ Our moat is not just one component, but the entire, integrated system:
         <div class="modal-content bg-white w-full max-w-4xl max-h-[90vh] rounded-lg shadow-xl transform scale-95">
              <div class="p-6 border-b flex justify-between items-center">
                 <h2 class="text-xl font-semibold">Product Roadmap (18-Month)</h2>
-                <button onclick="closeModal('modal-roadmap')" class="text-gray-500 hover:text-gray-800">&times;</button>
+                <button onclick="closeModal('modal-roadmap')" class="text-gray-500 hover:text-gray-800 text-3xl">&times;</button>
             </div>
-            <div class="p-6 overflow-y-auto h-[calc(90vh-140px)]">
-                <pre class="text-sm"># 18-Month Product Roadmap
-
-Our roadmap is focused on executing our "Trojan Horse" strategy: first, perfecting the D2C product to achieve campus ubiquity, then leveraging that position to launch and scale our B2B2C platform.
-
-### Phase 1: D2C Dominance & B2B Foundation (Q4 2025 - Q2 2026)
-
-* **Q4 2025:**
-    * **Launch v1.5:** Full public launch of the freemium D2C app on web and mobile web.
-    * **Core Feature Refinement:** Enhance audio transcription accuracy and expand support for more complex PDF layouts.
-    * **Campus Ambassador Portal:** Launch a dedicated portal for ambassadors to track referrals and earnings.
-* **Q1 2026:**
-    * **Gamification & Virality:** Introduce study streaks, leaderboards, and seamless "share notes with study group" features to boost K-factor.
-    * **Knowledge Genome v1:** Internal launch of the concept-tagging and relational mapping engine.
-    * **Begin B2B Dashboard MVP:** Start development of the analytics dashboard for university faculty.
-* **Q2 2026:**
-    * **Personalized Quizzing:** Launch the first user-facing feature powered by the Knowledge Genome: adaptive, curriculum-aware practice tests.
-    * **Complete B2B Dashboard MVP:** A functional dashboard ready for internal testing and initial demos.
-
-### Phase 2: B2B2C Pilot & Commercialization (Q3 2026 - Q1 2027)
-
-* **Q3 2026:**
-    * **Secure First Pilot:** Sign the first unpaid pilot program with a department at a target university (e.g., XIMB).
-    * **Faculty Onboarding:** Onboard the first cohort of professors to the B2B dashboard.
-    * **Collect Efficacy Data:** Work with the pilot department to track metrics on student engagement and performance vs. a control group.
-* **Q4 2026:**
-    * **Refine B2B Dashboard:** Iterate on the dashboard based on feedback from the pilot program.
-    * **Develop "At-Risk Student" Alerts:** Implement predictive alerts for faculty based on student engagement patterns.
-* **Q1 2027:**
-    * **Convert First Pilot to Paid Contract:** Convert the successful pilot into our first annual institutional license.
-    * **Build B2B Sales Pipeline:** Hire one dedicated B2B sales lead and begin outreach to 10 more target universities.
-
-### Phase 3: Scaling (Q2 2027 onwards)
-
-* **Scale B2B Sales:** Replicate the pilot-to-contract model across multiple universities.
-* **Expand Platform:** Introduce department-wide and university-wide analytics for Deans and administrators.
-* **Internationalization:** Begin localization and market testing for Southeast Asia expansion.</pre>
+            <div class="p-6 overflow-y-auto h-[calc(90vh-70px)] content-area">
+                <h1>18-Month Product Roadmap</h1>
+                <p>Our roadmap is focused on executing our "Trojan Horse" strategy: first, perfecting the D2C product to achieve campus ubiquity, then leveraging that position to launch and scale our B2B2C platform.</p>
+                <h3>Phase 1: D2C Dominance & B2B Foundation (Q4 2025 - Q2 2026)</h3>
+                <ul>
+                    <li><strong>Q4 2025:</strong>
+                        <ul class="pl-4">
+                            <li><strong>Launch v1.5:</strong> Full public launch of the freemium D2C app on web and mobile web.</li>
+                            <li><strong>Core Feature Refinement:</strong> Enhance audio transcription accuracy and expand support for more complex PDF layouts.</li>
+                            <li><strong>Campus Ambassador Portal:</strong> Launch a dedicated portal for ambassadors to track referrals and earnings.</li>
+                        </ul>
+                    </li>
+                    <li><strong>Q1 2026:</strong>
+                         <ul class="pl-4">
+                            <li><strong>Gamification & Virality:</strong> Introduce study streaks, leaderboards, and seamless "share notes with study group" features to boost K-factor.</li>
+                            <li><strong>Knowledge Genome v1:</strong> Internal launch of the concept-tagging and relational mapping engine.</li>
+                            <li><strong>Begin B2B Dashboard MVP:</strong> Start development of the analytics dashboard for university faculty.</li>
+                        </ul>
+                    </li>
+                     <li><strong>Q2 2026:</strong>
+                         <ul class="pl-4">
+                            <li><strong>Personalized Quizzing:</strong> Launch the first user-facing feature powered by the Knowledge Genome: adaptive, curriculum-aware practice tests.</li>
+                            <li><strong>Complete B2B Dashboard MVP:</strong> A functional dashboard ready for internal testing and initial demos.</li>
+                        </ul>
+                    </li>
+                </ul>
+                <h3>Phase 2: B2B2C Pilot & Commercialization (Q3 2026 - Q1 2027)</h3>
+                <ul>
+                    <li><strong>Q3 2026:</strong>
+                        <ul class="pl-4">
+                            <li><strong>Secure First Pilot:</strong> Sign the first unpaid pilot program with a department at a target university (e.g., XIMB).</li>
+                            <li><strong>Faculty Onboarding:</strong> Onboard the first cohort of professors to the B2B dashboard.</li>
+                            <li><strong>Collect Efficacy Data:</strong> Work with the pilot department to track metrics on student engagement and performance vs. a control group.</li>
+                        </ul>
+                    </li>
+                    <li><strong>Q4 2026:</strong>
+                        <ul class="pl-4">
+                            <li><strong>Refine B2B Dashboard:</strong> Iterate on the dashboard based on feedback from the pilot program.</li>
+                            <li><strong>Develop "At-Risk Student" Alerts:</strong> Implement predictive alerts for faculty based on student engagement patterns.</li>
+                        </ul>
+                    </li>
+                    <li><strong>Q1 2027:</strong>
+                        <ul class="pl-4">
+                           <li><strong>Convert First Pilot to Paid Contract:</strong> Convert the successful pilot into our first annual institutional license.</li>
+                           <li><strong>Build B2B Sales Pipeline:</strong> Hire one dedicated B2B sales lead and begin outreach to 10 more target universities.</li>
+                        </ul>
+                    </li>
+                </ul>
+                <h3>Phase 3: Scaling (Q2 2027 onwards)</h3>
+                <ul>
+                    <li><strong>Scale B2B Sales:</strong> Replicate the pilot-to-contract model across multiple universities.</li>
+                    <li><strong>Expand Platform:</strong> Introduce department-wide and university-wide analytics for Deans and administrators.</li>
+                    <li><strong>Internationalization:</strong> Begin localization and market testing for Southeast Asia expansion.</li>
+                </ul>
             </div>
         </div>
     </div>
@@ -308,45 +394,53 @@ Our roadmap is focused on executing our "Trojan Horse" strategy: first, perfecti
         <div class="modal-content bg-white w-full max-w-4xl max-h-[90vh] rounded-lg shadow-xl transform scale-95">
              <div class="p-6 border-b flex justify-between items-center">
                 <h2 class="text-xl font-semibold">GTM Playbook: The Trojan Horse</h2>
-                <button onclick="closeModal('modal-gtm')" class="text-gray-500 hover:text-gray-800">&times;</button>
+                <button onclick="closeModal('modal-gtm')" class="text-gray-500 hover:text-gray-800 text-3xl">&times;</button>
             </div>
-            <div class="p-6 overflow-y-auto h-[calc(90vh-140px)]">
-                <pre class="text-sm"># Go-to-Market Playbook: The Trojan Horse Strategy
-
-Our go-to-market is not a traditional sales funnel; it's a self-funding flywheel designed for market capture. We use a hyper-efficient D2C "Land" motion to fuel a high-margin B2B2C "Expand" motion.
-
-### Phase 1: The Land Grab (D2C Ubiquity)
-
-The objective is to achieve critical mass on a target campus at the lowest possible cost.
-
-1.  **The Spearhead: Campus Ambassador Program**
-    * We recruit and train 3-5 influential, high-energy students at each target university.
-    * **Playbook:** They are not just marketers; they are power users. They run workshops, host study sessions using Vekkam, and become the on-the-ground support system.
-    * **Incentives:** A mix of a small stipend and a performance-based commission on paid D2C conversions. This keeps our CAC surgically low (~₹780).
-
-2.  **The Engine: Freemium Product-Led Growth**
-    * **Zero-Friction Onboarding:** The product is free and delivers a "magic moment" within 3 minutes (e.g., summarizing a 1-hour lecture).
-    * **Strategic Pricing:** The D2C subscription is priced for zero resistance (€100/month), intentionally sacrificing profit for mass adoption. This yields a 1.3:1 LTV:CAC, which is strategically break-even.
-    * **Viral Loops:** Features like "Share notes with your study group" are designed to drive a high K-factor, turning our users into our sales force.
-
-### Phase 2: The Leverage & Expansion (B2B2C Conversion)
-
-The objective is to convert campus ubiquity into high-value, recurring institutional contracts.
-
-1.  **The Wedge: Data as a Moat**
-    * Once we achieve ~20% penetration on a campus, we possess an asset no competitor has: real-time data on student engagement and academic health.
-    * **The Pitch:** We approach the Dean not with a product demo, but with an insight: "35% of your first-year Economics students are using Vekkam. We can show you, in aggregate, which concepts from the syllabus they are struggling with *right now*."
-
-2.  **The Pilot: Proving the ROI**
-    * We offer a free, one-semester pilot of our B2B Analytics Dashboard to the relevant department.
-    * Faculty get a real-time view of student engagement and "at-risk" indicators.
-    * We work with them to prove a measurable lift in student performance and/or a reduction in course drop-out rates vs. a control group.
-
-3.  **The Close: The Inevitable Partnership**
-    * Armed with undeniable ROI data from the pilot, the conversation shifts from "should we buy this?" to "how quickly can we roll this out campus-wide?".
-    * We sign a multi-year, university-wide license, with pricing tiered by the number of students. A single contract can be worth **₹15-50 Lakhs per year.**
-
-This flywheel is repeatable and scalable. The D2C "Land Grab" funds itself while creating the perfect pipeline for our highly profitable B2B "Expand" motion.</pre>
+            <div class="p-6 overflow-y-auto h-[calc(90vh-70px)] content-area">
+                <h1>Go-to-Market Playbook: The Trojan Horse Strategy</h1>
+                <p>Our go-to-market is not a traditional sales funnel; it's a self-funding flywheel designed for market capture. We use a hyper-efficient D2C "Land" motion to fuel a high-margin B2B2C "Expand" motion.</p>
+                <h3>Phase 1: The Land Grab (D2C Ubiquity)</h3>
+                <p>The objective is to achieve critical mass on a target campus at the lowest possible cost.</p>
+                <ol>
+                    <li><strong>The Spearhead: Campus Ambassador Program</strong>
+                        <ul>
+                            <li>We recruit and train 3-5 influential, high-energy students at each target university.</li>
+                            <li><strong>Playbook:</strong> They are not just marketers; they are power users. They run workshops, host study sessions using Vekkam, and become the on-the-ground support system.</li>
+                            <li><strong>Incentives:</strong> A mix of a small stipend and a performance-based commission on paid D2C conversions. This keeps our CAC surgically low (~₹780).</li>
+                        </ul>
+                    </li>
+                    <li><strong>The Engine: Freemium Product-Led Growth</strong>
+                        <ul>
+                            <li><strong>Zero-Friction Onboarding:</strong> The product is free and delivers a "magic moment" within 3 minutes (e.g., summarizing a 1-hour lecture).</li>
+                            <li><strong>Strategic Pricing:</strong> The D2C subscription is priced for zero resistance (€100/month), intentionally sacrificing profit for mass adoption. This yields a 1.3:1 LTV:CAC, which is strategically break-even.</li>
+                            <li><strong>Viral Loops:</strong> Features like "Share notes with your study group" are designed to drive a high K-factor, turning our users into our sales force.</li>
+                        </ul>
+                    </li>
+                </ol>
+                <h3>Phase 2: The Leverage & Expansion (B2B2C Conversion)</h3>
+                <p>The objective is to convert campus ubiquity into high-value, recurring institutional contracts.</p>
+                 <ol>
+                    <li><strong>The Wedge: Data as a Moat</strong>
+                        <ul>
+                            <li>Once we achieve ~20% penetration on a campus, we possess an asset no competitor has: real-time data on student engagement and academic health.</li>
+                            <li><strong>The Pitch:</strong> We approach the Dean not with a product demo, but with an insight: "35% of your first-year Economics students are using Vekkam. We can show you, in aggregate, which concepts from the syllabus they are struggling with *right now*."</li>
+                        </ul>
+                    </li>
+                    <li><strong>The Pilot: Proving the ROI</strong>
+                        <ul>
+                            <li>We offer a free, one-semester pilot of our B2B Analytics Dashboard to the relevant department.</li>
+                            <li>Faculty get a real-time view of student engagement and "at-risk" indicators.</li>
+                            <li>We work with them to prove a measurable lift in student performance and/or a reduction in course drop-out rates vs. a control group.</li>
+                        </ul>
+                    </li>
+                     <li><strong>The Close: The Inevitable Partnership</strong>
+                        <ul>
+                            <li>Armed with undeniable ROI data from the pilot, the conversation shifts from "should we buy this?" to "how quickly can we roll this out campus-wide?".</li>
+                            <li>We sign a multi-year, university-wide license, with pricing tiered by the number of students. A single contract can be worth <strong>₹15-50 Lakhs per year.</strong></li>
+                        </ul>
+                    </li>
+                </ol>
+                <p>This flywheel is repeatable and scalable. The D2C "Land Grab" funds itself while creating the perfect pipeline for our highly profitable B2B "Expand" motion.</p>
             </div>
         </div>
     </div>
@@ -355,22 +449,28 @@ This flywheel is repeatable and scalable. The D2C "Land Grab" funds itself while
         <div class="modal-content bg-white w-full max-w-4xl max-h-[90vh] rounded-lg shadow-xl transform scale-95">
              <div class="p-6 border-b flex justify-between items-center">
                 <h2 class="text-xl font-semibold">User Testimonials</h2>
-                <button onclick="closeModal('modal-testimonials')" class="text-gray-500 hover:text-gray-800">&times;</button>
+                <button onclick="closeModal('modal-testimonials')" class="text-gray-500 hover:text-gray-800 text-3xl">&times;</button>
             </div>
-            <div class="p-6 overflow-y-auto h-[calc(90vh-140px)]">
-                <pre class="text-sm"># User Testimonials & Case Studies
-
-### Persona 1: The Overwhelmed Economics Major
-* **Name:** Priya S.
-* **Course:** B.Sc. Economics, XIM University
-* **Before Vekkam:** "I was constantly struggling to keep up. I had three core econ courses, and each had hours of lectures and dense PDFs. I was spending 15+ hours a week just organizing and re-reading notes, and my grades were stuck at a B-."
-* **After Vekkam:** **"Vekkam turned 15 hours of disorganized material into a 3-hour focused review session. For my mid-terms, I used it to synthesize everything and then hammered the auto-generated quizzes. I didn't just pass; I scored an A- and saved at least 10 hours a week. It’s my entire academic OS now."**
-
-### Persona 2: The Pre-Med Student
-* **Name:** Aman K.
-* **Course:** Pre-Med Track, Biology Major
-* **Before Vekkam:** "Anatomy and Organic Chemistry are pure volume. I was spending my entire life manually creating flashcards from massive textbooks. It was passive memorization, and I was constantly terrified of forgetting things."
-* **After Vekkam:** **"The Knowledge Genome's ability to pull key concepts and generate active recall quizzes was the key. I cut my manual prep time in half, and my retention went through the roof because I was actually understanding the connections between topics, not just memorizing facts. I finally feel ahead of the material instead of drowning in it."**</pre>
+            <div class="p-6 overflow-y-auto h-[calc(90vh-70px)] content-area">
+                <h1>User Testimonials & Case Studies</h1>
+                <h3>Persona 1: The Overwhelmed Economics Major</h3>
+                <ul>
+                    <li><strong>Name:</strong> Priya S.</li>
+                    <li><strong>Course:</strong> B.Sc. Economics, XIM University</li>
+                    <li><strong>Before Vekkam:</strong> "I was constantly struggling to keep up. I had three core econ courses, and each had hours of lectures and dense PDFs. I was spending 15+ hours a week just organizing and re-reading notes, and my grades were stuck at a B-."</li>
+                    <li><strong>After Vekkam:</strong> 
+                        <blockquote>"Vekkam turned 15 hours of disorganized material into a 3-hour focused review session. For my mid-terms, I used it to synthesize everything and then hammered the auto-generated quizzes. I didn't just pass; I scored an A- and saved at least 10 hours a week. It’s my entire academic OS now."</blockquote>
+                    </li>
+                </ul>
+                <h3>Persona 2: The Pre-Med Student</h3>
+                <ul>
+                    <li><strong>Name:</strong> Aman K.</li>
+                    <li><strong>Course:</strong> Pre-Med Track, Biology Major</li>
+                    <li><strong>Before Vekkam:</strong> "Anatomy and Organic Chemistry are pure volume. I was spending my entire life manually creating flashcards from massive textbooks. It was passive memorization, and I was constantly terrified of forgetting things."</li>
+                    <li><strong>After Vekkam:</strong>
+                        <blockquote>"The Knowledge Genome's ability to pull key concepts and generate active recall quizzes was the key. I cut my manual prep time in half, and my retention went through the roof because I was actually understanding the connections between topics, not just memorizing facts. I finally feel ahead of the material instead of drowning in it."</blockquote>
+                    </li>
+                </ul>
             </div>
         </div>
     </div>
