@@ -4,6 +4,7 @@ pydub
 noisereduce
 scipy
 PyMuPDF
+razorpay
 python-docx
 google.generativeai
 python-igraph
