@@ -9,15 +9,17 @@
             --bg-color: #0D1117;
             --primary-accent: #6E57E0;
             --secondary-accent: #33A0FF;
+            --highlighter-yellow: #FFD60A;
             --text-primary: #F0F6FC;
             --text-secondary: #C9D1D9;
             --border-color: rgba(240, 246, 252, 0.1);
             --card-bg: rgba(22, 27, 34, 0.5);
             --heading-font: 'Poppins', 'Helvetica Neue', Helvetica, Arial, sans-serif;
             --body-font: 'Inter', 'Georgia', serif;
+            --note-font: 'Gochi Hand', cursive;
         }
 
-        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&family=Inter:wght@400;500&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&family=Inter:wght@400;500&family=Gochi+Hand&display=swap');
 
         * {
             box-sizing: border-box;
@@ -33,6 +35,10 @@
             padding: 0;
             line-height: 1.7;
             overflow-x: hidden;
+            background-image:
+                linear-gradient(rgba(240, 246, 252, 0.03) 1px, transparent 1px),
+                linear-gradient(to right, rgba(240, 246, 252, 0.03) 1px, transparent 1px);
+            background-size: 2rem 2rem;
         }
         
         #background-aurora {
@@ -42,8 +48,8 @@
             width: 100%;
             height: 100%;
             z-index: -1;
-            background: radial-gradient(circle at 10% 20%, rgba(110, 87, 224, 0.2), transparent 40%),
-                        radial-gradient(circle at 80% 90%, rgba(51, 160, 255, 0.2), transparent 40%);
+            background: radial-gradient(circle at 10% 20%, rgba(110, 87, 224, 0.1), transparent 40%),
+                        radial-gradient(circle at 80% 90%, rgba(51, 160, 255, 0.1), transparent 40%);
             animation: moveAurora 20s infinite alternate ease-in-out;
         }
 
@@ -139,6 +145,20 @@
             margin-bottom: 3rem;
             text-align: center;
             font-weight: 600;
+            position: relative;
+        }
+        
+        section h2::after {
+            content: '';
+            position: absolute;
+            bottom: -15px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80px;
+            height: 5px;
+            background-image: url("data:image/svg+xml,%3Csvg width='80' height='5' viewBox='0 0 80 5' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1.5 2.5C10.5 1.5 28.5 -0.5 40 2C51.5 4.5 68 4.5 78.5 2.5' stroke='%23FFD60A' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E%0A");
+            background-size: contain;
+            background-repeat: no-repeat;
         }
         
         .fade-in-up {
@@ -204,20 +224,34 @@
         }
 
         .quote {
-            font-style: italic;
-            font-size: 1.25rem;
-            margin: 2rem auto;
-            padding: 1.5rem;
-            border-left: 4px solid var(--primary-accent);
-            background: rgba(110, 87, 224, 0.05);
-            max-width: 80%;
-            text-align: center;
+            font-family: var(--note-font);
+            font-style: normal;
+            font-size: clamp(1.2rem, 3vw, 1.5rem);
+            padding: 1.5rem 2rem;
+            background: #FFF9C4;
+            color: #1a1a1a;
+            max-width: 400px;
+            margin: 3rem auto;
+            transform: rotate(-2.5deg);
+            box-shadow: 5px 5px 15px rgba(0,0,0,0.2);
+            transition: transform 0.3s ease;
+            border: none;
+            text-align: left;
+        }
+        .quote:hover {
+            transform: rotate(0deg) scale(1.05);
+            z-index: 10;
         }
         
         .team-member p {
             margin-bottom: 0;
         }
         
+        .highlight {
+            background: linear-gradient(to top, rgba(255, 214, 10, 0.5) 30%, transparent 30%);
+            padding: 0 0.2rem;
+        }
+
         footer {
             text-align: center;
             padding: 3rem 0;
@@ -241,7 +275,7 @@
         <section id="opportunity">
             <h2 class="fade-in-up">The Opportunity: An Academic Lifeline</h2>
             <p class="fade-in-up" style="transition-delay: 100ms;">For the 80%+ of students who cram, Vekkam isn't just a tool; it's an academic lifeline. We've engineered an AI-powered learning platform for the reality of modern education: the last-minute crunch. We transform chaotic, high-stress study sessions into focused, efficient, and effective learning sprints, turning panic into performance.</p>
-            <p class="quote fade-in-up" style="transition-delay: 200ms;">"This isn't just a student problem. Poor academic performance is a leading indicator of student attrition. For a mid-sized university, even a small percentage of dropouts translates to millions in lost tuition revenue annually."</p>
+            <div class="quote fade-in-up" style="transition-delay: 200ms;">"This isn't just a student problem. Poor academic performance is a leading indicator of student attrition... translates to millions in lost tuition annually."</div>
         </section>
 
         <section id="solution">
@@ -261,7 +295,7 @@
 
         <section id="traction">
             <h2 class="fade-in-up">Early Proof: Market Validation</h2>
-            <p class="fade-in-up" style="transition-delay: 100ms;">Our beta with XIM University students showed a <strong>40% average reduction in study time</strong> and a <strong>25% average lift in unit test scores</strong>. We've already converted 4 of our first 20 beta users into paying subscribers, validating that students will pay for a superior workflow.</p>
+            <p class="fade-in-up" style="transition-delay: 100ms;">Our beta with XIM University students showed a <strong class="highlight">40% average reduction in study time</strong> and a <strong class="highlight">25% average lift in unit test scores</strong>. We've already converted 4 of our first 20 beta users into paying subscribers, validating that students will pay for a superior workflow.</p>
         </section>
 
         <section id="market">
@@ -351,3 +385,4 @@
     </script>
 </body>
 </html>
+
