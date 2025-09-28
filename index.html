@@ -346,6 +346,16 @@
             text-decoration: underline;
         }
 
+        .survey-link {
+            color: var(--text-secondary);
+            text-decoration: underline;
+            text-decoration-style: dotted;
+            transition: color 0.3s ease;
+        }
+        .survey-link:hover {
+            color: var(--primary-accent);
+        }
+
         .ask-vekkam-btn {
             position: fixed;
             bottom: 40px;
@@ -412,7 +422,7 @@
     <main class="container">
         <section id="opportunity">
             <h2 class="typewriter">Signal Detected: The Opportunity</h2>
-            <p class="fade-in">For the 80%+ of students operating in high-stress, last-minute crunch cycles, Vekkam is a tactical advantage. An AI-powered learning platform engineered for peak efficiency. We don't just manage chaos; we weaponize it, turning academic panic into strategic performance.</p>
+            <p class="fade-in">For the 80%+ of students operating in high-stress, last-minute crunch cycles (<a href="https://docs.google.com/spreadsheets/d/1zcOmF4UggzCPdmfqDFroWh4XnTromZCP9qxWRr3W-N0/edit?usp=sharing" target="_blank" class="survey-link">based on our survey of 100 students</a>), Vekkam is a tactical advantage. An AI-powered learning platform engineered for peak efficiency. We don't just manage chaos; we weaponize it, turning academic panic into strategic performance.</p>
             <p class="quote fade-in">"This isn't a student problem. It's an institutional vulnerability. Poor academic performance signals attrition risk. For a mid-sized university, a fractional increase in dropouts means millions in lost revenue. We provide the countermeasure."</p>
         </section>
 
@@ -731,3 +741,4 @@
     </script>
 </body>
 </html>
+
