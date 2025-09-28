@@ -190,23 +190,23 @@ def get_razorpay_client():
         return None
 
 def check_user_access(user_id):
-    """Checks if the user can perform an analysis based on their tier and usage."""
+    """Checks user access and returns status and a message, without printing."""
     user_data = load_user_data(user_id)
     tier = user_data.get('user_tier', 'free')
     today_str = datetime.now().strftime("%Y-%m-%d")
 
     if tier == 'free':
         if user_data.get('total_analyses', 0) >= FREE_TIER_LIMIT:
-            st.warning("You have used your single free analysis. Please upgrade for more.")
-            return False, 'limit_reached'
+            message = "You have used your single free analysis. Please upgrade to add more files or start a new session."
+            return False, 'limit_reached', message
     elif tier == 'paid':
         last_date = user_data.get('last_analysis_date')
         daily_count = user_data.get('daily_analyses_count', 0)
         if last_date == today_str and daily_count >= PAID_TIER_DAILY_LIMIT:
-            st.warning(f"You have reached your daily limit of {PAID_TIER_DAILY_LIMIT} analyses.")
-            return False, 'limit_reached'
+            message = f"You have reached your daily limit of {PAID_TIER_DAILY_LIMIT} analyses."
+            return False, 'limit_reached', message
             
-    return True, 'ok'
+    return True, 'ok', "Access granted."
 
 def show_paywall(user_id, user_info):
     """Displays the Razorpay payment button and handles the upgrade logic."""
@@ -495,9 +495,10 @@ def show_upload_state():
     st.header("Note & Lesson Engine: Upload")
     
     user_id = st.session_state.user_info.get('id') or st.session_state.user_info.get('email')
-    can_proceed, reason = check_user_access(user_id)
+    can_proceed, reason, message = check_user_access(user_id)
 
     if not can_proceed:
+        st.warning(message)
         show_paywall(user_id, st.session_state.user_info)
         return
 
@@ -552,9 +553,23 @@ def show_workspace_state():
                 for failure in st.session_state.extraction_failures:
                     st.error(f"**{failure['source_id']}**: {failure['reason']}")
         with st.expander("Add More Files"):
-            new_files = st.file_uploader("Upload more files", accept_multiple_files=True, key=f"uploader_{int(time.time())}")
-            if new_files:
-                st.info("File adding logic to be implemented.")
+            user_id = st.session_state.user_info.get('id') or st.session_state.user_info.get('email')
+            can_add_files, _, message = check_user_access(user_id)
+            
+            if not can_add_files:
+                st.info(message)
+
+            new_files = st.file_uploader(
+                "Upload more files", 
+                accept_multiple_files=True, 
+                key=f"uploader_{int(time.time())}",
+                disabled=not can_add_files
+            )
+            
+            if new_files and can_add_files:
+                # In a full implementation, you would process these new files
+                # and add them to the session state's 'all_chunks'.
+                st.info("File adding is disabled in this demo, but the rate limit check is active.")
 
 def show_synthesizing_state():
     st.header("Synthesizing Note Blocks...")
@@ -1124,6 +1139,15 @@ def main():
         show_landing_page(auth_url)
         return
 
+    # --- HIDE STREAMLIT STYLE ---
+    st.markdown("""
+        <style>
+            #MainMenu {visibility: hidden;}
+            header {visibility: hidden;}
+            footer {visibility: hidden;}
+        </style>
+        """, unsafe_allow_html=True)
+
     st.sidebar.title("Vekkam Engine")
     user = st.session_state.user_info
     user_id = user.get('id') or user.get('email')
@@ -1206,3 +1230,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
