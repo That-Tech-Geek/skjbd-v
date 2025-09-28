@@ -6,60 +6,150 @@
     <title>Vekkam | Confidential Investor Data Room</title>
     <style>
         :root {
-            --primary-color: #0a0a0a;
-            --secondary-color: #ffffff;
-            --accent-color: #4d4dff;
-            --text-color: #cccccc;
-            --heading-font: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-            --body-font: 'Georgia', serif;
+            --bg-color: #0D1117;
+            --primary-accent: #6E57E0;
+            --secondary-accent: #33A0FF;
+            --text-primary: #F0F6FC;
+            --text-secondary: #C9D1D9;
+            --border-color: rgba(240, 246, 252, 0.1);
+            --card-bg: rgba(22, 27, 34, 0.5);
+            --heading-font: 'Poppins', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            --body-font: 'Inter', 'Georgia', serif;
+        }
+
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&family=Inter:wght@400;500&display=swap');
+
+        * {
+            box-sizing: border-box;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
         }
 
         body {
             font-family: var(--body-font);
-            background-color: var(--primary-color);
-            color: var(--text-color);
+            background-color: var(--bg-color);
+            color: var(--text-secondary);
             margin: 0;
             padding: 0;
-            line-height: 1.6;
+            line-height: 1.7;
+            overflow-x: hidden;
+        }
+        
+        #background-aurora {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background: radial-gradient(circle at 10% 20%, rgba(110, 87, 224, 0.2), transparent 40%),
+                        radial-gradient(circle at 80% 90%, rgba(51, 160, 255, 0.2), transparent 40%);
+            animation: moveAurora 20s infinite alternate ease-in-out;
+        }
+
+        @keyframes moveAurora {
+            0% { transform: scale(1) rotate(0deg); opacity: 0.8; }
+            100% { transform: scale(1.5) rotate(20deg); opacity: 1; }
         }
 
         .container {
-            max-width: 960px;
+            max-width: 1000px;
             margin: auto;
-            padding: 2rem;
+            padding: 0 2rem;
+            position: relative;
+            z-index: 2;
         }
 
-        header {
+        header.main-header {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
             text-align: center;
-            padding: 3rem 0;
-            border-bottom: 1px solid #333;
+            position: relative;
         }
 
-        header h1 {
+        header.main-header h1 {
             font-family: var(--heading-font);
-            font-size: 3.5rem;
-            color: var(--secondary-color);
+            font-size: clamp(3rem, 10vw, 6rem);
+            color: var(--text-primary);
             margin: 0;
             letter-spacing: 2px;
+            font-weight: 700;
+            background: linear-gradient(90deg, var(--text-primary), var(--secondary-accent), var(--primary-accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-size: 200% auto;
+            animation: gradient-text 10s ease-in-out infinite;
+        }
+        
+        @keyframes gradient-text {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
         }
 
-        header p {
-            font-size: 1.2rem;
-            color: var(--accent-color);
+        header.main-header p {
+            font-size: clamp(1rem, 3vw, 1.25rem);
+            color: var(--secondary-accent);
+            margin-top: 1rem;
+            font-weight: 500;
         }
+        
+        .scroll-down-indicator {
+            position: absolute;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 24px;
+            height: 40px;
+            border: 2px solid var(--text-secondary);
+            border-radius: 12px;
+            opacity: 0.7;
+        }
+        .scroll-down-indicator::before {
+            content: '';
+            position: absolute;
+            top: 8px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 4px;
+            height: 8px;
+            background: var(--text-secondary);
+            border-radius: 2px;
+            animation: scroll-anim 2s infinite ease-out;
+        }
+        @keyframes scroll-anim {
+            0% { transform: translate(-50%, 0); opacity: 1; }
+            50% { opacity: 1; }
+            100% { transform: translate(-50%, 15px); opacity: 0; }
+        }
+
 
         section {
-            padding: 3rem 0;
-            border-bottom: 1px solid #333;
+            padding: 6rem 0;
+            border-bottom: 1px solid var(--border-color);
         }
 
         h2 {
             font-family: var(--heading-font);
-            font-size: 2.5rem;
-            color: var(--secondary-color);
-            border-left: 5px solid var(--accent-color);
-            padding-left: 1rem;
-            margin-bottom: 2rem;
+            font-size: clamp(2rem, 5vw, 3rem);
+            color: var(--text-primary);
+            margin-bottom: 3rem;
+            text-align: center;
+            font-weight: 600;
+        }
+        
+        .fade-in-up {
+            opacity: 0;
+            transform: translateY(40px);
+            transition: opacity 0.8s cubic-bezier(0.165, 0.84, 0.44, 1), transform 0.8s cubic-bezier(0.165, 0.84, 0.44, 1);
+        }
+        
+        .fade-in-up.visible {
+            opacity: 1;
+            transform: translateY(0);
         }
 
         .grid {
@@ -69,115 +159,131 @@
         }
 
         .card {
-            background: #1a1a1a;
+            background: var(--card-bg);
             padding: 2rem;
-            border-radius: 8px;
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            transition: transform 0.4s ease, box-shadow 0.4s ease;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            will-change: transform;
         }
 
         .card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+            box-shadow: 0 15px 30px rgba(0,0,0,0.3);
+            border-color: rgba(110, 87, 224, 0.5);
         }
 
         .card h3 {
             font-family: var(--heading-font);
-            color: var(--accent-color);
+            color: var(--primary-accent);
             font-size: 1.5rem;
             margin-top: 0;
         }
 
         .button {
             display: inline-block;
-            background-color: var(--accent-color);
-            color: var(--secondary-color);
-            padding: 1rem 2rem;
+            background: linear-gradient(90deg, var(--secondary-accent), var(--primary-accent));
+            color: var(--text-primary);
+            padding: 0.9rem 1.8rem;
             text-decoration: none;
-            border-radius: 5px;
+            border-radius: 8px;
             font-family: var(--heading-font);
-            font-weight: bold;
-            transition: background-color 0.3s ease;
+            font-weight: 600;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
             border: none;
             cursor: pointer;
             font-size: 1rem;
+            background-size: 200% 100%;
         }
 
         .button:hover {
-            background-color: #3a3ad5;
-        }
-
-        footer {
-            text-align: center;
-            padding: 2rem 0;
-            font-size: 0.9rem;
+            transform: translateY(-3px) scale(1.02);
+            box-shadow: 0 8px 20px rgba(110, 87, 224, 0.3);
+            background-position: 100% 0;
         }
 
         .quote {
             font-style: italic;
-            font-size: 1.2rem;
-            margin: 2rem 0;
-            padding-left: 2rem;
-            border-left: 3px solid var(--accent-color);
+            font-size: 1.25rem;
+            margin: 2rem auto;
+            padding: 1.5rem;
+            border-left: 4px solid var(--primary-accent);
+            background: rgba(110, 87, 224, 0.05);
+            max-width: 80%;
+            text-align: center;
+        }
+        
+        .team-member p {
+            margin-bottom: 0;
+        }
+        
+        footer {
+            text-align: center;
+            padding: 3rem 0;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
         }
     </style>
 </head>
 <body>
+    <div id="background-aurora"></div>
 
-    <header>
+    <header class="main-header">
         <div class="container">
             <h1>VEKKAM</h1>
             <p>Confidential Investor Data Room</p>
         </div>
+        <div class="scroll-down-indicator"></div>
     </header>
 
-    <div class="container">
-
+    <main class="container">
         <section id="opportunity">
-            <h2>The Opportunity: An Academic Lifeline</h2>
-            [cite_start]<p>For the 80%+ of students who cram, Vekkam isn't just a tool; it's an academic lifeline[cite: 20]. [cite_start]We've engineered an AI-powered learning platform for the reality of modern education: the last-minute crunch[cite: 18]. [cite_start]We transform chaotic, high-stress study sessions into focused, efficient, and effective learning sprints, turning panic into performance[cite: 19, 21].</p>
-            [cite_start]<p class="quote">"This isn't just a student problem. Poor academic performance is a leading indicator of student attrition. For a mid-sized university, even a small percentage of dropouts translates to millions in lost tuition revenue annually[cite: 31]."</p>
+            <h2 class="fade-in-up">The Opportunity: An Academic Lifeline</h2>
+            <p class="fade-in-up" style="transition-delay: 100ms;">For the 80%+ of students who cram, Vekkam isn't just a tool; it's an academic lifeline. We've engineered an AI-powered learning platform for the reality of modern education: the last-minute crunch. We transform chaotic, high-stress study sessions into focused, efficient, and effective learning sprints, turning panic into performance.</p>
+            <p class="quote fade-in-up" style="transition-delay: 200ms;">"This isn't just a student problem. Poor academic performance is a leading indicator of student attrition. For a mid-sized university, even a small percentage of dropouts translates to millions in lost tuition revenue annually."</p>
         </section>
 
         <section id="solution">
-            <h2>Our Moat: The Knowledge Genome Project</h2>
-            [cite_start]<p>Generic LLMs can summarize, but they can't understand a university's specific curriculum structure[cite: 44]. [cite_start]Our proprietary "Knowledge Genome Project" is a system that deconstructs curriculum into core concepts, mapping the relationships between topics and identifying knowledge gaps[cite: 42, 43]. [cite_start]This allows us to deliver learning, not just information[cite: 45]. [cite_start]This is our defensible IP[cite: 46].</p>
+            <h2 class="fade-in-up">Our Moat: The Knowledge Genome Project</h2>
+            <p class="fade-in-up" style="transition-delay: 100ms;">Generic LLMs can summarize, but they can't understand a university's specific curriculum structure. Our proprietary "Knowledge Genome Project" is a system that deconstructs curriculum into core concepts, mapping the relationships between topics and identifying knowledge gaps. This allows us to deliver learning, not just information. <strong>This is our defensible IP.</strong></p>
             <div class="grid">
-                <div class="card">
+                <div class="card fade-in-up" style="transition-delay: 200ms;">
                     <h3>Aggregate & Synthesize</h3>
-                    [cite_start]<p>Upload everything—audio lectures, textbook PDFs, slides, and even whiteboard photos[cite: 37]. [cite_start]Our engine processes this multimodal information, creating a unified set of clear, structured notes in under 5 seconds[cite: 39].</p>
+                    <p>Upload everything—audio lectures, textbook PDFs, slides, and even whiteboard photos. Our engine processes this multimodal information, creating a unified set of clear, structured notes in under 5 seconds.</p>
                 </div>
-                <div class="card">
+                <div class="card fade-in-up" style="transition-delay: 300ms;">
                     <h3>Master & Conquer</h3>
-                    [cite_start]<p>Students engage in an active-passive hybrid workflow, customizing outputs and querying a Personal TA with access to all their course content for perfectly relevant answers[cite: 41].</p>
+                    <p>Students engage in an active-passive hybrid workflow, customizing outputs and querying a Personal TA with access to all their course content for perfectly relevant answers.</p>
                 </div>
             </div>
         </section>
 
         <section id="traction">
-            <h2>Early Proof: Market Validation</h2>
-            [cite_start]<p>Our beta with XIM University students showed a <strong>40% average reduction in study time</strong> and a <strong>25% average lift in unit test scores</strong>[cite: 116]. [cite_start]We've already converted 4 of our first 20 beta users into paying subscribers, validating that students will pay for a superior workflow[cite: 118].</p>
+            <h2 class="fade-in-up">Early Proof: Market Validation</h2>
+            <p class="fade-in-up" style="transition-delay: 100ms;">Our beta with XIM University students showed a <strong>40% average reduction in study time</strong> and a <strong>25% average lift in unit test scores</strong>. We've already converted 4 of our first 20 beta users into paying subscribers, validating that students will pay for a superior workflow.</p>
         </section>
 
         <section id="market">
-            <h2>The Market: Explosive Growth</h2>
-            [cite_start]<p>The Indian EdTech market is our beachhead, valued at $7.5 billion and projected to reach $29 billion by 2030[cite: 64]. [cite_start]Our initial focus, the higher education market in India, was valued at $68 billion in 2024 and is expected to grow to $137 billion by 2033[cite: 65].</p>
+            <h2 class="fade-in-up">The Market: Explosive Growth</h2>
+            <p class="fade-in-up" style="transition-delay: 100ms;">The Indian EdTech market is our beachhead, valued at $7.5 billion and projected to reach $29 billion by 2030. Our initial focus, the higher education market in India, was valued at $68 billion in 2024 and is expected to grow to $137 billion by 2033.</p>
         </section>
         
         <section id="documents">
-            <h2>Due Diligence Documents</h2>
-            <p>Here you'll find our core documents for your review. We believe in transparency and are confident in the strength of our model and strategy.</p>
+            <h2 class="fade-in-up">Due Diligence Documents</h2>
+            <p class="fade-in-up" style="transition-delay: 100ms;">Here you'll find our core documents for your review. We believe in transparency and are confident in the strength of our model and strategy.</p>
             <div class="grid">
-                <div class="card">
+                <div class="card fade-in-up" style="transition-delay: 200ms;">
                     <h3>Pitch Deck</h3>
                     <p>The complete investor presentation outlining our vision, strategy, and the massive opportunity ahead.</p>
                     <a href="https://drive.google.com/open?id=1hEwuE7PmTYjOPIvQTCmKj_m97NYeBhuJ" target="_blank" class="button">View Pitch Deck</a>
                 </div>
-                <div class="card">
+                <div class="card fade-in-up" style="transition-delay: 300ms;">
                     <h3>Financial Model</h3>
                     <p>A detailed, interactive financial model projecting our growth, revenue, and profitability.</p>
                     <a href="https://drive.google.com/open?id=1LpikXQOWiKzX3HV4NE89aWXqJz1ef2yfx-iWkP4ZtD0" target="_blank" class="button">Access Financial Model</a>
                 </div>
-                <div class="card">
+                <div class="card fade-in-up" style="transition-delay: 400ms;">
                     <h3>Monte Carlo Simulations</h3>
                     <p>1,000,000 simulations stress-testing our D2C model against real-world volatility, proving our model's viability and upside potential.</p>
                     <a href="https://drive.google.com/open?id=1gzjD-osSsNUxZOp3DEcdTsWe02BG1bgz" target="_blank" class="button">Review Simulations</a>
@@ -186,20 +292,20 @@
         </section>
         
         <section id="team">
-            <h2>The Team: Builders & Visionaries</h2>
+            <h2 class="fade-in-up">The Team: Builders & Visionaries</h2>
             <div class="grid">
-                <div class="card">
+                <div class="card team-member fade-in-up" style="transition-delay: 200ms;">
                     <h3>Sambit Mishra | Founder, CEO</h3>
-                    <p>An Economics student at XIM with a demonstrated history of execution. [cite_start]Previously closed ₹1.2 Cr in corporate sponsorships and was the national runner-up in IIM Ahmedabad's case competition[cite: 292].</p>
+                    <p>An Economics student at XIM with a demonstrated history of execution. Previously closed ₹1.2 Cr in corporate sponsorships and was the national runner-up in IIM Ahmedabad's case competition.</p>
                 </div>
-                <div class="card">
+                <div class="card team-member fade-in-up" style="transition-delay: 300ms;">
                     <h3>Thamizharasan S. | Co-Founder, R&D Lead</h3>
-                    <p>A professional game developer specializing in applying addictive learning loops to EdTech. [cite_start]He is the architect of our core IP, the 'Knowledge Genome Project'[cite: 288, 289].</p>
+                    <p>A professional game developer specializing in applying addictive learning loops to EdTech. He is the architect of our core IP, the 'Knowledge Genome Project'.</p>
                 </div>
             </div>
         </section>
 
-    </div>
+    </main>
 
     <footer>
         <div class="container">
@@ -207,5 +313,41 @@
         </div>
     </footer>
 
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // On-scroll animations
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('visible');
+                    }
+                });
+            }, {
+                threshold: 0.1
+            });
+
+            const elementsToAnimate = document.querySelectorAll('.fade-in-up');
+            elementsToAnimate.forEach(el => observer.observe(el));
+
+            // Card 3D Tilt Effect
+            const cards = document.querySelectorAll('.card');
+            cards.forEach(card => {
+                card.addEventListener('mousemove', (e) => {
+                    const rect = card.getBoundingClientRect();
+                    const x = e.clientX - rect.left - rect.width / 2;
+                    const y = e.clientY - rect.top - rect.height / 2;
+                    
+                    const rotateX = -y / 20;
+                    const rotateY = x / 20;
+
+                    card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(1.05)`;
+                });
+
+                card.addEventListener('mouseleave', () => {
+                    card.style.transform = 'perspective(1000px) rotateX(0) rotateY(0) scale(1)';
+                });
+            });
+        });
+    </script>
 </body>
 </html>
