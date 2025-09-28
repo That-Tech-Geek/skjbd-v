@@ -3,28 +3,57 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vekkam | Confidential Investor Data Room</title>
+    <title>Vekkam // Secure Data Holo-Archive</title>
     <style>
         :root {
-            --bg-color: #0D1117;
-            --primary-accent: #6E57E0;
-            --secondary-accent: #33A0FF;
-            --highlighter-yellow: #FFD60A;
-            --text-primary: #F0F6FC;
-            --text-secondary: #C9D1D9;
-            --border-color: rgba(240, 246, 252, 0.1);
-            --card-bg: rgba(22, 27, 34, 0.5);
-            --heading-font: 'Poppins', 'Helvetica Neue', Helvetica, Arial, sans-serif;
-            --body-font: 'Inter', 'Georgia', serif;
-            --note-font: 'Gochi Hand', cursive;
+            --bg-color: #010409;
+            --primary-accent: #00f2ff;
+            --secondary-accent: #ff00c1;
+            --text-primary: #e6f1ff;
+            --text-secondary: #8b949e;
+            --border-color: rgba(0, 242, 255, 0.2);
+            --card-bg: rgba(10, 15, 30, 0.7);
+            --heading-font: 'Orbitron', sans-serif;
+            --body-font: 'Rajdhani', sans-serif;
         }
 
-        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&family=Inter:wght@400;500&family=Gochi+Hand&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Rajdhani:wght@400;600&display=swap');
 
         * {
             box-sizing: border-box;
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
+        }
+        
+        #preloader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--bg-color);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: var(--body-font);
+            color: var(--primary-accent);
+            font-size: 1.2rem;
+            letter-spacing: 2px;
+            opacity: 1;
+            transition: opacity 0.5s ease-out 1s; /* Added delay */
+        }
+        #preloader.loaded {
+            opacity: 0;
+            pointer-events: none;
+        }
+        .loader-text::after {
+            content: '_';
+            animation: blink 1s infinite;
+        }
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
         }
 
         body {
@@ -35,31 +64,36 @@
             padding: 0;
             line-height: 1.7;
             overflow-x: hidden;
-            background-image:
-                linear-gradient(rgba(240, 246, 252, 0.03) 1px, transparent 1px),
-                linear-gradient(to right, rgba(240, 246, 252, 0.03) 1px, transparent 1px);
-            background-size: 2rem 2rem;
+            font-size: 18px;
         }
         
-        #background-aurora {
+        #background-canvas {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
             z-index: -1;
-            background: radial-gradient(circle at 10% 20%, rgba(110, 87, 224, 0.1), transparent 40%),
-                        radial-gradient(circle at 80% 90%, rgba(51, 160, 255, 0.1), transparent 40%);
-            animation: moveAurora 20s infinite alternate ease-in-out;
         }
-
-        @keyframes moveAurora {
-            0% { transform: scale(1) rotate(0deg); opacity: 0.8; }
-            100% { transform: scale(1.5) rotate(20deg); opacity: 1; }
+        
+        .scan-line {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: linear-gradient(90deg, transparent, var(--primary-accent), transparent);
+            opacity: 0.5;
+            z-index: 10;
+            animation: scan 8s linear infinite;
+        }
+        @keyframes scan {
+            0% { top: 0%; }
+            100% { top: 100%; }
         }
 
         .container {
-            max-width: 1000px;
+            max-width: 1100px;
             margin: auto;
             padding: 0 2rem;
             position: relative;
@@ -74,33 +108,38 @@
             justify-content: center;
             text-align: center;
             position: relative;
+            overflow: hidden;
         }
 
         header.main-header h1 {
             font-family: var(--heading-font);
-            font-size: clamp(3rem, 10vw, 6rem);
+            font-size: clamp(3.5rem, 12vw, 8rem);
             color: var(--text-primary);
             margin: 0;
-            letter-spacing: 2px;
-            font-weight: 700;
-            background: linear-gradient(90deg, var(--text-primary), var(--secondary-accent), var(--primary-accent));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-size: 200% auto;
-            animation: gradient-text 10s ease-in-out infinite;
+            letter-spacing: 3px;
+            font-weight: 900;
+            text-shadow: 0 0 15px var(--primary-accent), 0 0 30px var(--primary-accent), 0 0 50px rgba(0, 242, 255, 0.7);
+            animation: text-flicker 4s infinite alternate;
         }
-        
-        @keyframes gradient-text {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
+        @keyframes text-flicker {
+            0% { opacity: 0.8; }
+            5% { opacity: 1; text-shadow: 0 0 15px var(--primary-accent), 0 0 30px var(--primary-accent), 0 0 50px rgba(0, 242, 255, 0.7); }
+            10% { opacity: 0.9; }
+            15% { opacity: 1; }
+            20% { opacity: 0.8; }
+            25% { opacity: 1; }
+            80% { opacity: 1; text-shadow: 0 0 15px var(--primary-accent), 0 0 30px var(--primary-accent), 0 0 50px rgba(0, 242, 255, 0.7); }
+            85% { opacity: 0.7; text-shadow: 0 0 15px var(--primary-accent), 0 0 20px var(--primary-accent), 0 0 30px rgba(0, 242, 255, 0.5); }
+            100% { opacity: 1; }
         }
 
         header.main-header p {
             font-size: clamp(1rem, 3vw, 1.25rem);
-            color: var(--secondary-accent);
+            color: var(--primary-accent);
             margin-top: 1rem;
-            font-weight: 500;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 3px;
         }
         
         .scroll-down-indicator {
@@ -108,281 +147,576 @@
             bottom: 40px;
             left: 50%;
             transform: translateX(-50%);
-            width: 24px;
-            height: 40px;
-            border: 2px solid var(--text-secondary);
-            border-radius: 12px;
-            opacity: 0.7;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: var(--primary-accent);
+            text-transform: uppercase;
+            font-size: 0.8rem;
+            letter-spacing: 1px;
         }
-        .scroll-down-indicator::before {
-            content: '';
-            position: absolute;
-            top: 8px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 4px;
-            height: 8px;
-            background: var(--text-secondary);
-            border-radius: 2px;
-            animation: scroll-anim 2s infinite ease-out;
+        .chevron {
+            width: 20px;
+            height: 20px;
+            margin-top: 10px;
         }
-        @keyframes scroll-anim {
-            0% { transform: translate(-50%, 0); opacity: 1; }
-            50% { opacity: 1; }
-            100% { transform: translate(-50%, 15px); opacity: 0; }
+        .chevron path {
+            stroke: var(--primary-accent);
+            fill: none;
+            stroke-width: 2;
+            animation: chevron-pulse 2s infinite;
         }
+        @keyframes chevron-pulse {
+            0% { opacity: 0; transform: translateY(-10px); }
+            50% { opacity: 1; transform: translateY(0); }
+            100% { opacity: 0; transform: translateY(10px); }
+        }
+        .chevron path:nth-child(2) { animation-delay: 0.2s; }
+        .chevron path:nth-child(3) { animation-delay: 0.4s; }
 
 
         section {
-            padding: 6rem 0;
-            border-bottom: 1px solid var(--border-color);
+            padding: 8rem 0;
+            position: relative;
         }
+        section::before, section::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            width: 100%;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--primary-accent), transparent);
+            opacity: 0.3;
+        }
+        section::before { top: 0; }
+        section::after { bottom: 0; }
 
         h2 {
             font-family: var(--heading-font);
-            font-size: clamp(2rem, 5vw, 3rem);
+            font-size: clamp(2.5rem, 5vw, 3.5rem);
             color: var(--text-primary);
-            margin-bottom: 3rem;
+            margin-bottom: 3.5rem;
             text-align: center;
-            font-weight: 600;
+            font-weight: 700;
             position: relative;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        h2 .type-cursor {
+            display: inline-block;
+            width: 1.5rem;
+            height: 3.5rem;
+            background: var(--secondary-accent);
+            margin-left: 10px;
+            animation: blink 1s infinite;
+            vertical-align: bottom;
         }
         
-        section h2::after {
-            content: '';
-            position: absolute;
-            bottom: -15px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 80px;
-            height: 5px;
-            background-image: url("data:image/svg+xml,%3Csvg width='80' height='5' viewBox='0 0 80 5' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1.5 2.5C10.5 1.5 28.5 -0.5 40 2C51.5 4.5 68 4.5 78.5 2.5' stroke='%23FFD60A' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E%0A");
-            background-size: contain;
-            background-repeat: no-repeat;
-        }
-        
-        .fade-in-up {
+        .fade-in {
             opacity: 0;
-            transform: translateY(40px);
-            transition: opacity 0.8s cubic-bezier(0.165, 0.84, 0.44, 1), transform 0.8s cubic-bezier(0.165, 0.84, 0.44, 1);
+            transform: translateY(30px);
+            transition: opacity 0.8s ease-out, transform 0.8s ease-out;
         }
-        
-        .fade-in-up.visible {
+        .fade-in.visible {
             opacity: 1;
             transform: translateY(0);
         }
 
         .grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 2rem;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 2.5rem;
         }
 
         .card {
             background: var(--card-bg);
-            padding: 2rem;
-            border-radius: 12px;
+            padding: 2.5rem;
             border: 1px solid var(--border-color);
-            transition: transform 0.4s ease, box-shadow 0.4s ease;
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            will-change: transform;
+            transition: background 0.4s ease, border-color 0.4s ease;
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            position: relative;
+            overflow: hidden;
+            clip-path: polygon(0 15px, 15px 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%);
         }
-
         .card:hover {
-            box-shadow: 0 15px 30px rgba(0,0,0,0.3);
-            border-color: rgba(110, 87, 224, 0.5);
+            border-color: var(--primary-accent);
+            background: rgba(10, 15, 30, 0.9);
+        }
+        .card-glow {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            background: radial-gradient(circle at var(--mouse-x) var(--mouse-y), rgba(0, 242, 255, 0.2), transparent 40%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        .card:hover .card-glow {
+            opacity: 1;
         }
 
         .card h3 {
             font-family: var(--heading-font);
             color: var(--primary-accent);
-            font-size: 1.5rem;
+            font-size: 1.8rem;
             margin-top: 0;
+            margin-bottom: 1rem;
+            font-weight: 700;
         }
 
         .button {
             display: inline-block;
-            background: linear-gradient(90deg, var(--secondary-accent), var(--primary-accent));
-            color: var(--text-primary);
-            padding: 0.9rem 1.8rem;
+            background: transparent;
+            color: var(--primary-accent);
+            padding: 1rem 2rem;
             text-decoration: none;
-            border-radius: 8px;
             font-family: var(--heading-font);
-            font-weight: 600;
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-            border: none;
+            font-weight: 700;
+            transition: all 0.3s ease;
+            border: 2px solid var(--primary-accent);
             cursor: pointer;
             font-size: 1rem;
-            background-size: 200% 100%;
+            position: relative;
+            overflow: hidden;
+            z-index: 1;
+            clip-path: polygon(0 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%);
         }
-
         .button:hover {
-            transform: translateY(-3px) scale(1.02);
-            box-shadow: 0 8px 20px rgba(110, 87, 224, 0.3);
-            background-position: 100% 0;
+            color: var(--bg-color);
+            text-shadow: none;
+            transform: scale(1.05);
+            box-shadow: 0 0 20px var(--primary-accent);
+        }
+        .button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background-color: var(--primary-accent);
+            transition: left 0.3s ease;
+            z-index: -1;
+        }
+        .button:hover::before {
+            left: 0;
         }
 
         .quote {
-            font-family: var(--note-font);
-            font-style: normal;
-            font-size: clamp(1.2rem, 3vw, 1.5rem);
-            padding: 1.5rem 2rem;
-            background: #FFF9C4;
-            color: #1a1a1a;
-            max-width: 400px;
+            font-size: 1.3rem;
             margin: 3rem auto;
-            transform: rotate(-2.5deg);
-            box-shadow: 5px 5px 15px rgba(0,0,0,0.2);
-            transition: transform 0.3s ease;
-            border: none;
-            text-align: left;
+            max-width: 700px;
+            padding: 2rem;
+            border: 1px solid rgba(255, 0, 193, 0.3);
+            background: rgba(255, 0, 193, 0.05);
+            font-weight: 600;
+            color: var(--text-primary);
+            position: relative;
+            font-style: italic;
         }
-        .quote:hover {
-            transform: rotate(0deg) scale(1.05);
-            z-index: 10;
+        .quote::before, .quote::after {
+            content: '“';
+            font-family: var(--heading-font);
+            position: absolute;
+            color: var(--secondary-accent);
+            font-size: 4rem;
+            opacity: 0.3;
         }
+        .quote::before { top: -1rem; left: 0.5rem; }
+        .quote::after { content: '”'; bottom: -2rem; right: 0.5rem; }
         
-        .team-member p {
-            margin-bottom: 0;
-        }
-        
-        .highlight {
-            background: linear-gradient(to top, rgba(255, 214, 10, 0.5) 30%, transparent 30%);
-            padding: 0 0.2rem;
+        .stat-highlight {
+            color: var(--secondary-accent);
+            font-weight: 700;
+            font-size: 1.5em;
+            text-shadow: 0 0 8px var(--secondary-accent);
         }
 
+        .ask-vekkam-btn {
+            position: fixed;
+            bottom: 40px;
+            right: 40px;
+            z-index: 500;
+            background-color: var(--primary-accent);
+            color: var(--bg-color);
+            font-family: var(--heading-font);
+            padding: 1rem 1.5rem;
+            border-radius: 50px;
+            text-decoration: none;
+            font-weight: 700;
+            box-shadow: 0 0 25px rgba(0, 242, 255, 0.5);
+            transition: all 0.3s ease;
+            animation: pulse-glow 2s infinite alternate;
+        }
+
+        .ask-vekkam-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 0 35px rgba(0, 242, 255, 0.8);
+        }
+
+        @keyframes pulse-glow {
+            from {
+                box-shadow: 0 0 20px rgba(0, 242, 255, 0.4);
+                transform: scale(1);
+            }
+            to {
+                box-shadow: 0 0 35px rgba(0, 242, 255, 0.7);
+                transform: scale(1.03);
+            }
+        }
+        
         footer {
             text-align: center;
-            padding: 3rem 0;
-            font-size: 0.9rem;
+            padding: 4rem 0 2rem;
+            font-size: 1rem;
             color: var(--text-secondary);
+            border-top: 1px solid var(--border-color);
+            letter-spacing: 2px;
+            text-transform: uppercase;
         }
     </style>
 </head>
 <body>
-    <div id="background-aurora"></div>
+    <div id="preloader"><div class="loader-text">ESTABLISHING SECURE CONNECTION</div></div>
+    <div class="scan-line"></div>
+    <canvas id="background-canvas"></canvas>
 
     <header class="main-header">
         <div class="container">
             <h1>VEKKAM</h1>
-            <p>Confidential Investor Data Room</p>
+            <p>// SECURE DATA HOLO-ARCHIVE //</p>
         </div>
-        <div class="scroll-down-indicator"></div>
+        <div class="scroll-down-indicator">
+            INITIATE SCROLL
+            <svg class="chevron" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                <path d="M12 15.586l-4.293-4.293-1.414 1.414L12 18.414l5.707-5.707-1.414-1.414z"/>
+                <path d="M12 8.586l-4.293-4.293-1.414 1.414L12 11.414l5.707-5.707-1.414-1.414z"/>
+            </svg>
+        </div>
     </header>
 
     <main class="container">
         <section id="opportunity">
-            <h2 class="fade-in-up">The Opportunity: An Academic Lifeline</h2>
-            <p class="fade-in-up" style="transition-delay: 100ms;">For the 80%+ of students who cram, Vekkam isn't just a tool; it's an academic lifeline. We've engineered an AI-powered learning platform for the reality of modern education: the last-minute crunch. We transform chaotic, high-stress study sessions into focused, efficient, and effective learning sprints, turning panic into performance.</p>
-            <div class="quote fade-in-up" style="transition-delay: 200ms;">"This isn't just a student problem. Poor academic performance is a leading indicator of student attrition... translates to millions in lost tuition annually."</div>
+            <h2 class="typewriter">Signal Detected: The Opportunity</h2>
+            <p class="fade-in">For the 80%+ of students operating in high-stress, last-minute crunch cycles, Vekkam is a tactical advantage. An AI-powered learning platform engineered for peak efficiency. We don't just manage chaos; we weaponize it, turning academic panic into strategic performance.</p>
+            <p class="quote fade-in">"This isn't a student problem. It's an institutional vulnerability. Poor academic performance signals attrition risk. For a mid-sized university, a fractional increase in dropouts means millions in lost revenue. We provide the countermeasure."</p>
         </section>
 
         <section id="solution">
-            <h2 class="fade-in-up">Our Moat: The Knowledge Genome Project</h2>
-            <p class="fade-in-up" style="transition-delay: 100ms;">Generic LLMs can summarize, but they can't understand a university's specific curriculum structure. Our proprietary "Knowledge Genome Project" is a system that deconstructs curriculum into core concepts, mapping the relationships between topics and identifying knowledge gaps. This allows us to deliver learning, not just information. <strong>This is our defensible IP.</strong></p>
+            <h2 class="typewriter">Core Architecture: The Knowledge Genome</h2>
+            <p class="fade-in">Consumer-grade LLMs process text; our "Knowledge Genome Project" deciphers curriculum. It's a proprietary system that deconstructs subject matter into a relational graph of core concepts. It doesn't just return information—it delivers a pedagogical advantage. This is our strategic moat.</p>
             <div class="grid">
-                <div class="card fade-in-up" style="transition-delay: 200ms;">
-                    <h3>Aggregate & Synthesize</h3>
-                    <p>Upload everything—audio lectures, textbook PDFs, slides, and even whiteboard photos. Our engine processes this multimodal information, creating a unified set of clear, structured notes in under 5 seconds.</p>
+                <div class="card fade-in">
+                    <div class="card-glow"></div>
+                    <h3>Phase I: Ingest & Synthesize</h3>
+                    <p>Multimodal data ingestion—audio lectures, dense PDFs, chaotic notes, visual data. Our engine cross-references and synthesizes this input into a unified, structured knowledge base in under 5 seconds.</p>
                 </div>
-                <div class="card fade-in-up" style="transition-delay: 300ms;">
-                    <h3>Master & Conquer</h3>
-                    <p>Students engage in an active-passive hybrid workflow, customizing outputs and querying a Personal TA with access to all their course content for perfectly relevant answers.</p>
+                <div class="card fade-in">
+                    <div class="card-glow"></div>
+                    <h3>Phase II: Master & Execute</h3>
+                    <p>Engage a hybrid active-passive learning protocol. Users query a personalized Tactical AI trained exclusively on their course data, ensuring zero-hallucination, perfectly contextualized support.</p>
                 </div>
             </div>
         </section>
 
         <section id="traction">
-            <h2 class="fade-in-up">Early Proof: Market Validation</h2>
-            <p class="fade-in-up" style="transition-delay: 100ms;">Our beta with XIM University students showed a <strong class="highlight">40% average reduction in study time</strong> and a <strong class="highlight">25% average lift in unit test scores</strong>. We've already converted 4 of our first 20 beta users into paying subscribers, validating that students will pay for a superior workflow.</p>
+            <h2 class="typewriter">Field Data: Initial Validation</h2>
+            <p class="fade-in" style="text-align: center; font-size: 1.3rem; font-weight: 600;">Beta protocol with XIM University operatives yielded a <strong class="stat-highlight" data-count="40">0</strong>% reduction in prep-time and a <strong class="stat-highlight" data-count="25">0</strong>% performance uplift in unit assessments. Early monetization confirmed: operatives will allocate resources for a superior workflow.</p>
         </section>
 
         <section id="market">
-            <h2 class="fade-in-up">The Market: Explosive Growth</h2>
-            <p class="fade-in-up" style="transition-delay: 100ms;">The Indian EdTech market is our beachhead, valued at $7.5 billion and projected to reach $29 billion by 2030. Our initial focus, the higher education market in India, was valued at $68 billion in 2024 and is expected to grow to $137 billion by 2033.</p>
+            <h2 class="typewriter">Target Zone: Market Trajectory</h2>
+            <p class="fade-in">Initial deployment: the Indian EdTech sector, a $7.5B market projected to hit $29B by 2030. Our beachhead is the $68B higher-ed segment. The mission is total market penetration, followed by global expansion.</p>
         </section>
         
         <section id="documents">
-            <h2 class="fade-in-up">Due Diligence Documents</h2>
-            <p class="fade-in-up" style="transition-delay: 100ms;">Here you'll find our core documents for your review. We believe in transparency and are confident in the strength of our model and strategy.</p>
+            <h2 class="typewriter">Intel Packet: Due Diligence</h2>
+            <p class="fade-in">Core schematics and projections are available for your review. Full transparency is standard operating procedure.</p>
             <div class="grid">
-                <div class="card fade-in-up" style="transition-delay: 200ms;">
-                    <h3>Pitch Deck</h3>
-                    <p>The complete investor presentation outlining our vision, strategy, and the massive opportunity ahead.</p>
-                    <a href="https://drive.google.com/open?id=1hEwuE7PmTYjOPIvQTCmKj_m97NYeBhuJ" target="_blank" class="button">View Pitch Deck</a>
+                <div class="card fade-in">
+                    <div class="card-glow"></div>
+                    <h3>Strategic Briefing [Pitch Deck]</h3>
+                    <p>The complete mission overview, outlining vision, strategy, and projected operational impact.</p>
+                    <a href="https://drive.google.com/open?id=1hEwuE7PmTYjOPIvQTCmKj_m97NYeBhuJ" target="_blank" class="button">Access Deck</a>
                 </div>
-                <div class="card fade-in-up" style="transition-delay: 300ms;">
-                    <h3>Financial Model</h3>
-                    <p>A detailed, interactive financial model projecting our growth, revenue, and profitability.</p>
-                    <a href="https://drive.google.com/open?id=1LpikXQOWiKzX3HV4NE89aWXqJz1ef2yfx-iWkP4ZtD0" target="_blank" class="button">Access Financial Model</a>
+                <div class="card fade-in">
+                    <div class="card-glow"></div>
+                    <h3>Economic Model [Financials]</h3>
+                    <p>Interactive projections detailing growth vectors, revenue streams, and long-term profitability.</p>
+                    <a href="https://drive.google.com/open?id=1LpikXQOWiKzX3HV4NE89aWXqJz1ef2yfx-iWkP4ZtD0" target="_blank" class="button">Access Model</a>
                 </div>
-                <div class="card fade-in-up" style="transition-delay: 400ms;">
-                    <h3>Monte Carlo Simulations</h3>
-                    <p>1,000,000 simulations stress-testing our D2C model against real-world volatility, proving our model's viability and upside potential.</p>
-                    <a href="https://drive.google.com/open?id=1gzjD-osSsNUxZOp3DEcdTsWe02BG1bgz" target="_blank" class="button">Review Simulations</a>
+                <div class="card fade-in">
+                    <div class="card-glow"></div>
+                    <h3>Threat Analysis [Simulations]</h3>
+                    <p>1M-iteration Monte Carlo stress test of our D2C protocol against market volatility. Confirms model resilience and massive upside.</p>
+                    <a href="https://drive.google.com/open?id=1gzjD-osSsNUxZOp3DEcdTsWe02BG1bgz" target="_blank" class="button">Access Sims</a>
                 </div>
             </div>
         </section>
         
         <section id="team">
-            <h2 class="fade-in-up">The Team: Builders & Visionaries</h2>
+            <h2 class="typewriter">The Architects</h2>
             <div class="grid">
-                <div class="card team-member fade-in-up" style="transition-delay: 200ms;">
-                    <h3>Sambit Mishra | Founder, CEO</h3>
-                    <p>An Economics student at XIM with a demonstrated history of execution. Previously closed ₹1.2 Cr in corporate sponsorships and was the national runner-up in IIM Ahmedabad's case competition.</p>
+                <div class="card team-member fade-in">
+                    <div class="card-glow"></div>
+                    <h3>Sambit Mishra // Mission Lead</h3>
+                    <p>Economics student, XIM. Demonstrated history of execution. Closed ₹1.2 Cr in corporate sponsorships. National runner-up, IIM Ahmedabad case competition.</p>
                 </div>
-                <div class="card team-member fade-in-up" style="transition-delay: 300ms;">
-                    <h3>Thamizharasan S. | Co-Founder, R&D Lead</h3>
-                    <p>A professional game developer specializing in applying addictive learning loops to EdTech. He is the architect of our core IP, the 'Knowledge Genome Project'.</p>
+                <div class="card team-member fade-in">
+                    <div class="card-glow"></div>
+                    <h3>Thamizharasan S. // R&D Command</h3>
+                    <p>Professional game developer. Architect of the 'Knowledge Genome Project.' Specializes in applying addictive learning loops to complex systems.</p>
                 </div>
             </div>
         </section>
 
     </main>
 
+    <a href="https://gemini.google.com/gem/1TMfiB7floXOrjkysgE48aO-vo7cebsLz?usp=sharing" target="_blank" class="ask-vekkam-btn">
+        Ask Vekkam
+    </a>
+
     <footer>
         <div class="container">
-            <p>&copy; 2025 Vekkam. All Rights Reserved. Confidential & Proprietary.</p>
+            <p>VEKKAM // END TRANSMISSION //</p>
         </div>
     </footer>
 
     <script>
+        // --- PRELOADER ---
+        window.addEventListener('load', () => {
+            const preloader = document.getElementById('preloader');
+            setTimeout(() => {
+                preloader.classList.add('loaded');
+            }, 500);
+        });
+
+        // --- BACKGROUND CANVAS PARTICLES ---
+        const canvas = document.getElementById('background-canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        let particlesArray;
+
+        const mouse = {
+            x: null,
+            y: null,
+            radius: (canvas.height / 120) * (canvas.width / 120)
+        }
+
+        window.addEventListener('mousemove', event => {
+            mouse.x = event.x;
+            mouse.y = event.y;
+        });
+        window.addEventListener('mouseout', () => {
+            mouse.x = null;
+            mouse.y = null;
+        });
+
+
+        class Particle {
+            constructor(x, y, directionX, directionY, size, color) {
+                this.x = x;
+                this.y = y;
+                this.directionX = directionX;
+                this.directionY = directionY;
+                this.size = size;
+                this.color = color;
+            }
+            draw() {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2, false);
+                ctx.fillStyle = 'rgba(0, 242, 255, 0.3)';
+                ctx.fill();
+            }
+            update() {
+                if (this.x > canvas.width || this.x < 0) {
+                    this.directionX = -this.directionX;
+                }
+                if (this.y > canvas.height || this.y < 0) {
+                    this.directionY = -this.directionY;
+                }
+                let dx = mouse.x - this.x;
+                let dy = mouse.y - this.y;
+                let distance = Math.sqrt(dx * dx + dy * dy);
+                if (distance < mouse.radius + this.size) {
+                    if (mouse.x < this.x && this.x < canvas.width - this.size * 10) {
+                        this.x += 5;
+                    }
+                    if (mouse.x > this.x && this.x > this.size * 10) {
+                        this.x -= 5;
+                    }
+                    if (mouse.y < this.y && this.y < canvas.height - this.size * 10) {
+                        this.y += 5;
+                    }
+                    if (mouse.y > this.y && this.y > this.size * 10) {
+                        this.y -= 5;
+                    }
+                }
+                this.x += this.directionX;
+                this.y += this.directionY;
+                this.draw();
+            }
+        }
+
+        function init() {
+            particlesArray = [];
+            let numberOfParticles = (canvas.height * canvas.width) / 15000;
+            for (let i = 0; i < numberOfParticles; i++) {
+                let size = (Math.random() * 2) + 1;
+                let x = (Math.random() * ((innerWidth - size * 2) - (size * 2)) + size * 2);
+                let y = (Math.random() * ((innerHeight - size * 2) - (size * 2)) + size * 2);
+                let directionX = (Math.random() * 0.4) - 0.2;
+                let directionY = (Math.random() * 0.4) - 0.2;
+                let color = 'rgba(0, 242, 255, 0.3)';
+                particlesArray.push(new Particle(x, y, directionX, directionY, size, color));
+            }
+        }
+
+        function connect() {
+            let opacityValue = 1;
+            for (let a = 0; a < particlesArray.length; a++) {
+                for (let b = a; b < particlesArray.length; b++) {
+                    let distance = ((particlesArray[a].x - particlesArray[b].x) * (particlesArray[a].x - particlesArray[b].x)) +
+                        ((particlesArray[a].y - particlesArray[b].y) * (particlesArray[a].y - particlesArray[b].y));
+                    if (distance < (canvas.width / 7) * (canvas.height / 7)) {
+                        opacityValue = 1 - (distance / 20000);
+                        ctx.strokeStyle = `rgba(0, 242, 255, ${opacityValue * 0.3})`;
+                        ctx.lineWidth = 1;
+                        ctx.beginPath();
+                        ctx.moveTo(particlesArray[a].x, particlesArray[a].y);
+                        ctx.lineTo(particlesArray[b].x, particlesArray[b].y);
+                        ctx.stroke();
+                    }
+                }
+            }
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            ctx.clearRect(0, 0, innerWidth, innerHeight);
+            for (let i = 0; i < particlesArray.length; i++) {
+                particlesArray[i].update();
+            }
+            connect();
+        }
+        
+        window.addEventListener('resize', () => {
+            canvas.width = innerWidth;
+            canvas.height = innerHeight;
+            mouse.radius = (canvas.height / 120) * (canvas.width / 120);
+            init();
+        });
+
+        init();
+        animate();
+
+
+        // --- ON SCROLL EFFECTS & ADVANCED UI ---
         document.addEventListener('DOMContentLoaded', function() {
-            // On-scroll animations
+            // Typewriter effect
+            function typeWriter(element) {
+                const text = element.getAttribute('data-text');
+                element.innerHTML = '';
+                let i = 0;
+                const cursor = document.createElement('span');
+                cursor.className = 'type-cursor';
+                element.appendChild(cursor);
+                
+                function type() {
+                    if (i < text.length) {
+                        element.insertBefore(document.createTextNode(text.charAt(i)), cursor);
+                        i++;
+                        setTimeout(type, 70);
+                    } else {
+                        cursor.style.animation = 'blink 1s infinite';
+                    }
+                }
+                type();
+            }
+            
+            // Number counting animation
+            function countUp(element) {
+                const target = +element.getAttribute('data-count');
+                let current = 0;
+                const duration = 2000; // 2 seconds
+                const stepTime = Math.abs(Math.floor(duration / target));
+
+                function updateCount() {
+                    current++;
+                    element.innerText = current;
+                    if (current < target) {
+                        setTimeout(updateCount, stepTime);
+                    }
+                }
+                updateCount();
+            }
+
+            // General scroll observer
             const observer = new IntersectionObserver((entries) => {
                 entries.forEach(entry => {
                     if (entry.isIntersecting) {
                         entry.target.classList.add('visible');
+                        
+                        if (entry.target.classList.contains('typewriter') && !entry.target.hasAttribute('data-typed')) {
+                             entry.target.setAttribute('data-text', entry.target.textContent.trim());
+                             entry.target.setAttribute('data-typed', 'true');
+                             typeWriter(entry.target);
+                        }
+                        
+                        const statElements = entry.target.querySelectorAll('.stat-highlight[data-count]');
+                        statElements.forEach(statEl => {
+                            if (!statEl.hasAttribute('data-counted')) {
+                                statEl.setAttribute('data-counted', 'true');
+                                countUp(statEl);
+                            }
+                        });
+                        
                     }
                 });
             }, {
-                threshold: 0.1
+                threshold: 0.25
             });
 
-            const elementsToAnimate = document.querySelectorAll('.fade-in-up');
+            const elementsToAnimate = document.querySelectorAll('.fade-in, h2.typewriter');
             elementsToAnimate.forEach(el => observer.observe(el));
+            
+             const tractionSectionObserver = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const statElements = entry.target.querySelectorAll('.stat-highlight[data-count]');
+                        statElements.forEach(statEl => {
+                            if (!statEl.hasAttribute('data-counted')) {
+                                statEl.setAttribute('data-counted', 'true');
+                                countUp(statEl);
+                            }
+                        });
+                        tractionSectionObserver.unobserve(entry.target);
+                    }
+                });
+            }, { threshold: 0.5 });
 
-            // Card 3D Tilt Effect
+            const tractionSection = document.getElementById('traction');
+            if(tractionSection) {
+                tractionSectionObserver.observe(tractionSection);
+            }
+
+            // Card mouse follow glow
             const cards = document.querySelectorAll('.card');
             cards.forEach(card => {
                 card.addEventListener('mousemove', (e) => {
                     const rect = card.getBoundingClientRect();
-                    const x = e.clientX - rect.left - rect.width / 2;
-                    const y = e.clientY - rect.top - rect.height / 2;
-                    
-                    const rotateX = -y / 20;
-                    const rotateY = x / 20;
-
-                    card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(1.05)`;
-                });
-
-                card.addEventListener('mouseleave', () => {
-                    card.style.transform = 'perspective(1000px) rotateX(0) rotateY(0) scale(1)';
+                    const x = e.clientX - rect.left;
+                    const y = e.clientY - rect.top;
+                    card.style.setProperty('--mouse-x', `${x}px`);
+                    card.style.setProperty('--mouse-y', `${y}px`);
                 });
             });
         });
     </script>
 </body>
 </html>
-
