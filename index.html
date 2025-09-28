@@ -1,88 +1,133 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Vekkam | Investor Data Room</title>
-    <script src="[https://cdn.tailwindcss.com](https://cdn.tailwindcss.com)"></script>
-    <link rel="preconnect" href="[https://fonts.googleapis.com](https://fonts.googleapis.com)">
-    <link rel="preconnect" href="[https://fonts.gstatic.com](https://fonts.gstatic.com)" crossorigin>
-    <link href="[https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap](https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap)" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --bg-light: #f9fafb;
+            --bg-dark: #111827;
+            --card-bg-light: rgba(255, 255, 255, 0.6);
+            --card-bg-dark: rgba(29, 39, 58, 0.5);
+            --text-light: #1f2937;
+            --text-dark: #e5e7eb;
+            --text-muted-light: #6b7280;
+            --text-muted-dark: #9ca3af;
+            --border-light: rgba(229, 231, 235, 0.8);
+            --border-dark: rgba(55, 65, 81, 0.6);
+            --header-light: #111827;
+            --header-dark: #ffffff;
+            --accent: #3b82f6;
+        }
+
+        html.dark {
+            --bg: var(--bg-dark);
+            --card-bg: var(--card-bg-dark);
+            --text: var(--text-dark);
+            --text-muted: var(--text-muted-dark);
+            --border: var(--border-dark);
+            --header: var(--header-dark);
+        }
+
+        html:not(.dark) {
+            --bg: var(--bg-light);
+            --card-bg: var(--card-bg-light);
+            --text: var(--text-light);
+            --text-muted: var(--text-muted-light);
+            --border: var(--border-light);
+            --header: var(--header-light);
+        }
+
         body {
             font-family: 'Inter', sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            transition: background-color 0.3s ease, color 0.3s ease;
         }
-        .data-room-card {
-            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+        
+        .aurora-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            overflow: hidden;
+            z-index: -1;
+        }
+
+        .aurora-bg::before, .aurora-bg::after {
+            content: '';
+            position: absolute;
+            width: 100vw;
+            height: 100vh;
+            background-image:
+                radial-gradient(circle at 10% 10%, var(--accent), transparent 25%),
+                radial-gradient(circle at 90% 80%, #7c3aed, transparent 25%);
+            filter: blur(120px) brightness(0.6);
+            animation: aurora-glow 20s linear infinite;
+            opacity: 0.2;
+        }
+        
+        html:not(.dark) .aurora-bg::before, html:not(.dark) .aurora-bg::after {
+             filter: blur(120px) brightness(1.2);
+             opacity: 0.1;
+        }
+
+        .aurora-bg::after {
+            animation-direction: reverse;
+        }
+
+        @keyframes aurora-glow {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .glass-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--border);
+            transition: transform 0.2s ease, box-shadow 0.3s ease, background 0.3s ease;
             cursor: pointer;
         }
-        .data-room-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        .glass-card:hover {
+            transform: translateY(-8px) scale(1.02);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            border-color: var(--accent);
         }
         .modal {
-            transition: opacity 0.25s ease;
+            transition: opacity 0.3s ease;
         }
         .modal-content {
-            transition: transform 0.25s ease;
+            background: var(--card-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--border);
+            transition: transform 0.3s ease, background 0.3s ease;
         }
-        .content-area h1 {
-            font-size: 1.875rem;
-            font-weight: 700;
-            margin-bottom: 1.5rem;
+        .section-header {
+            color: var(--header);
+            position: relative;
+            padding-bottom: 8px;
         }
-        .content-area h3 {
-            font-size: 1.25rem;
-            font-weight: 600;
-            margin-top: 2rem;
-            margin-bottom: 1rem;
-            border-bottom: 1px solid #e5e7eb;
-            padding-bottom: 0.5rem;
-        }
-        .content-area p {
-            line-height: 1.6;
-            margin-bottom: 1rem;
-        }
-        .content-area ul {
-            list-style-type: disc;
-            padding-left: 1.5rem;
-            margin-bottom: 1rem;
-        }
-        .content-area ol {
-            list-style-type: decimal;
-            padding-left: 1.5rem;
-            margin-bottom: 1rem;
-        }
-        .content-area li {
-            margin-bottom: 0.5rem;
-        }
-        .content-area strong {
-            font-weight: 600;
-            color: #111827;
-        }
-        .content-area blockquote {
-            border-left: 4px solid #d1d5db;
-            padding-left: 1rem;
-            margin: 1.5rem 0;
-            font-style: italic;
-            color: #4b5563;
-        }
-        .content-area table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 1.5rem;
-        }
-        .content-area th, .content-area td {
-            border: 1px solid #e5e7eb;
-            padding: 0.75rem;
-            text-align: left;
-        }
-        .content-area th {
-            background-color: #f9fafb;
+        .section-header::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 50px;
+            height: 3px;
+            background-color: var(--accent);
+            border-radius: 2px;
         }
         .loader {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #3498db;
+            border: 4px solid rgba(255,255,255,0.2);
+            border-top: 4px solid var(--accent);
             border-radius: 50%;
             width: 40px;
             height: 40px;
@@ -92,26 +137,55 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+
+        /* Content Area Styling */
+        .content-area h1 {font-size: 2rem; font-weight: 800; margin-bottom: 1.5rem; color: var(--header);}
+        .content-area h3 {font-size: 1.5rem; font-weight: 700; margin-top: 2.5rem; margin-bottom: 1rem; border-bottom: 1px solid var(--border); padding-bottom: 0.75rem; color: var(--header);}
+        .content-area p {line-height: 1.7; margin-bottom: 1rem;}
+        .content-area ul, .content-area ol {padding-left: 1.5rem; margin-bottom: 1rem;}
+        .content-area li {margin-bottom: 0.75rem;}
+        .content-area strong {font-weight: 700; color: var(--header);}
+        .content-area blockquote {border-left: 4px solid var(--accent); padding-left: 1rem; margin: 1.5rem 0; font-style: italic; color: var(--text-muted);}
+        .content-area table {width: 100%; border-collapse: collapse; margin-bottom: 1.5rem;}
+        .content-area th, .content-area td {border: 1px solid var(--border); padding: 0.75rem; text-align: left;}
+        .content-area th {background-color: rgba(0,0,0,0.1);}
+        
+        /* Theme Toggle */
+        .theme-switch-wrapper { display: flex; align-items: center; }
+        .theme-switch { display: inline-block; height: 26px; position: relative; width: 50px; }
+        .theme-switch input { display:none; }
+        .slider { background-color: #4b5563; bottom: 0; cursor: pointer; left: 0; position: absolute; right: 0; top: 0; transition: .4s; border-radius: 34px; }
+        .slider:before { background-color: #fff; bottom: 4px; content: ""; height: 18px; left: 4px; position: absolute; transition: .4s; width: 18px; border-radius: 50%; }
+        input:checked + .slider { background-color: var(--accent); }
+        input:checked + .slider:before { transform: translateX(24px); }
     </style>
 </head>
-<body class="bg-gray-50 text-gray-800">
-
-    <div class="container mx-auto px-4 py-12">
+<body class="antialiased">
+    <div class="aurora-bg"></div>
+    <div class="container mx-auto px-4 py-12 relative z-10">
 
         <!-- Header -->
-        <header class="text-center mb-12">
-            <h1 class="text-4xl font-bold text-gray-900">Vekkam</h1>
-            <p class="text-xl text-gray-600 mt-2">Confidential Investor Data Room</p>
+        <header class="flex justify-between items-center mb-16">
+            <div>
+                <h1 class="text-4xl font-extrabold" style="color: var(--header);">Vekkam</h1>
+                <p class="text-xl mt-2" style="color: var(--text-muted);">Confidential Investor Data Room</p>
+            </div>
+            <div class="theme-switch-wrapper">
+                <label class="theme-switch" for="checkbox">
+                    <input type="checkbox" id="checkbox" onchange="toggleTheme()" checked />
+                    <div class="slider round"></div>
+                </label>
+            </div>
         </header>
 
-        <main class="space-y-16">
+        <main class="space-y-20">
 
              <!-- AI Co-pilot Section -->
             <section id="ai-copilot">
-                <div class="bg-blue-600 text-white p-8 rounded-lg text-center shadow-lg">
+                <div class="bg-gradient-to-r from-blue-600 to-indigo-700 text-white p-8 rounded-xl text-center shadow-2xl">
                     <h2 class="text-3xl font-bold">VC Decision Co-pilot</h2>
-                    <p class="mt-2 mb-6 max-w-2xl mx-auto">Tired of reading? Let our AI synthesize the data and generate a draft investment memo for you. Your time is valuable—let's get to the signal, faster.</p>
-                    <button onclick="openModal('modal-ai-copilot')" class="bg-white text-blue-600 font-bold py-3 px-8 rounded-full hover:bg-gray-100 transition duration-300">
+                    <p class="mt-2 mb-6 max-w-2xl mx-auto opacity-90">Synthesize this entire data room into a draft investment memo. Your time is valuable—let's get to the signal, faster.</p>
+                    <button onclick="openModal('modal-ai-copilot')" class="bg-white text-blue-600 font-bold py-3 px-8 rounded-full hover:bg-gray-200 transition duration-300 transform hover:scale-105">
                         Launch AI Co-pilot
                     </button>
                 </div>
@@ -119,124 +193,56 @@
 
             <!-- Corporate Section -->
             <section id="corporate">
-                <h2 class="text-2xl font-semibold border-l-4 border-blue-600 pl-4 mb-6">Corporate</h2>
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <a href="[https://drive.google.com/file/d/1hEwuE7PmTYjOPIvQTCmKj_m97NYeBhuJ/view?usp=sharing](https://drive.google.com/file/d/1hEwuE7PmTYjOPIvQTCmKj_m97NYeBhuJ/view?usp=sharing)" target="_blank" class="data-room-card block bg-white p-6 rounded-lg border border-gray-200">
-                        <h3 class="font-semibold text-lg text-gray-900">Investor Pitch Deck</h3>
-                        <p class="text-gray-500 mt-2">The complete investment presentation.</p>
-                    </a>
-                    <div onclick="openModal('modal-exec-summary')" class="data-room-card block bg-white p-6 rounded-lg border border-gray-200">
-                        <h3 class="font-semibold text-lg text-gray-900">Executive Summary</h3>
-                        <p class="text-gray-500 mt-2">A one-page overview of the business.</p>
+                <h2 class="text-3xl font-bold section-header mb-8">Corporate</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                    <div onclick="window.open('https://drive.google.com/file/d/1hEwuE7PmTYjOPIvQTCmKj_m97NYeBhuJ/view?usp=sharing', '_blank')" class="glass-card p-6 rounded-xl flex flex-col items-start">
+                        <div class="w-12 h-12 bg-blue-500/20 rounded-lg flex items-center justify-center mb-4"><svg class="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg></div>
+                        <h3 class="font-semibold text-lg" style="color: var(--header);">Investor Deck</h3>
+                        <p class="mt-2 flex-grow" style="color: var(--text-muted);">The complete investment presentation.</p>
                     </div>
-                    <div onclick="openModal('modal-bios')" class="data-room-card block bg-white p-6 rounded-lg border border-gray-200">
-                        <h3 class="font-semibold text-lg text-gray-900">Founder Bios</h3>
-                        <p class="text-gray-500 mt-2">Detailed backgrounds of the founding team.</p>
+                    <div onclick="openModal('modal-exec-summary')" class="glass-card p-6 rounded-xl flex flex-col items-start">
+                        <div class="w-12 h-12 bg-green-500/20 rounded-lg flex items-center justify-center mb-4"><svg class="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg></div>
+                        <h3 class="font-semibold text-lg" style="color: var(--header);">Executive Summary</h3>
+                        <p class="mt-2 flex-grow" style="color: var(--text-muted);">A one-page overview of the business.</p>
                     </div>
-                    <div onclick="openModal('modal-cap-table')" class="data-room-card block bg-white p-6 rounded-lg border border-gray-200">
-                        <h3 class="font-semibold text-lg text-gray-900">Capitalization Table</h3>
-                        <p class="text-gray-500 mt-2">Current ownership structure.</p>
+                    <div onclick="openModal('modal-bios')" class="glass-card p-6 rounded-xl flex flex-col items-start">
+                        <div class="w-12 h-12 bg-purple-500/20 rounded-lg flex items-center justify-center mb-4"><svg class="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M15 21v-1a6 6 0 00-5.197-5.975M15 21H3v-1a6 6 0 0112 0v1z"></path></svg></div>
+                        <h3 class="font-semibold text-lg" style="color: var(--header);">Founder Bios</h3>
+                        <p class="mt-2 flex-grow" style="color: var(--text-muted);">Detailed backgrounds of the founding team.</p>
                     </div>
-                </div>
-            </section>
-
-            <!-- Product & Tech Section -->
-            <section id="product">
-                <h2 class="text-2xl font-semibold border-l-4 border-green-600 pl-4 mb-6">Product & Technology</h2>
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <div onclick="openModal('modal-tech-memo')" class="data-room-card block bg-white p-6 rounded-lg border border-gray-200">
-                        <h3 class="font-semibold text-lg text-gray-900">Technical Memo: Knowledge Genome</h3>
-                        <p class="text-gray-500 mt-2">Deep dive into our proprietary AI architecture.</p>
-                    </div>
-                    <div onclick="openModal('modal-roadmap')" class="data-room-card block bg-white p-6 rounded-lg border border-gray-200">
-                        <h3 class="font-semibold text-lg text-gray-900">Product Roadmap (18-Month)</h3>
-                        <p class="text-gray-500 mt-2">The feature and platform development timeline.</p>
+                    <div onclick="openModal('modal-cap-table')" class="glass-card p-6 rounded-xl flex flex-col items-start">
+                        <div class="w-12 h-12 bg-yellow-500/20 rounded-lg flex items-center justify-center mb-4"><svg class="w-6 h-6 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg></div>
+                        <h3 class="font-semibold text-lg" style="color: var(--header);">Capitalization Table</h3>
+                        <p class="mt-2 flex-grow" style="color: var(--text-muted);">Current ownership structure.</p>
                     </div>
                 </div>
             </section>
 
-            <!-- GTM Section -->
-            <section id="gtm">
-                <h2 class="text-2xl font-semibold border-l-4 border-purple-600 pl-4 mb-6">Go-to-Market & Traction</h2>
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <div onclick="openModal('modal-gtm')" class="data-room-card block bg-white p-6 rounded-lg border border-gray-200">
-                        <h3 class="font-semibold text-lg text-gray-900">GTM Strategy: Trojan Horse</h3>
-                        <p class="text-gray-500 mt-2">Our B2B2C campus capture playbook.</p>
-                    </div>
-                    <div onclick="openModal('modal-testimonials')" class="data-room-card block bg-white p-6 rounded-lg border border-gray-200">
-                        <h3 class="font-semibold text-lg text-gray-900">User Testimonials</h3>
-                        <p class="text-gray-500 mt-2">Full quotes from our beta users.</p>
-                    </div>
-                </div>
-            </section>
+            <!-- Sections for Product, GTM, Financials -->
+            <section id="product"><h2 class="text-3xl font-bold section-header mb-8">Product & Technology</h2><div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8"><div onclick="openModal('modal-tech-memo')" class="glass-card p-6 rounded-xl flex flex-col items-start"><div class="w-12 h-12 bg-green-500/20 rounded-lg flex items-center justify-center mb-4"><svg class="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4M17 3v4m2-2h-4m2 14h4m-2-2v4M12 7a2 2 0 100-4 2 2 0 000 4zM12 14a2 2 0 100-4 2 2 0 000 4zM12 21a2 2 0 100-4 2 2 0 000 4z"></path></svg></div><h3 class="font-semibold text-lg" style="color: var(--header);">Technical Memo</h3><p class="mt-2 flex-grow" style="color: var(--text-muted);">Deep dive into the Knowledge Genome.</p></div><div onclick="openModal('modal-roadmap')" class="glass-card p-6 rounded-xl flex flex-col items-start"><div class="w-12 h-12 bg-green-500/20 rounded-lg flex items-center justify-center mb-4"><svg class="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l5.447 2.724A1 1 0 0021 16.382V5.618a1 1 0 00-1.447-.894L15 7m0 10V7m0 10h- teknolojisi"></path></svg></div><h3 class="font-semibold text-lg" style="color: var(--header);">Product Roadmap</h3><p class="mt-2 flex-grow" style="color: var(--text-muted);">The 18-month development timeline.</p></div></div></section>
+            <section id="gtm"><h2 class="text-3xl font-bold section-header mb-8">Go-to-Market</h2><div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8"><div onclick="openModal('modal-gtm')" class="glass-card p-6 rounded-xl flex flex-col items-start"><div class="w-12 h-12 bg-purple-500/20 rounded-lg flex items-center justify-center mb-4"><svg class="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V9z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 2v7h7"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 17l5-5 5 5"></path></svg></div><h3 class="font-semibold text-lg" style="color: var(--header);">GTM Strategy</h3><p class="mt-2 flex-grow" style="color: var(--text-muted);">The "Trojan Horse" campus capture playbook.</p></div><div onclick="openModal('modal-testimonials')" class="glass-card p-6 rounded-xl flex flex-col items-start"><div class="w-12 h-12 bg-purple-500/20 rounded-lg flex items-center justify-center mb-4"><svg class="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg></div><h3 class="font-semibold text-lg" style="color: var(--header);">User Testimonials</h3><p class="mt-2 flex-grow" style="color: var(--text-muted);">Full quotes from our beta users.</p></div></div></section>
+            <section id="financials"><h2 class="text-3xl font-bold section-header mb-8">Financials</h2><div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8"><div onclick="window.open('https://docs.google.com/spreadsheets/d/1LpikXQOWiKzX3HV4NE89aWXqJz1ef2yfx-iWkP4ZtD0/edit?usp=sharing', '_blank')" class="glass-card p-6 rounded-xl flex flex-col items-start"><div class="w-12 h-12 bg-yellow-500/20 rounded-lg flex items-center justify-center mb-4"><svg class="w-6 h-6 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg></div><h3 class="font-semibold text-lg" style="color: var(--header);">Financial Model</h3><p class="mt-2 flex-grow" style="color: var(--text-muted);">Complete financial projections (Google Sheet).</p></div><div onclick="window.open('https://drive.google.com/file/d/1gzjD-osSsNUxZOp3DEcdTsWe02BG1bgz/view?usp=sharing', '_blank')" class="glass-card p-6 rounded-xl flex flex-col items-start"><div class="w-12 h-12 bg-yellow-500/20 rounded-lg flex items-center justify-center mb-4"><svg class="w-6 h-6 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg></div><h3 class="font-semibold text-lg" style="color: var(--header);">Monte Carlo Sims</h3><p class="mt-2 flex-grow" style="color: var(--text-muted);">1,000-iteration simulation results.</p></div></div></section>
 
-            <!-- Financials Section -->
-            <section id="financials">
-                <h2 class="text-2xl font-semibold border-l-4 border-yellow-500 pl-4 mb-6">Financials</h2>
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <a href="[https://docs.google.com/spreadsheets/d/1LpikXQOWiKzX3HV4NE89aWXqJz1ef2yfx-iWkP4ZtD0/edit?usp=sharing](https://docs.google.com/spreadsheets/d/1LpikXQOWiKzX3HV4NE89aWXqJz1ef2yfx-iWkP4ZtD0/edit?usp=sharing)" target="_blank" class="data-room-card block bg-white p-6 rounded-lg border border-gray-200">
-                        <h3 class="font-semibold text-lg text-gray-900">Financial Model</h3>
-                        <p class="text-gray-500 mt-2">The complete financial projections.</p>
-                    </a>
-                    <a href="[https://drive.google.com/file/d/1gzjD-osSsNUxZOp3DEcdTsWe02BG1bgz/view?usp=sharing](https://drive.google.com/file/d/1gzjD-osSsNUxZOp3DEcdTsWe02BG1bgz/view?usp=sharing)" target="_blank" class="data-room-card block bg-white p-6 rounded-lg border border-gray-200">
-                        <h3 class="font-semibold text-lg text-gray-900">Monte Carlo Simulation</h3>
-                        <p class="text-gray-500 mt-2">1,000-iteration simulation results.</p>
-                    </a>
-                </div>
-            </section>
         </main>
 
-        <footer class="text-center mt-16 text-gray-500">
+        <footer class="text-center mt-24" style="color: var(--text-muted);">
             <p>&copy; 2025 Vekkam. All rights reserved.</p>
             <p class="text-sm">This information is confidential and proprietary to Vekkam.</p>
         </footer>
     </div>
 
     <!-- Modals -->
-    <div id="modal-ai-copilot" class="modal fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center p-4">
-        <div class="modal-content bg-white w-full max-w-4xl max-h-[90vh] rounded-lg shadow-xl transform scale-95">
-             <div class="p-6 border-b flex justify-between items-center">
-                <h2 class="text-xl font-semibold">VC Decision Co-pilot</h2>
-                <button onclick="closeModal('modal-ai-copilot')" class="text-gray-500 hover:text-gray-800 text-3xl">&times;</button>
-            </div>
-            <div class="p-6 overflow-y-auto h-[calc(90vh-70px)]">
-                <div id="copilot-input-area">
-                    <p class="mb-4">This tool synthesizes Vekkam's data into a draft investment memo. Adjust your fund's typical parameters below to tailor the return analysis.</p>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                        <div>
-                            <label for="exit-multiple" class="block text-sm font-medium text-gray-700">Target Exit Multiple (on Y5 Revenue)</label>
-                            <input type="number" id="exit-multiple" value="10" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
-                        </div>
-                        <div>
-                            <label for="ownership" class="block text-sm font-medium text-gray-700">Target Fund Ownership (%)</label>
-                            <input type="number" id="ownership" value="15" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
-                        </div>
-                    </div>
-                    <button id="generate-memo-button" onclick="generateMemo()" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 transition duration-300">
-                        Generate AI Analysis
-                    </button>
-                </div>
-                <div id="copilot-output-area" class="hidden content-area">
-                    <div id="loader-area" class="flex justify-center items-center py-16">
-                         <div class="loader"></div>
-                    </div>
-                    <div id="memo-content" class="hidden"></div>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <div id="modal-exec-summary" class="modal fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center p-4"><div class="modal-content bg-white w-full max-w-4xl max-h-[90vh] rounded-lg shadow-xl transform scale-95"><div class="p-6 border-b flex justify-between items-center"><h2 class="text-xl font-semibold">Executive Summary</h2><button onclick="closeModal('modal-exec-summary')" class="text-gray-500 hover:text-gray-800 text-3xl">&times;</button></div><div class="p-6 overflow-y-auto h-[calc(90vh-70px)] content-area"><h1>Vekkam: Executive Summary</h1><p><strong>One-Liner:</strong> Vekkam is a B2B2C EdTech platform that uses a strategically priced D2C product as a Trojan Horse to capture the multi-crore Indian higher education market.</p><h3>The Problem</h3><p>For students, last-minute exam prep is a high-stress, inefficient scramble of disorganized notes, lectures, and PDFs. For universities, this poor performance is a leading indicator of student attrition, a multi-crore problem in lost tuition revenue.</p><h3>The Solution</h3><p>Vekkam is an AI-powered academic operating system that transforms chaotic study materials into a focused, interactive knowledge base in seconds. Our core IP, the "Knowledge Genome Project," goes beyond summarization to map the pedagogical relationships between concepts, enabling true, curriculum-aware learning.</p><h3>The "Trojan Horse" Go-to-Market</h3><p>Our GTM is a two-phase flywheel.</p><ol><li><strong>Land (D2C):</strong> We use a hyper-efficient Campus Ambassador program to drive mass adoption of our freemium D2C product, priced for zero friction. The goal is not profit; it is ubiquity.</li><li><strong>Expand (B2B2C):</strong> With critical mass on a campus, we leverage our unique data on student engagement to sell high-margin, multi-year institutional contracts to universities, providing them with a powerful tool to reduce attrition.</li></ol><h3>The Team</h3><ul><li><strong>Sambit Mishra (CEO):</strong> An Economics student at XIMB who lived the problem. Proven GTM and fundraising execution (closed ₹1.2 Cr in sponsorships). Experience building a native AI-powered stock analysis engine using the same core principles as our tech.</li><li><strong>Thamizharasan S. (R&D Lead):</strong> The architect of our tech moat. A professional game developer applying principles of addictive design to learning. Leads the development of our Knowledge Genome using a stack including Python and graph databases (Neo4j).</li></ul><h3>The Ask</h3><p>We are raising a pre-seed round of <strong>₹50 Lakhs</strong> to scale our campus capture program to 5 more universities, fully develop the B2B analytics dashboard, and hire one dedicated B2B sales lead.</p></div></div></div>
-    <div id="modal-bios" class="modal fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center p-4"><div class="modal-content bg-white w-full max-w-4xl max-h-[90vh] rounded-lg shadow-xl transform scale-95"><div class="p-6 border-b flex justify-between items-center"><h2 class="text-xl font-semibold">Founder Bios</h2><button onclick="closeModal('modal-bios')" class="text-gray-500 hover:text-gray-800 text-3xl">&times;</button></div><div class="p-6 overflow-y-auto h-[calc(90vh-70px)] content-area"><h1>Founder Biographies</h1><h3>Sambit Mishra - Co-Founder & CEO</h3><p class="text-gray-600 -mt-3 mb-4">(Vision, Go-to-Market, Fundraising)</p><p>Sambit is the driving force behind Vekkam's vision and business strategy. As an Economics student at XIM University, he personally experienced the pain point of inefficient, high-stress exam preparation and built the initial Vekkam workflow to solve it. His unique blend of financial acumen, GTM execution, and technical insight makes him uniquely suited to lead Vekkam's "Trojan Horse" strategy.</p><ul><li><strong>Proven Fundraising & GTM:</strong> As a Fundraising Intern at the Buddha CEO Quantum Foundation, Sambit single-handedly closed <strong>₹1.2 Cr in sponsorships</strong> from over 100 corporate leads, demonstrating a rare ability to execute a B2B sales motion as a student. This experience is directly applicable to Vekkam's B2B2C pivot.</li><li><strong>Deep Financial & Strategic Acumen:</strong> Sambit has reverse-engineered dozens of investment memos across Seed, Series A, and Series B rounds to build his own investment decision model. He built Vekkam's financial projections and Monte Carlo simulation from the ground up.</li><li><strong>Applied AI Experience:</strong> Beyond Vekkam, Sambit developed a native <strong>AI-powered stock analysis engine</strong> for peer-based investment recommendations and an <strong>adaptive intraday trading engine</strong>. This work involved applying predictive modeling and NLP to complex, unstructured data—the same core skills required to architect the Knowledge Genome Project.</li></ul><h3>Thamizharasan S. - Co-Founder & Head of R&D</h3><p class="text-gray-600 -mt-3 mb-4">(Product, Technology, & The "Knowledge Genome")</p><p>Thamiz is the architect of Vekkam's defensible technology moat. His background as a professional game developer is Vekkam's secret weapon, allowing the team to build an addictive, high-retention product that students genuinely want to use. He leads the development of the core IP, the "Knowledge Genome Project."</p><ul><li><strong>Expertise in Complex Systems:</strong> Game development requires building and managing complex neural patterns for player behavior and game logic. Thamiz applies this expertise to map the relationships between academic concepts, creating a system that understands pedagogy, not just text.</li><li><strong>Technical Stack:</strong> Thamiz is proficient in the full stack required to execute the Vekkam vision, including <strong>Python</strong>, backend development, and, crucially, <strong>graph databases (Neo4j)</strong> for relational mapping. He leads the deployment of the <strong>proprietary NLP/NER models</strong> that form our core IP.</li><li><strong>User-Centric Product Design:</strong> His experience in gamifying learning is essential for driving the high engagement rates needed for our freemium model to succeed and generate the data that fuels our B2B sales engine.</li></ul></div></div></div>
-    <div id="modal-cap-table" class="modal fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center p-4"><div class="modal-content bg-white w-full max-w-4xl max-h-[90vh] rounded-lg shadow-xl transform scale-95"><div class="p-6 border-b flex justify-between items-center"><h2 class="text-xl font-semibold">Capitalization Table</h2><button onclick="closeModal('modal-cap-table')" class="text-gray-500 hover:text-gray-800 text-3xl">&times;</button></div><div class="p-6 overflow-y-auto h-[calc(90vh-70px)] content-area"><h1>Capitalization Table (Pre-Seed)</h1><p>This table reflects the current ownership structure of Vekkam prior to the pre-seed investment round.</p><table><thead><tr><th>Shareholder</th><th>Role</th><th>Common Shares</th><th>Ownership</th></tr></thead><tbody><tr><td>Sambit Mishra</td><td>Co-Founder & CEO</td><td>5,000,000</td><td>50%</td></tr><tr><td>Thamizharasan S.</td><td>Co-Founder & R&D</td><td>5,000,000</td><td>50%</td></tr><tr class="font-bold"><td>Total</td><td></td><td>10,000,000</td><td>100%</td></tr></tbody></table><p><strong>Note:</strong> This is a simplified pre-seed cap table. An ESOP (Employee Stock Ownership Plan) will be established from the post-money valuation.</p></div></div></div>
-    <div id="modal-tech-memo" class="modal fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center p-4"><div class="modal-content bg-white w-full max-w-4xl max-h-[90vh] rounded-lg shadow-xl transform scale-95"><div class="p-6 border-b flex justify-between items-center"><h2 class="text-xl font-semibold">Technical Memo: Knowledge Genome</h2><button onclick="closeModal('modal-tech-memo')" class="text-gray-500 hover:text-gray-800 text-3xl">&times;</button></div><div class="p-6 overflow-y-auto h-[calc(90vh-70px)] content-area"><h1>Technical Memo: The Vekkam "Knowledge Genome"</h1><h3>1. Overview</h3><p>The "Knowledge Genome Project" is Vekkam's core intellectual property and primary defensible moat. It is a proprietary system designed to deconstruct unstructured academic content and map it into a structured, relational graph of pedagogical knowledge. This allows us to deliver a learning experience that is fundamentally superior to generic AI tools which rely on simple summarization or keyword-based retrieval.</p><h3>2. System Architecture</h3><p>The architecture is a three-stage pipeline:</p><p><strong>Stage 1: Ingestion & Deconstruction</strong></p><ul><li><strong>Input:</strong> Multi-modal, unstructured data (PDF textbooks, audio lecture files, raw text notes, presentation slides).</li><li><strong>Process:</strong><ul class="pl-4"><li>Content is run through a multi-modal parsing engine.</li><li>Audio is transcribed using fine-tuned ASR (Automatic Speech Recognition) models optimized for academic terminology and accents to ensure high accuracy.</li><li>All content is standardized into a clean, raw text format.</li></ul></li></ul><p><strong>Stage 2: Concept Tagging & Relational Mapping (The Moat)</strong></p><ul><li><strong>Process:</strong><ol class="pl-4"><li><strong>Concept Tagging:</strong> The clean text is fed into our proprietary <strong>Natural Language Processing (NLP)</strong> model. We utilize <strong>Named Entity Recognition (NER)</strong>, specifically trained on a corpus of Indian university textbooks across various subjects, to identify and tag core academic concepts (e.g., 'Opportunity Cost,' 'Market Equilibrium,' 'Nash Equilibrium').</li><li><strong>Relational Mapping:</strong> These tagged concepts are then ingested into a <strong>graph database (Neo4j)</strong>. We don't just store the concept; we create nodes and define the relationships (edges) between them, such as <code>'Scarcity' -> IS_A_PREREQUISITE_FOR -> 'Opportunity Cost'</code>. This creates the "genome."</li></ol></li></ul><p><strong>Stage 3: Pedagogical Output</strong></p><ul><li><strong>Process:</strong> When a user interacts with their study material, our application queries the Knowledge Genome, not just the raw text.</li><li><strong>Output:</strong> This enables unique, high-value features that generic tools cannot replicate:<ul class="pl-4"><li><strong>Curriculum-Aware Quizzes:</strong> Generate practice questions that test the relationships between concepts, not just definitions.</li><li><strong>Root Cause Analysis:</strong> Identify student knowledge gaps. We can tell a user <em>why</em> they are struggling with a complex topic by highlighting their weak foundation in a prerequisite concept.</li><li><strong>Personalized Learning Paths:</strong> Dynamically generate a study plan that prioritizes foundational concepts before moving to more advanced topics.</li></ul></li></ul><h3>3. Defensibility</h3><p>Our moat is not just one component, but the entire, integrated system:</p><ul><li><strong>Proprietary Data:</strong> Our NER model's accuracy is a direct function of the unique academic data we train it on.</li><li><strong>Graph Structure:</strong> The relational graph itself is a complex asset that becomes more powerful and accurate with every user interaction.</li><li><strong>Network Effects:</strong> More users mean more data, which improves the genome's accuracy, which creates a better product, which attracts more users.</li></ul></div></div></div>
-    <div id="modal-roadmap" class="modal fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center p-4"><div class="modal-content bg-white w-full max-w-4xl max-h-[90vh] rounded-lg shadow-xl transform scale-95"><div class="p-6 border-b flex justify-between items-center"><h2 class="text-xl font-semibold">Product Roadmap (18-Month)</h2><button onclick="closeModal('modal-roadmap')" class="text-gray-500 hover:text-gray-800 text-3xl">&times;</button></div><div class="p-6 overflow-y-auto h-[calc(90vh-70px)] content-area"><h1>18-Month Product Roadmap</h1><p>Our roadmap is focused on executing our "Trojan Horse" strategy: first, perfecting the D2C product to achieve campus ubiquity, then leveraging that position to launch and scale our B2B2C platform.</p><h3>Phase 1: D2C Dominance & B2B Foundation (Q4 2025 - Q2 2026)</h3><ul><li><strong>Q4 2025:</strong><ul class="pl-4"><li><strong>Launch v1.5:</strong> Full public launch of the freemium D2C app on web and mobile web.</li><li><strong>Core Feature Refinement:</strong> Enhance audio transcription accuracy and expand support for more complex PDF layouts.</li><li><strong>Campus Ambassador Portal:</strong> Launch a dedicated portal for ambassadors to track referrals and earnings.</li></ul></li><li><strong>Q1 2026:</strong><ul class="pl-4"><li><strong>Gamification & Virality:</strong> Introduce study streaks, leaderboards, and seamless "share notes with study group" features to boost K-factor.</li><li><strong>Knowledge Genome v1:</strong> Internal launch of the concept-tagging and relational mapping engine.</li><li><strong>Begin B2B Dashboard MVP:</strong> Start development of the analytics dashboard for university faculty.</li></ul></li><li><strong>Q2 2026:</strong><ul class="pl-4"><li><strong>Personalized Quizzing:</strong> Launch the first user-facing feature powered by the Knowledge Genome: adaptive, curriculum-aware practice tests.</li><li><strong>Complete B2B Dashboard MVP:</strong> A functional dashboard ready for internal testing and initial demos.</li></ul></li></ul><h3>Phase 2: B2B2C Pilot & Commercialization (Q3 2026 - Q1 2027)</h3><ul><li><strong>Q3 2026:</strong><ul class="pl-4"><li><strong>Secure First Pilot:</strong> Sign the first unpaid pilot program with a department at a target university (e.g., XIMB).</li><li><strong>Faculty Onboarding:</strong> Onboard the first cohort of professors to the B2B dashboard.</li><li><strong>Collect Efficacy Data:</strong> Work with the pilot department to track metrics on student engagement and performance vs. a control group.</li></ul></li><li><strong>Q4 2026:</strong><ul class="pl-4"><li><strong>Refine B2B Dashboard:</strong> Iterate on the dashboard based on feedback from the pilot program.</li><li><strong>Develop "At-Risk Student" Alerts:</strong> Implement predictive alerts for faculty based on student engagement patterns.</li></ul></li><li><strong>Q1 2027:</strong><ul class="pl-4"><li><strong>Convert First Pilot to Paid Contract:</strong> Convert the successful pilot into our first annual institutional license.</li><li><strong>Build B2B Sales Pipeline:</strong> Hire one dedicated B2B sales lead and begin outreach to 10 more target universities.</li></ul></li></ul><h3>Phase 3: Scaling (Q2 2027 onwards)</h3><ul><li><strong>Scale B2B Sales:</strong> Replicate the pilot-to-contract model across multiple universities.</li><li><strong>Expand Platform:</strong> Introduce department-wide and university-wide analytics for Deans and administrators.</li><li><strong>Internationalization:</strong> Begin localization and market testing for Southeast Asia expansion.</li></ul></div></div></div>
-    <div id="modal-gtm" class="modal fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center p-4"><div class="modal-content bg-white w-full max-w-4xl max-h-[90vh] rounded-lg shadow-xl transform scale-95"><div class="p-6 border-b flex justify-between items-center"><h2 class="text-xl font-semibold">GTM Playbook: The Trojan Horse</h2><button onclick="closeModal('modal-gtm')" class="text-gray-500 hover:text-gray-800 text-3xl">&times;</button></div><div class="p-6 overflow-y-auto h-[calc(90vh-70px)] content-area"><h1>Go-to-Market Playbook: The Trojan Horse Strategy</h1><p>Our go-to-market is not a traditional sales funnel; it's a self-funding flywheel designed for market capture. We use a hyper-efficient D2C "Land" motion to fuel a high-margin B2B2C "Expand" motion.</p><h3>Phase 1: The Land Grab (D2C Ubiquity)</h3><p>The objective is to achieve critical mass on a target campus at the lowest possible cost.</p><ol><li><strong>The Spearhead: Campus Ambassador Program</strong><ul><li>We recruit and train 3-5 influential, high-energy students at each target university.</li><li><strong>Playbook:</strong> They are not just marketers; they are power users. They run workshops, host study sessions using Vekkam, and become the on-the-ground support system.</li><li><strong>Incentives:</strong> A mix of a small stipend and a performance-based commission on paid D2C conversions. This keeps our CAC surgically low (~₹780).</li></ul></li><li><strong>The Engine: Freemium Product-Led Growth</strong><ul><li><strong>Zero-Friction Onboarding:</strong> The product is free and delivers a "magic moment" within 3 minutes (e.g., summarizing a 1-hour lecture).</li><li><strong>Strategic Pricing:</strong> The D2C subscription is priced for zero resistance (€100/month), intentionally sacrificing profit for mass adoption. This yields a 1.3:1 LTV:CAC, which is strategically break-even.</li><li><strong>Viral Loops:</strong> Features like "Share notes with your study group" are designed to drive a high K-factor, turning our users into our sales force.</li></ul></li></ol><h3>Phase 2: The Leverage & Expansion (B2B2C Conversion)</h3><p>The objective is to convert campus ubiquity into high-value, recurring institutional contracts.</p><ol><li><strong>The Wedge: Data as a Moat</strong><ul><li>Once we achieve ~20% penetration on a campus, we possess an asset no competitor has: real-time data on student engagement and academic health.</li><li><strong>The Pitch:</strong> We approach the Dean not with a product demo, but with an insight: "35% of your first-year Economics students are using Vekkam. We can show you, in aggregate, which concepts from the syllabus they are struggling with *right now*."</li></ul></li><li><strong>The Pilot: Proving the ROI</strong><ul><li>We offer a free, one-semester pilot of our B2B Analytics Dashboard to the relevant department.</li><li>Faculty get a real-time view of student engagement and "at-risk" indicators.</li><li>We work with them to prove a measurable lift in student performance and/or a reduction in course drop-out rates vs. a control group.</li></ul></li><li><strong>The Close: The Inevitable Partnership</strong><ul><li>Armed with undeniable ROI data from the pilot, the conversation shifts from "should we buy this?" to "how quickly can we roll this out campus-wide?".</li><li>We sign a multi-year, university-wide license, with pricing tiered by the number of students. A single contract can be worth <strong>₹15-50 Lakhs per year.</strong></li></ul></li></ol><p>This flywheel is repeatable and scalable. The D2C "Land Grab" funds itself while creating the perfect pipeline for our highly profitable B2B "Expand" motion.</p></div></div></div>
-    <div id="modal-testimonials" class="modal fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center p-4"><div class="modal-content bg-white w-full max-w-4xl max-h-[90vh] rounded-lg shadow-xl transform scale-95"><div class="p-6 border-b flex justify-between items-center"><h2 class="text-xl font-semibold">User Testimonials</h2><button onclick="closeModal('modal-testimonials')" class="text-gray-500 hover:text-gray-800 text-3xl">&times;</button></div><div class="p-6 overflow-y-auto h-[calc(90vh-70px)] content-area"><h1>User Testimonials & Case Studies</h1><h3>Persona 1: The Overwhelmed Economics Major</h3><ul><li><strong>Name:</strong> Priya S.</li><li><strong>Course:</strong> B.Sc. Economics, XIM University</li><li><strong>Before Vekkam:</strong> "I was constantly struggling to keep up. I had three core econ courses, and each had hours of lectures and dense PDFs. I was spending 15+ hours a week just organizing and re-reading notes, and my grades were stuck at a B-."</li><li><strong>After Vekkam:</strong> <blockquote>"Vekkam turned 15 hours of disorganized material into a 3-hour focused review session. For my mid-terms, I used it to synthesize everything and then hammered the auto-generated quizzes. I didn't just pass; I scored an A- and saved at least 10 hours a week. It’s my entire academic OS now."</blockquote></li></ul><h3>Persona 2: The Pre-Med Student</h3><ul><li><strong>Name:</strong> Aman K.</li><li><strong>Course:</strong> Pre-Med Track, Biology Major</li><li><strong>Before Vekkam:</strong> "Anatomy and Organic Chemistry are pure volume. I was spending my entire life manually creating flashcards from massive textbooks. It was passive memorization, and I was constantly terrified of forgetting things."</li><li><strong>After Vekkam:</strong><blockquote>"The Knowledge Genome's ability to pull key concepts and generate active recall quizzes was the key. I cut my manual prep time in half, and my retention went through the roof because I was actually understanding the connections between topics, not just memorizing facts. I finally feel ahead of the material instead of drowning in it."</blockquote></li></ul></div></div></div>
+    <div id="modal-ai-copilot" class="modal fixed inset-0 bg-black bg-opacity-70 hidden flex items-center justify-center p-4 z-50"><div class="modal-content bg-white w-full max-w-4xl max-h-[90vh] rounded-2xl shadow-xl transform scale-95"><div class="p-6 border-b flex justify-between items-center" style="border-color: var(--border);"><h2 class="text-xl font-semibold" style="color: var(--header);">VC Decision Co-pilot</h2><button onclick="closeModal('modal-ai-copilot')" style="color: var(--text-muted);" class="hover:text-white text-3xl">&times;</button></div><div class="p-8 overflow-y-auto h-[calc(90vh-70px)]"><div id="copilot-input-area"><p class="mb-4" style="color: var(--text-muted);">This tool synthesizes Vekkam's data into a draft investment memo. Adjust your fund's typical parameters below to tailor the return analysis.</p><div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8"><div class="relative"><label for="exit-multiple" class="block text-sm font-medium" style="color: var(--text-muted);">Target Exit Multiple (on Y5 Revenue)</label><input type="number" id="exit-multiple" value="10" class="mt-1 block w-full px-4 py-3 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500" style="background-color: var(--bg); border: 1px solid var(--border); color: var(--text);"></div><div class="relative"><label for="ownership" class="block text-sm font-medium" style="color: var(--text-muted);">Target Fund Ownership (%)</label><input type="number" id="ownership" value="15" class="mt-1 block w-full px-4 py-3 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500" style="background-color: var(--bg); border: 1px solid var(--border); color: var(--text);"></div></div><button id="generate-memo-button" onclick="generateMemo()" class="w-full bg-blue-600 text-white font-bold py-4 px-4 rounded-lg hover:bg-blue-700 transition duration-300 transform hover:scale-105">Generate AI Analysis</button></div><div id="copilot-output-area" class="hidden content-area"><div id="loader-area" class="flex justify-center items-center py-16"><div class="loader"></div></div><div id="memo-content" class="hidden"></div></div></div></div></div>
+    <div id="modal-exec-summary" class="modal fixed inset-0 bg-black bg-opacity-70 hidden flex items-center justify-center p-4 z-50"><div class="modal-content w-full max-w-4xl max-h-[90vh] rounded-2xl shadow-xl transform scale-95"><div class="p-6 border-b flex justify-between items-center" style="border-color: var(--border);"><h2 class="text-xl font-semibold" style="color: var(--header);">Executive Summary</h2><button onclick="closeModal('modal-exec-summary')" style="color: var(--text-muted);" class="hover:text-white text-3xl">&times;</button></div><div class="p-8 overflow-y-auto h-[calc(90vh-70px)] content-area"><h1>Vekkam: Executive Summary</h1><p><strong>One-Liner:</strong> Vekkam is a B2B2C EdTech platform that uses a strategically priced D2C product as a Trojan Horse to capture the multi-crore Indian higher education market.</p><h3>The Problem</h3><p>For students, last-minute exam prep is a high-stress, inefficient scramble of disorganized notes, lectures, and PDFs. For universities, this poor performance is a leading indicator of student attrition, a multi-crore problem in lost tuition revenue.</p><h3>The Solution</h3><p>Vekkam is an AI-powered academic operating system that transforms chaotic study materials into a focused, interactive knowledge base in seconds. Our core IP, the "Knowledge Genome Project," goes beyond summarization to map the pedagogical relationships between concepts, enabling true, curriculum-aware learning.</p><h3>The "Trojan Horse" Go-to-Market</h3><p>Our GTM is a two-phase flywheel.</p><ol><li><strong>Land (D2C):</strong> We use a hyper-efficient Campus Ambassador program to drive mass adoption of our freemium D2C product, priced for zero friction. The goal is not profit; it is ubiquity.</li><li><strong>Expand (B2B2C):</strong> With critical mass on a campus, we leverage our unique data on student engagement to sell high-margin, multi-year institutional contracts to universities, providing them with a powerful tool to reduce attrition.</li></ol><h3>The Team</h3><ul><li><strong>Sambit Mishra (CEO):</strong> An Economics student at XIMB who lived the problem. Proven GTM and fundraising execution (closed ₹1.2 Cr in sponsorships). Experience building a native AI-powered stock analysis engine using the same core principles as our tech.</li><li><strong>Thamizharasan S. (R&D Lead):</strong> The architect of our tech moat. A professional game developer applying principles of addictive design to learning. Leads the development of our Knowledge Genome using a stack including Python and graph databases (Neo4j).</li></ul><h3>The Ask</h3><p>We are raising a pre-seed round of <strong>₹50 Lakhs</strong> to scale our campus capture program to 5 more universities, fully develop the B2B analytics dashboard, and hire one dedicated B2B sales lead.</p></div></div></div>
+    <div id="modal-bios" class="modal fixed inset-0 bg-black bg-opacity-70 hidden flex items-center justify-center p-4 z-50"><div class="modal-content w-full max-w-4xl max-h-[90vh] rounded-2xl shadow-xl transform scale-95"><div class="p-6 border-b flex justify-between items-center" style="border-color: var(--border);"><h2 class="text-xl font-semibold" style="color: var(--header);">Founder Bios</h2><button onclick="closeModal('modal-bios')" style="color: var(--text-muted);" class="hover:text-white text-3xl">&times;</button></div><div class="p-8 overflow-y-auto h-[calc(90vh-70px)] content-area"><h1>Founder Biographies</h1><h3>Sambit Mishra - Co-Founder & CEO</h3><p style="color: var(--text-muted); margin-top: -1rem; margin-bottom: 1rem;">(Vision, Go-to-Market, Fundraising)</p><p>Sambit is the driving force behind Vekkam's vision and business strategy. As an Economics student at XIM University, he personally experienced the pain point of inefficient, high-stress exam preparation and built the initial Vekkam workflow to solve it. His unique blend of financial acumen, GTM execution, and technical insight makes him uniquely suited to lead Vekkam's "Trojan Horse" strategy.</p><ul><li><strong>Proven Fundraising & GTM:</strong> As a Fundraising Intern at the Buddha CEO Quantum Foundation, Sambit single-handedly closed <strong>₹1.2 Cr in sponsorships</strong> from over 100 corporate leads, demonstrating a rare ability to execute a B2B sales motion as a student. This experience is directly applicable to Vekkam's B2B2C pivot.</li><li><strong>Deep Financial & Strategic Acumen:</strong> Sambit has reverse-engineered dozens of investment memos across Seed, Series A, and Series B rounds to build his own investment decision model. He built Vekkam's financial projections and Monte Carlo simulation from the ground up.</li><li><strong>Applied AI Experience:</strong> Beyond Vekkam, Sambit developed a native <strong>AI-powered stock analysis engine</strong> for peer-based investment recommendations and an <strong>adaptive intraday trading engine</strong>. This work involved applying predictive modeling and NLP to complex, unstructured data—the same core skills required to architect the Knowledge Genome Project.</li></ul><h3>Thamizharasan S. - Co-Founder & Head of R&D</h3><p style="color: var(--text-muted); margin-top: -1rem; margin-bottom: 1rem;">(Product, Technology, & The "Knowledge Genome")</p><p>Thamiz is the architect of Vekkam's defensible technology moat. His background as a professional game developer is Vekkam's secret weapon, allowing the team to build an addictive, high-retention product that students genuinely want to use. He leads the development of the core IP, the "Knowledge Genome Project."</p><ul><li><strong>Expertise in Complex Systems:</strong> Game development requires building and managing complex neural patterns for player behavior and game logic. Thamiz applies this expertise to map the relationships between academic concepts, creating a system that understands pedagogy, not just text.</li><li><strong>Technical Stack:</strong> Thamiz is proficient in the full stack required to execute the Vekkam vision, including <strong>Python</strong>, backend development, and, crucially, <strong>graph databases (Neo4j)</strong> for relational mapping. He leads the deployment of the <strong>proprietary NLP/NER models</strong> that form our core IP.</li><li><strong>User-Centric Product Design:</strong> His experience in gamifying learning is essential for driving the high engagement rates needed for our freemium model to succeed and generate the data that fuels our B2B sales engine.</li></ul></div></div></div>
+    <div id="modal-cap-table" class="modal fixed inset-0 bg-black bg-opacity-70 hidden flex items-center justify-center p-4 z-50"><div class="modal-content w-full max-w-4xl max-h-[90vh] rounded-2xl shadow-xl transform scale-95"><div class="p-6 border-b flex justify-between items-center" style="border-color: var(--border);"><h2 class="text-xl font-semibold" style="color: var(--header);">Capitalization Table</h2><button onclick="closeModal('modal-cap-table')" style="color: var(--text-muted);" class="hover:text-white text-3xl">&times;</button></div><div class="p-8 overflow-y-auto h-[calc(90vh-70px)] content-area"><h1>Capitalization Table (Pre-Seed)</h1><p>This table reflects the current ownership structure of Vekkam prior to the pre-seed investment round.</p><table><thead><tr><th>Shareholder</th><th>Role</th><th>Common Shares</th><th>Ownership</th></tr></thead><tbody><tr><td>Sambit Mishra</td><td>Co-Founder & CEO</td><td>5,000,000</td><td>50%</td></tr><tr><td>Thamizharasan S.</td><td>Co-Founder & R&D</td><td>5,000,000</td><td>50%</td></tr><tr class="font-bold bg-white/10"><td>Total</td><td></td><td>10,000,000</td><td>100%</td></tr></tbody></table><p><strong>Note:</strong> This is a simplified pre-seed cap table. An ESOP (Employee Stock Ownership Plan) will be established from the post-money valuation.</p></div></div></div>
+    <div id="modal-tech-memo" class="modal fixed inset-0 bg-black bg-opacity-70 hidden flex items-center justify-center p-4 z-50"><div class="modal-content w-full max-w-4xl max-h-[90vh] rounded-2xl shadow-xl transform scale-95"><div class="p-6 border-b flex justify-between items-center" style="border-color: var(--border);"><h2 class="text-xl font-semibold" style="color: var(--header);">Technical Memo: Knowledge Genome</h2><button onclick="closeModal('modal-tech-memo')" style="color: var(--text-muted);" class="hover:text-white text-3xl">&times;</button></div><div class="p-8 overflow-y-auto h-[calc(90vh-70px)] content-area"><h1>Technical Memo: The Vekkam "Knowledge Genome"</h1><h3>1. Overview</h3><p>The "Knowledge Genome Project" is Vekkam's core intellectual property and primary defensible moat. It is a proprietary system designed to deconstruct unstructured academic content and map it into a structured, relational graph of pedagogical knowledge. This allows us to deliver a learning experience that is fundamentally superior to generic AI tools which rely on simple summarization or keyword-based retrieval.</p><h3>2. System Architecture</h3><p>The architecture is a three-stage pipeline:</p><p><strong>Stage 1: Ingestion & Deconstruction</strong></p><ul><li><strong>Input:</strong> Multi-modal, unstructured data (PDF textbooks, audio lecture files, raw text notes, presentation slides).</li><li><strong>Process:</strong><ul class="pl-4"><li>Content is run through a multi-modal parsing engine.</li><li>Audio is transcribed using fine-tuned ASR (Automatic Speech Recognition) models optimized for academic terminology and accents to ensure high accuracy.</li><li>All content is standardized into a clean, raw text format.</li></ul></li></ul><p><strong>Stage 2: Concept Tagging & Relational Mapping (The Moat)</strong></p><ul><li><strong>Process:</strong><ol class="pl-4"><li><strong>Concept Tagging:</strong> The clean text is fed into our proprietary <strong>Natural Language Processing (NLP)</strong> model. We utilize <strong>Named Entity Recognition (NER)</strong>, specifically trained on a corpus of Indian university textbooks across various subjects, to identify and tag core academic concepts (e.g., 'Opportunity Cost,' 'Market Equilibrium,' 'Nash Equilibrium').</li><li><strong>Relational Mapping:</strong> These tagged concepts are then ingested into a <strong>graph database (Neo4j)</strong>. We don't just store the concept; we create nodes and define the relationships (edges) between them, such as <code>'Scarcity' -> IS_A_PREREQUISITE_FOR -> 'Opportunity Cost'</code>. This creates the "genome."</li></ol></li></ul><p><strong>Stage 3: Pedagogical Output</strong></p><ul><li><strong>Process:</strong> When a user interacts with their study material, our application queries the Knowledge Genome, not just the raw text.</li><li><strong>Output:</strong> This enables unique, high-value features that generic tools cannot replicate:<ul class="pl-4"><li><strong>Curriculum-Aware Quizzes:</strong> Generate practice questions that test the relationships between concepts, not just definitions.</li><li><strong>Root Cause Analysis:</strong> Identify student knowledge gaps. We can tell a user <em>why</em> they are struggling with a complex topic by highlighting their weak foundation in a prerequisite concept.</li><li><strong>Personalized Learning Paths:</strong> Dynamically generate a study plan that prioritizes foundational concepts before moving to more advanced topics.</li></ul></li></ul><h3>3. Defensibility</h3><p>Our moat is not just one component, but the entire, integrated system:</p><ul><li><strong>Proprietary Data:</strong> Our NER model's accuracy is a direct function of the unique academic data we train it on.</li><li><strong>Graph Structure:</strong> The relational graph itself is a complex asset that becomes more powerful and accurate with every user interaction.</li><li><strong>Network Effects:</strong> More users mean more data, which improves the genome's accuracy, which creates a better product, which attracts more users.</li></ul></div></div></div>
+    <div id="modal-roadmap" class="modal fixed inset-0 bg-black bg-opacity-70 hidden flex items-center justify-center p-4 z-50"><div class="modal-content w-full max-w-4xl max-h-[90vh] rounded-2xl shadow-xl transform scale-95"><div class="p-6 border-b flex justify-between items-center" style="border-color: var(--border);"><h2 class="text-xl font-semibold" style="color: var(--header);">Product Roadmap</h2><button onclick="closeModal('modal-roadmap')" style="color: var(--text-muted);" class="hover:text-white text-3xl">&times;</button></div><div class="p-8 overflow-y-auto h-[calc(90vh-70px)] content-area"><h1>18-Month Product Roadmap</h1><p>Our roadmap is focused on executing our "Trojan Horse" strategy: first, perfecting the D2C product to achieve campus ubiquity, then leveraging that position to launch and scale our B2B2C platform.</p><h3>Phase 1: D2C Dominance & B2B Foundation (Q4 2025 - Q2 2026)</h3><ul><li><strong>Q4 2025:</strong><ul class="pl-4"><li><strong>Launch v1.5:</strong> Full public launch of the freemium D2C app on web and mobile web.</li><li><strong>Core Feature Refinement:</strong> Enhance audio transcription accuracy and expand support for more complex PDF layouts.</li><li><strong>Campus Ambassador Portal:</strong> Launch a dedicated portal for ambassadors to track referrals and earnings.</li></ul></li><li><strong>Q1 2026:</strong><ul class="pl-4"><li><strong>Gamification & Virality:</strong> Introduce study streaks, leaderboards, and seamless "share notes with study group" features to boost K-factor.</li><li><strong>Knowledge Genome v1:</strong> Internal launch of the concept-tagging and relational mapping engine.</li><li><strong>Begin B2B Dashboard MVP:</strong> Start development of the analytics dashboard for university faculty.</li></ul></li><li><strong>Q2 2026:</strong><ul class="pl-4"><li><strong>Personalized Quizzing:</strong> Launch the first user-facing feature powered by the Knowledge Genome: adaptive, curriculum-aware practice tests.</li><li><strong>Complete B2B Dashboard MVP:</strong> A functional dashboard ready for internal testing and initial demos.</li></ul></li></ul><h3>Phase 2: B2B2C Pilot & Commercialization (Q3 2026 - Q1 2027)</h3><ul><li><strong>Q3 2026:</strong><ul class="pl-4"><li><strong>Secure First Pilot:</strong> Sign the first unpaid pilot program with a department at a target university (e.g., XIMB).</li><li><strong>Faculty Onboarding:</strong> Onboard the first cohort of professors to the B2B dashboard.</li><li><strong>Collect Efficacy Data:</strong> Work with the pilot department to track metrics on student engagement and performance vs. a control group.</li></ul></li><li><strong>Q4 2026:</strong><ul class="pl-4"><li><strong>Refine B2B Dashboard:</strong> Iterate on the dashboard based on feedback from the pilot program.</li><li><strong>Develop "At-Risk Student" Alerts:</strong> Implement predictive alerts for faculty based on student engagement patterns.</li></ul></li><li><strong>Q1 2027:</strong><ul class="pl-4"><li><strong>Convert First Pilot to Paid Contract:</strong> Convert the successful pilot into our first annual institutional license.</li><li><strong>Build B2B Sales Pipeline:</strong> Hire one dedicated B2B sales lead and begin outreach to 10 more target universities.</li></ul></li></ul><h3>Phase 3: Scaling (Q2 2027 onwards)</h3><ul><li><strong>Scale B2B Sales:</strong> Replicate the pilot-to-contract model across multiple universities.</li><li><strong>Expand Platform:</strong> Introduce department-wide and university-wide analytics for Deans and administrators.</li><li><strong>Internationalization:</strong> Begin localization and market testing for Southeast Asia expansion.</li></ul></div></div></div>
+    <div id="modal-gtm" class="modal fixed inset-0 bg-black bg-opacity-70 hidden flex items-center justify-center p-4 z-50"><div class="modal-content w-full max-w-4xl max-h-[90vh] rounded-2xl shadow-xl transform scale-95"><div class="p-6 border-b flex justify-between items-center" style="border-color: var(--border);"><h2 class="text-xl font-semibold" style="color: var(--header);">GTM Playbook</h2><button onclick="closeModal('modal-gtm')" style="color: var(--text-muted);" class="hover:text-white text-3xl">&times;</button></div><div class="p-8 overflow-y-auto h-[calc(90vh-70px)] content-area"><h1>Go-to-Market Playbook: The Trojan Horse Strategy</h1><p>Our go-to-market is not a traditional sales funnel; it's a self-funding flywheel designed for market capture. We use a hyper-efficient D2C "Land" motion to fuel a high-margin B2B2C "Expand" motion.</p><h3>Phase 1: The Land Grab (D2C Ubiquity)</h3><p>The objective is to achieve critical mass on a target campus at the lowest possible cost.</p><ol><li><strong>The Spearhead: Campus Ambassador Program</strong><ul><li>We recruit and train 3-5 influential, high-energy students at each target university.</li><li><strong>Playbook:</strong> They are not just marketers; they are power users. They run workshops, host study sessions using Vekkam, and become the on-the-ground support system.</li><li><strong>Incentives:</strong> A mix of a small stipend and a performance-based commission on paid D2C conversions. This keeps our CAC surgically low (~₹780).</li></ul></li><li><strong>The Engine: Freemium Product-Led Growth</strong><ul><li><strong>Zero-Friction Onboarding:</strong> The product is free and delivers a "magic moment" within 3 minutes (e.g., summarizing a 1-hour lecture).</li><li><strong>Strategic Pricing:</strong> The D2C subscription is priced for zero resistance (€100/month), intentionally sacrificing profit for mass adoption. This yields a 1.3:1 LTV:CAC, which is strategically break-even.</li><li><strong>Viral Loops:</strong> Features like "Share notes with your study group" are designed to drive a high K-factor, turning our users into our sales force.</li></ul></li></ol><h3>Phase 2: The Leverage & Expansion (B2B2C Conversion)</h3><p>The objective is to convert campus ubiquity into high-value, recurring institutional contracts.</p><ol><li><strong>The Wedge: Data as a Moat</strong><ul><li>Once we achieve ~20% penetration on a campus, we possess an asset no competitor has: real-time data on student engagement and academic health.</li><li><strong>The Pitch:</strong> We approach the Dean not with a product demo, but with an insight: "35% of your first-year Economics students are using Vekkam. We can show you, in aggregate, which concepts from the syllabus they are struggling with *right now*."</li></ul></li><li><strong>The Pilot: Proving the ROI</strong><ul><li>We offer a free, one-semester pilot of our B2B Analytics Dashboard to the relevant department.</li><li>Faculty get a real-time view of student engagement and "at-risk" indicators.</li><li>We work with them to prove a measurable lift in student performance and/or a reduction in course drop-out rates vs. a control group.</li></ul></li><li><strong>The Close: The Inevitable Partnership</strong><ul><li>Armed with undeniable ROI data from the pilot, the conversation shifts from "should we buy this?" to "how quickly can we roll this out campus-wide?".</li><li>We sign a multi-year, university-wide license, with pricing tiered by the number of students. A single contract can be worth <strong>₹15-50 Lakhs per year.</strong></li></ul></li></ol><p>This flywheel is repeatable and scalable. The D2C "Land Grab" funds itself while creating the perfect pipeline for our highly profitable B2B "Expand" motion.</p></div></div></div>
+    <div id="modal-testimonials" class="modal fixed inset-0 bg-black bg-opacity-70 hidden flex items-center justify-center p-4 z-50"><div class="modal-content w-full max-w-4xl max-h-[90vh] rounded-2xl shadow-xl transform scale-95"><div class="p-6 border-b flex justify-between items-center" style="border-color: var(--border);"><h2 class="text-xl font-semibold" style="color: var(--header);">User Testimonials</h2><button onclick="closeModal('modal-testimonials')" style="color: var(--text-muted);" class="hover:text-white text-3xl">&times;</button></div><div class="p-8 overflow-y-auto h-[calc(90vh-70px)] content-area"><h1>User Testimonials & Case Studies</h1><h3>Persona 1: The Overwhelmed Economics Major</h3><ul><li><strong>Name:</strong> Priya S.</li><li><strong>Course:</strong> B.Sc. Economics, XIM University</li><li><strong>Before Vekkam:</strong> "I was constantly struggling to keep up. I had three core econ courses, and each had hours of lectures and dense PDFs. I was spending 15+ hours a week just organizing and re-reading notes, and my grades were stuck at a B-."</li><li><strong>After Vekkam:</strong> <blockquote>"Vekkam turned 15 hours of disorganized material into a 3-hour focused review session. For my mid-terms, I used it to synthesize everything and then hammered the auto-generated quizzes. I didn't just pass; I scored an A- and saved at least 10 hours a week. It’s my entire academic OS now."</blockquote></li></ul><h3>Persona 2: The Pre-Med Student</h3><ul><li><strong>Name:</strong> Aman K.</li><li><strong>Course:</strong> Pre-Med Track, Biology Major</li><li><strong>Before Vekkam:</strong> "Anatomy and Organic Chemistry are pure volume. I was spending my entire life manually creating flashcards from massive textbooks. It was passive memorization, and I was constantly terrified of forgetting things."</li><li><strong>After Vekam:</strong><blockquote>"The Knowledge Genome's ability to pull key concepts and generate active recall quizzes was the key. I cut my manual prep time in half, and my retention went through the roof because I was actually understanding the connections between topics, not just memorizing facts. I finally feel ahead of the material instead of drowning in it."</blockquote></li></ul></div></div></div>
     
     <script>
         function openModal(modalId) {
-            // Reset AI modal if it's the one being opened
             if (modalId === 'modal-ai-copilot') {
                 document.getElementById('copilot-input-area').style.display = 'block';
                 document.getElementById('copilot-output-area').style.display = 'none';
@@ -244,38 +250,42 @@
                 document.getElementById('memo-content').style.display = 'none';
                 document.getElementById('memo-content').innerHTML = '';
             }
-            document.getElementById(modalId).classList.remove('hidden');
+            const modal = document.getElementById(modalId);
+            modal.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
             setTimeout(() => {
+                modal.classList.remove('opacity-0');
                 document.querySelector(`#${modalId} .modal-content`).classList.remove('scale-95');
             }, 10);
         }
 
         function closeModal(modalId) {
+            const modal = document.getElementById(modalId);
+            modal.classList.add('opacity-0');
             document.querySelector(`#${modalId} .modal-content`).classList.add('scale-95');
+            document.body.style.overflow = 'auto';
             setTimeout(() => {
-                document.getElementById(modalId).classList.add('hidden');
-            }, 250);
+                modal.classList.add('hidden');
+            }, 300);
+        }
+
+        function toggleTheme() {
+            const html = document.documentElement;
+            html.classList.toggle('dark');
         }
 
         async function generateMemo() {
-            // 1. Show loader, hide input
             document.getElementById('copilot-input-area').style.display = 'none';
             document.getElementById('copilot-output-area').style.display = 'block';
-
-            // 2. Get user inputs
+            
             const exitMultiple = document.getElementById('exit-multiple').value || 10;
             const ownership = document.getElementById('ownership').value || 15;
+            const year5Revenue = 50000000;
+            const preSeedAsk = 5000000;
 
-            // 3. Define core data points (simplified from your model for this demo)
-            const year5Revenue = 50000000; // 5 Cr - a realistic projection
-            const preSeedAsk = 5000000; // 50 Lakhs
-
-            // 4. Construct the prompt for the Gemini API
             const systemPrompt = `You are an experienced VC analyst at a top-tier venture fund. Your job is to synthesize provided data into a concise, clear, and decisive investment memo. Focus on the core drivers of the business and the potential for a venture-scale return. Be objective but highlight the key strengths of the opportunity. Structure your output with the following sections in markdown: Investment Thesis, Bull Case, Bear Case, Key Risks, and Projected Return Analysis.`;
-
             const userPrompt = \`
                 Analyze the following investment opportunity in "Vekkam" and generate an investment memo.
-
                 **Core Data:**
                 * **Company:** Vekkam
                 * **Stage:** Pre-Seed
@@ -288,20 +298,16 @@
                     * CAC per institution (estimated): ~₹7.8 Lakhs (cost of D2C land grab)
                     * LTV per institution (estimated): ~₹75 Lakhs (based on multi-year contract)
                     * LTV:CAC Ratio: ~9.6:1
-
                 **VC Input Parameters:**
                 * **Target Exit Multiple on Revenue (Year 5):** ${exitMultiple}x
                 * **Target Fund Ownership:** ${ownership}%
                 * **Projected Year 5 Revenue (from financial model):** ₹${year5Revenue.toLocaleString('en-IN')}
-
                 **Instructions:**
                 Based on the data above, generate the investment memo. For the "Projected Return Analysis," calculate the required exit valuation, the potential fund return, and the multiple on investment (MOIC). Conclude with a clear recommendation.
             \`;
             
-            // 5. Make the API call
-            const apiKey = ""; // This will be provided by the environment
+            const apiKey = "";
             const apiUrl = \`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=\${apiKey}\`;
-
             const payload = {
                 contents: [{ parts: [{ text: userPrompt }] }],
                 systemInstruction: { parts: [{ text: systemPrompt }] }
@@ -318,15 +324,13 @@
                 if (result.candidates && result.candidates[0].content.parts[0].text) {
                     memoText = result.candidates[0].content.parts[0].text;
                 } else {
-                    throw new Error('Invalid API response structure');
+                    throw new Error(JSON.stringify(result));
                 }
             } catch (error) {
                 console.error("API call failed:", error);
-                memoText = "### Error\\n\\n The AI analysis could not be generated at this time. Please try again later or review the documents manually.";
+                memoText = "### Error\n\nThe AI analysis could not be generated at this time. Please try again later or review the documents manually.";
             }
 
-            // 6. Render the output
-            // Simple markdown to HTML conversion
             let htmlContent = memoText
                 .replace(/^### (.*$)/gim, '<h3>$1</h3>')
                 .replace(/^## (.*$)/gim, '<h2>$1</h2>')
@@ -334,9 +338,8 @@
                 .replace(/\*\*(.*)\*\*/gim, '<strong>$1</strong>')
                 .replace(/\*(.*)\*/gim, '<em>$1</em>')
                 .replace(/^\* (.*$)/gim, '<ul><li>$1</li></ul>')
-                .replace(/<\/ul>\\n<ul>/gim, '') // Consolidate lists
+                .replace(/<\/ul>\n?<ul>/gim, '')
                 .replace(/\n/g, '<br>');
-
 
             document.getElementById('loader-area').style.display = 'none';
             const memoContentDiv = document.getElementById('memo-content');
