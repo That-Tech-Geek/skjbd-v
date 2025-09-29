@@ -14,8 +14,6 @@ from functools import wraps
 from google.api_core import exceptions
 from pathlib import Path
 import uuid
-import razorpay
-from datetime import datetime
 
 # --- GOOGLE OAUTH & API LIBRARIES ---
 try:
@@ -36,52 +34,46 @@ MAX_RETRIES = 3
 DATA_DIR = Path("user_data")
 DATA_DIR.mkdir(exist_ok=True)
 
-# --- TIER LIMITS ---
-FREE_TIER_LIMIT = 1
-PAID_TIER_DAILY_LIMIT = 3
-PAYMENT_AMOUNT = 99900 # Amount in paise (e.g., 999.00 INR)
-
 # --- PAGE CONFIGURATION ---
 st.set_page_config(page_title="Vekkam Engine", page_icon="🧠", layout="wide", initial_sidebar_state="expanded")
 
 # --- MOCK KNOWLEDGE GENOME DATA (FOR GENESIS MODULE) ---
 ECON_101_GENOME = {
-    # ... (existing genome data remains unchanged)
- "subject": "Econ 101",
- "version": "1.0",
- "nodes": [
-   {
-     "gene_id": "ECON101_SCARCITY",
-     "gene_name": "Scarcity",
-     "difficulty": 1,
-     "content_alleles": [
-       {"type": "text", "content": "Scarcity refers to the basic economic problem, the gap between limited – that is, scarce – resources and theoretically limitless wants. This situation requires people to make decisions about how to allocate resources in an efficient way, in order to satisfy as many of their wants as possible."},
-       {"type": "video", "url": "https://www.youtube.com/watch?v=yoVc_S_gd_0"}
-     ]
-   },
-   {
-     "gene_id": "ECON101_OPPCOST",
-     "gene_name": "Opportunity Cost",
-     "difficulty": 2,
-     "content_alleles": [
-         {"type": "text", "content": "Opportunity cost is the potential forgone profit from a missed opportunity—the result of choosing one alternative and forgoing another. In short, it’s what you give up when you make a decision. The formula is simply the difference between the expected return of each option. Expected Return = (Probability of Gain x Potential Gain) - (Probability of Loss x Potential Loss)."},
-         {"type": "video", "url": "https://www.youtube.com/watch?v=PSU-SA-Fv_M"}
-     ]
-   },
-   {
-     "gene_id": "ECON101_SND",
-     "gene_name": "Supply and Demand",
-     "difficulty": 3,
-     "content_alleles": [
-         {"type": "text", "content": "Supply and demand is a model of microeconomics. It describes how a price is formed in a market economy. In a competitive market, the unit price for a particular good will vary until it settles at a point where the quantity demanded by consumers (at the current price) will equal the quantity supplied by producers (at the current price), resulting in an economic equilibrium for price and quantity."},
-         {"type": "video", "url": "https://www.youtube.com/watch?v=9QSWLmyGpYc"}
-     ]
-   }
- ],
- "edges": [
-   {"from": "ECON101_SCARCITY", "to": "ECON101_OPPCOST"},
-   {"from": "ECON101_OPPCOST", "to": "ECON101_SND"}
- ]
+  "subject": "Econ 101",
+  "version": "1.0",
+  "nodes": [
+    {
+      "gene_id": "ECON101_SCARCITY",
+      "gene_name": "Scarcity",
+      "difficulty": 1,
+      "content_alleles": [
+        {"type": "text", "content": "Scarcity refers to the basic economic problem, the gap between limited – that is, scarce – resources and theoretically limitless wants. This situation requires people to make decisions about how to allocate resources in an efficient way, in order to satisfy as many of their wants as possible."},
+        {"type": "video", "url": "https://www.youtube.com/watch?v=yoVc_S_gd_0"}
+      ]
+    },
+    {
+      "gene_id": "ECON101_OPPCOST",
+      "gene_name": "Opportunity Cost",
+      "difficulty": 2,
+      "content_alleles": [
+          {"type": "text", "content": "Opportunity cost is the potential forgone profit from a missed opportunity—the result of choosing one alternative and forgoing another. In short, it’s what you give up when you make a decision. The formula is simply the difference between the expected return of each option. Expected Return = (Probability of Gain x Potential Gain) - (Probability of Loss x Potential Loss)."},
+          {"type": "video", "url": "https://www.youtube.com/watch?v=PSU-SA-Fv_M"}
+      ]
+    },
+    {
+      "gene_id": "ECON101_SND",
+      "gene_name": "Supply and Demand",
+      "difficulty": 3,
+      "content_alleles": [
+          {"type": "text", "content": "Supply and demand is a model of microeconomics. It describes how a price is formed in a market economy. In a competitive market, the unit price for a particular good will vary until it settles at a point where the quantity demanded by consumers (at the current price) will equal the quantity supplied by producers (at the current price), resulting in an economic equilibrium for price and quantity."},
+          {"type": "video", "url": "https://www.youtube.com/watch?v=9QSWLmyGpYc"}
+      ]
+    }
+  ],
+  "edges": [
+    {"from": "ECON101_SCARCITY", "to": "ECON101_OPPCOST"},
+    {"from": "ECON101_OPPCOST", "to": "ECON101_SND"}
+  ]
 }
 
 
@@ -115,55 +107,28 @@ def gemini_api_call_with_retry(func):
         return None
     return wrapper
 
-# --- PERSISTENT DATA STORAGE & USER MANAGEMENT ---
+# --- PERSISTENT DATA STORAGE ---
 def get_user_data_path(user_id):
     """Generates a secure filepath for a user data."""
     safe_filename = hashlib.md5(user_id.encode()).hexdigest() + ".json"
     return DATA_DIR / safe_filename
 
 def load_user_data(user_id):
-    """Loads a user session history from a JSON file, initializing tier status if not present."""
+    """Loads a user session history from a JSON file."""
     filepath = get_user_data_path(user_id)
-    default_data = {
-        "sessions": [],
-        "user_tier": "free",
-        "total_analyses": 0,
-        "last_analysis_date": None,
-        "daily_analyses_count": 0
-    }
     if filepath.exists():
         with open(filepath, 'r') as f:
             try:
-                data = json.load(f)
-                # Ensure all keys exist for backward compatibility
-                for key, value in default_data.items():
-                    data.setdefault(key, value)
-                return data
+                return json.load(f)
             except json.JSONDecodeError:
-                return default_data
-    return default_data
+                return {"sessions": []}
+    return {"sessions": []}
 
 def save_user_data(user_id, data):
     """Saves a user session history to a JSON file."""
     filepath = get_user_data_path(user_id)
     with open(filepath, 'w') as f:
         json.dump(data, f, indent=2)
-
-def update_user_usage(user_id):
-    """Updates user's analysis count after a successful operation."""
-    user_data = load_user_data(user_id)
-    today_str = datetime.now().strftime("%Y-%m-%d")
-    
-    if user_data['user_tier'] == 'free':
-        user_data['total_analyses'] += 1
-    elif user_data['user_tier'] == 'paid':
-        if user_data['last_analysis_date'] == today_str:
-            user_data['daily_analyses_count'] += 1
-        else:
-            user_data['last_analysis_date'] = today_str
-            user_data['daily_analyses_count'] = 1
-            
-    save_user_data(user_id, user_data)
 
 def save_session_to_history(user_id, final_notes):
     """Saves the full note content from a completed session for a user."""
@@ -177,96 +142,6 @@ def save_session_to_history(user_id, final_notes):
     }
     user_data["sessions"].insert(0, new_session)
     save_user_data(user_id, user_data)
-
-# --- PAYWALL & ACCESS CONTROL ---
-def get_razorpay_client():
-    """Initializes and returns the Razorpay client."""
-    try:
-        key_id = st.secrets["Razorpay"]["key_id"]
-        key_secret = st.secrets["Razorpay"]["key_secret"]
-        return razorpay.Client(auth=(key_id, key_secret))
-    except (KeyError, FileNotFoundError):
-        st.error("Razorpay credentials are not configured correctly in st.secrets.")
-        return None
-
-def check_user_access(user_id):
-    """Checks user access and returns status and a message, without printing."""
-    user_data = load_user_data(user_id)
-    tier = user_data.get('user_tier', 'free')
-    today_str = datetime.now().strftime("%Y-%m-%d")
-
-    if tier == 'free':
-        if user_data.get('total_analyses', 0) >= FREE_TIER_LIMIT:
-            message = "You have used your single free analysis. Please upgrade to add more files or start a new session."
-            return False, 'limit_reached', message
-    elif tier == 'paid':
-        last_date = user_data.get('last_analysis_date')
-        daily_count = user_data.get('daily_analyses_count', 0)
-        if last_date == today_str and daily_count >= PAID_TIER_DAILY_LIMIT:
-            message = f"You have reached your daily limit of {PAID_TIER_DAILY_LIMIT} analyses."
-            return False, 'limit_reached', message
-            
-    return True, 'ok', "Access granted."
-
-def show_paywall(user_id, user_info):
-    """Displays the Razorpay payment button and handles the upgrade logic."""
-    st.header("🚀 Upgrade to Premium")
-    st.markdown("Unlock unlimited potential with 3 analyses per day, every day.")
-    
-    client = get_razorpay_client()
-    if not client:
-        return
-
-    payment_data = {
-        "amount": PAYMENT_AMOUNT,
-        "currency": "INR",
-        "receipt": f"receipt_{user_id}_{int(time.time())}",
-        "notes": {
-            "user_id": user_id,
-            "email": user_info.get('email', 'N/A')
-        }
-    }
-    try:
-        order = client.order.create(data=payment_data)
-        order_id = order['id']
-        
-        st.markdown(f"""
-        <form>
-            <script 
-                src="https://checkout.razorpay.com/v1/checkout.js"
-                data-key="{st.secrets['Razorpay']['key_id']}"
-                data-amount="{PAYMENT_AMOUNT}"
-                data-currency="INR"
-                data-order_id="{order_id}"
-                data-buttontext="Pay {PAYMENT_AMOUNT/100:.2f} INR with Razorpay"
-                data-name="Vekkam Engine"
-                data-description="Premium Access"
-                data-prefill.name="{user_info.get('name', '')}"
-                data-prefill.email="{user_info.get('email', '')}"
-                data-theme.color="#007BFF">
-            </script>
-        </form>
-        """, unsafe_allow_html=True)
-
-        st.info("After successful payment, please click the button below to confirm your upgrade.")
-
-        if st.button("I have paid! Verify and Upgrade my account."):
-            # --- IMPORTANT ---
-            # In a real-world production app, you MUST verify the payment signature from Razorpay 
-            # using a webhook and a backend server. This client-side confirmation is for
-            # demonstration purposes ONLY and is NOT secure.
-            with st.spinner("Verifying..."):
-                time.sleep(2) # Simulate verification delay
-                user_data = load_user_data(user_id)
-                user_data['user_tier'] = 'paid'
-                save_user_data(user_id, user_data)
-                st.success("Upgrade successful! Your account is now Premium.")
-                st.balloons()
-                time.sleep(2)
-                st.rerun()
-
-    except Exception as e:
-        st.error(f"Could not initiate payment. Error: {e}")
 
 # --- API SELF-DIAGNOSIS & UTILITIES ---
 def check_gemini_api():
@@ -475,12 +350,12 @@ def show_landing_page(auth_url):
     st.markdown('<h2 class="section-header">The Unfair Advantage Over Other Tools</h2>', unsafe_allow_html=True)
     st.markdown("""
         <table class="comparison-table-premium">
-            <thead><tr><th>Capability</th><th>Vekkam (Free)</th><th>Vekkam (Premium)</th><th>ChatGPT / Gemini</th></tr></thead>
+            <thead><tr><th>Capability</th><th>Vekkam</th><th>ChatGPT / Gemini</th><th>Turbolearn</th><th>Perplexity</th></tr></thead>
             <tbody>
-                <tr><td><strong>Multi-Modal Synthesis</strong></td><td class="check">✔ (1 Time)</td><td class="check">✔ (3/day)</td><td class="cross">Partial</td></tr>
-                <tr><td><strong>Chat With <u>Your</u> Content Only</strong></td><td class="check">✔</td><td class="check">✔</td><td class="cross">✖ (General)</td></tr>
-                <tr><td><strong>Integrated Mock Test Generator</strong></td><td class="check">✔</td><td class="check">✔</td><td class="cross">✖</td></tr>
-                <tr><td><strong>Builds a Persistent Knowledge Base</strong></td><td class="check">✔</td><td class="check">✔</td><td class="cross">✖ (Chat History)</td></tr>
+                <tr><td><strong>Multi-Modal Synthesis (Audio, PDF, IMG)</strong></td><td class="check">✔</td><td class="cross">Partial</td><td class="cross">YouTube Only</td><td class="cross">URL/Text Only</td></tr>
+                <tr><td><strong>Chat With <u>Your</u> Content Only</strong></td><td class="check">✔</td><td class="cross">✖ (General)</td><td class="check">✔</td><td class="cross">✖ (Web Search)</td></tr>
+                <tr><td><strong>Integrated Mock Test Generator</strong></td><td class="check">✔</td><td class="cross">✖</td><td class="cross">✖</td><td class="cross">✖</td></tr>
+                <tr><td><strong>Builds a Persistent Knowledge Base</strong></td><td class="check">✔</td><td class="cross">✖ (Chat History)</td><td class="check">✔</td><td class="cross">✖</td></tr>
             </tbody>
         </table>
     """, unsafe_allow_html=True)
@@ -493,15 +368,6 @@ def show_landing_page(auth_url):
 # --- UI STATE FUNCTIONS for NOTE & LESSON ENGINE ---
 def show_upload_state():
     st.header("Note & Lesson Engine: Upload")
-    
-    user_id = st.session_state.user_info.get('id') or st.session_state.user_info.get('email')
-    can_proceed, reason, message = check_user_access(user_id)
-
-    if not can_proceed:
-        st.warning(message)
-        show_paywall(user_id, st.session_state.user_info)
-        return
-
     uploaded_files = st.file_uploader("Select files", accept_multiple_files=True, type=['mp3', 'm4a', 'wav', 'png', 'jpg', 'pptx', 'pdf'])
     if st.button("Process Files", type="primary") and uploaded_files:
         st.session_state.initial_files = uploaded_files
@@ -515,16 +381,9 @@ def show_processing_state():
         with ThreadPoolExecutor() as executor:
             futures = {executor.submit(process_source, f, 'transcript' if f.type.startswith('audio/') else 'image' if f.type.startswith('image/') else 'pdf'): f for f in st.session_state.initial_files}
             for future in as_completed(futures): results.append(future.result())
-        
         st.session_state.all_chunks = []
         st.session_state.all_chunks.extend([c for r in results if r and r['status'] == 'success' for c in r['chunks']])
         st.session_state.extraction_failures = [r for r in results if r and r['status'] == 'error']
-
-    # Only update usage if the processing was successful for at least one file
-    if any(r['status'] == 'success' for r in results if r):
-        user_id = st.session_state.user_info.get('id') or st.session_state.user_info.get('email')
-        update_user_usage(user_id)
-
     st.session_state.current_state = 'workspace'
     st.rerun()
 
@@ -553,23 +412,9 @@ def show_workspace_state():
                 for failure in st.session_state.extraction_failures:
                     st.error(f"**{failure['source_id']}**: {failure['reason']}")
         with st.expander("Add More Files"):
-            user_id = st.session_state.user_info.get('id') or st.session_state.user_info.get('email')
-            can_add_files, _, message = check_user_access(user_id)
-            
-            if not can_add_files:
-                st.info(message)
-
-            new_files = st.file_uploader(
-                "Upload more files", 
-                accept_multiple_files=True, 
-                key=f"uploader_{int(time.time())}",
-                disabled=not can_add_files
-            )
-            
-            if new_files and can_add_files:
-                # In a full implementation, you would process these new files
-                # and add them to the session state's 'all_chunks'.
-                st.info("File adding is disabled in this demo, but the rate limit check is active.")
+            new_files = st.file_uploader("Upload more files", accept_multiple_files=True, key=f"uploader_{int(time.time())}")
+            if new_files:
+                st.info("File adding logic to be implemented.")
 
 def show_synthesizing_state():
     st.header("Synthesizing Note Blocks...")
@@ -660,13 +505,12 @@ def show_personal_ta_ui():
                 st.markdown(response)
         st.session_state.ta_messages.append({"role": "assistant", "content": response})
 
-# --- MOCK TEST GENERATOR (Code unchanged) ---
+# --- UI STATE FUNCTIONS for MOCK TEST GENERATOR ---
 def show_mock_test_generator():
+    """Main function to handle the multi-stage mock test generation and execution."""
     st.header("📝 Mock Test Generator")
-    st.info("The Mock Test Generator is available to all users without limits.")
 
     if 'test_stage' not in st.session_state: st.session_state.test_stage = 'start'
-    # ... (rest of mock test code is identical) ...
     if 'syllabus' not in st.session_state: st.session_state.syllabus = ""
     if 'questions' not in st.session_state: st.session_state.questions = {}
     if 'user_answers' not in st.session_state: st.session_state.user_answers = {}
@@ -848,7 +692,7 @@ def render_final_results():
             if key in st.session_state: del st.session_state[key]
         st.rerun()
 
-# --- AI & Utility Functions for Mock Test (Code unchanged) ---
+# --- AI & Utility Functions for Mock Test ---
 def get_bloom_level_name(level):
     if level is None: return "N/A"
     levels = {1: "Remembering", 2: "Understanding", 3: "Applying", 4: "Analyzing", 5: "Evaluating"}
@@ -926,7 +770,7 @@ def generate_feedback_on_performance(score, total, questions, user_answers, syll
     response = model.generate_content(prompt)
     return response.text
 
-# --- MASTERY ENGINE (Code unchanged) ---
+# --- AI & Utility Functions for Mastery Engine ---
 @st.cache_resource
 def get_google_search_service():
     """Initializes and returns the Google Custom Search API service, cached for performance."""
@@ -988,12 +832,10 @@ def generate_allele_from_query(user_topic, context_chunks=None):
     if video_url: content_alleles.append({"type": "video", "url": video_url})
     return {"gene_id": gene_id, "gene_name": gene_name, "difficulty": 0, "content_alleles": content_alleles}
 
+# --- UI STATE FUNCTIONS for MASTERY ENGINE ---
 def show_mastery_engine():
     st.header("🏆 Mastery Engine")
-    st.info("The Mastery Engine is available to all users without limits.")
-
     if 'mastery_stage' not in st.session_state: st.session_state.mastery_stage = 'course_selection'
-    # ... (rest of mastery engine code is identical) ...
     if 'user_progress' not in st.session_state: st.session_state.user_progress = {}
     if 'current_genome' not in st.session_state: st.session_state.current_genome = None
 
@@ -1069,9 +911,11 @@ def render_content_viewer():
         st.rerun()
 
 def render_boss_battle():
+    # Guardrail to prevent crash if state is lost
     if 'selected_node_id' not in st.session_state:
         st.warning("No concept selected for the boss battle. Redirecting to skill tree.")
         st.session_state.mastery_stage = 'skill_tree'
+        # Also clean up any lingering test state to be safe
         for key in ['test_stage', 'syllabus', 'questions', 'user_answers', 'score', 'feedback']:
             if key in st.session_state: del st.session_state[key]
         st.rerun()
@@ -1081,6 +925,7 @@ def render_boss_battle():
     node_data = next((n for n in st.session_state.current_genome['nodes'] if n['gene_id'] == node_id), None)
     st.subheader(f"Boss Battle: {node_data['gene_name']}")
     
+    # Custom boss battle flow, separate from the main test generator's multi-stage logic
     if 'test_stage' not in st.session_state: st.session_state.test_stage = 'mcq_generating'
     stage = st.session_state.test_stage
     
@@ -1139,15 +984,6 @@ def main():
         show_landing_page(auth_url)
         return
 
-    # --- HIDE STREAMLIT STYLE ---
-    st.markdown("""
-        <style>
-            #MainMenu {visibility: hidden;}
-            header {visibility: hidden;}
-            footer {visibility: hidden;}
-        </style>
-        """, unsafe_allow_html=True)
-
     st.sidebar.title("Vekkam Engine")
     user = st.session_state.user_info
     user_id = user.get('id') or user.get('email')
@@ -1155,28 +991,9 @@ def main():
     st.sidebar.subheader(f"Welcome, {user['given_name']}")
     if st.sidebar.button("Logout"): st.session_state.clear(); st.rerun()
     st.sidebar.divider()
-    
-    # --- Subscription Status in Sidebar ---
-    st.sidebar.subheader("Subscription Status")
-    user_data = load_user_data(user_id)
-    tier = user_data.get('user_tier', 'free')
-    st.sidebar.metric("Your Tier", tier.title())
-    if tier == 'free':
-        analyses_left = FREE_TIER_LIMIT - user_data.get('total_analyses', 0)
-        st.sidebar.write(f"Analyses Left: **{analyses_left}**")
-        if analyses_left <= 0 and st.sidebar.button("Upgrade to Premium"):
-             st.session_state.show_upgrade_flow = True # A flag to trigger paywall
-    else: # Paid tier
-        today_str = datetime.now().strftime("%Y-%m-%d")
-        daily_count = user_data.get('daily_analyses_count', 0)
-        if user_data.get('last_analysis_date') != today_str:
-            daily_count = 0 # Reset for the new day
-        analyses_left = PAID_TIER_DAILY_LIMIT - daily_count
-        st.sidebar.write(f"Daily Analyses Left: **{analyses_left}/{PAID_TIER_DAILY_LIMIT}**")
-    st.sidebar.divider()
-
 
     st.sidebar.subheader("Study Session History")
+    user_data = load_user_data(user_id)
     if not user_data["sessions"]:
         st.sidebar.info("Your saved sessions will appear here.")
     else:
@@ -1214,13 +1031,7 @@ def main():
     st.sidebar.write(f"Gemini: **{check_gemini_api()}**")
 
     # --- Tool Routing ---
-    # Handle the upgrade flow if triggered from sidebar
-    if st.session_state.get('show_upgrade_flow'):
-        show_paywall(user_id, st.session_state.user_info)
-        # un-set the flag so it doesn't persist
-        if 'show_upgrade_flow' in st.session_state:
-            del st.session_state['show_upgrade_flow']
-    elif tool_choice == "Note & Lesson Engine":
+    if tool_choice == "Note & Lesson Engine":
         if 'current_state' not in st.session_state: st.session_state.current_state = 'upload'
         state_map = { 'upload': show_upload_state, 'processing': show_processing_state, 'workspace': show_workspace_state, 'synthesizing': show_synthesizing_state, 'results': show_results_state }
         state_map.get(st.session_state.current_state, show_upload_state)()
@@ -1230,4 +1041,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
