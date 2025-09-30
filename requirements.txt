@@ -4,6 +4,7 @@ pydub
 noisereduce
 scipy
 PyMuPDF
+shortuuid
 razorpay
 python-docx
 google.generativeai
