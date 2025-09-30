@@ -53,7 +53,10 @@
     <header class="bg-white/80 backdrop-blur-md sticky top-0 z-50 border-b border-slate-200">
         <nav class="container mx-auto px-6 py-4 flex justify-between items-center">
             <a href="#" class="text-2xl font-bold text-slate-800">Vekkam</a>
-            <a href="https://drive.google.com/file/d/1Pw_WF-Ph423Vfj8w3VRnRIlRSiAZk22Q/view?usp=sharing" target="_blank" class="bg-blue-600 text-white font-semibold px-5 py-2 rounded-lg hover:bg-blue-700 transition-colors">View Pitch Deck</a>
+            <div class="flex items-center gap-4">
+                <a href="https://docs.google.com/spreadsheets/d/1l56zpOzfUXBjA_pcxgfvVviqGsKA48eWiVdfoerLPHg/edit?usp=sharing" target="_blank" class="bg-white text-slate-700 font-semibold px-5 py-2 rounded-lg border border-slate-300 hover:bg-slate-50 transition-colors">Financial Model</a>
+                <a href="https://drive.google.com/file/d/1Pw_WF-Ph423Vfj8w3VRnRIlRSiAZk22Q/view?usp=sharing" target="_blank" class="bg-blue-600 text-white font-semibold px-5 py-2 rounded-lg hover:bg-blue-700 transition-colors">View Pitch Deck</a>
+            </div>
         </nav>
     </header>
 
@@ -88,7 +91,7 @@
                         <p class="mt-2 text-slate-500">Operatives were able to achieve their learning objectives in significantly less time, freeing up valuable resources.</p>
                     </div>
                     <div class="stat-card text-center fade-in">
-                        <p class="text-6xl font-extrabold gradient-text" data-count="25">25%</p>
+                        <p class="text-6xl font-extrabold gradient-text" data-count="25">0%</p>
                         <p class="mt-2 text-xl font-bold text-slate-800">Uplift in Assessment Scores</p>
                         <p class="mt-2 text-slate-500">More efficient preparation translated directly into superior academic performance and higher average scores.</p>
                     </div>
@@ -124,6 +127,15 @@
                             <span><strong>Zero-Hallucination Support:</strong> Provides a tactical AI trained exclusively on course data for perfectly contextualized, accurate academic support.</span>
                         </li>
                     </ul>
+                    <!-- This is the new link added as requested -->
+                    <div class="mt-8">
+                        <a href="https://docs.google.com/document/d/1zPH0_Q62KoFXF8-GZv05YSfimbGJUGHtMTnahgnF3rU/edit?usp=sharing" target="_blank" class="font-semibold text-blue-600 hover:text-blue-800 transition-colors inline-flex items-center group">
+                            This is how we're different from the competition
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 ml-1 transition-transform transform group-hover:translate-x-1" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd" />
+                            </svg>
+                        </a>
+                    </div>
                 </div>
                 <div class="fade-in">
                     <div class="bg-slate-800 rounded-lg p-8 shadow-2xl">
@@ -193,25 +205,27 @@
                 updateCount();
             }
 
-            const statObserver = new IntersectionObserver((entries, statObserver) => {
+            // Using Intersection Observer to trigger the countUp animation on each stat card
+            const statCards = document.querySelectorAll('.stat-card');
+            const statObserver = new IntersectionObserver((entries, observer) => {
                 entries.forEach(entry => {
                     if (entry.isIntersecting) {
                         const statElement = entry.target.querySelector('[data-count]');
                         if (statElement && !statElement.hasAttribute('data-counted')) {
                             statElement.setAttribute('data-counted', 'true');
                             countUp(statElement);
-                            statObserver.unobserve(entry.target);
                         }
+                        observer.unobserve(entry.target);
                     }
                 });
-            }, { threshold: 0.8 });
+            }, { threshold: 0.5 });
 
-            const tractionSection = document.getElementById('traction');
-            if(tractionSection) {
-                 statObserver.observe(tractionSection);
-            }
+            statCards.forEach(card => {
+                 statObserver.observe(card);
+            });
         });
     </script>
 
 </body>
 </html>
+
