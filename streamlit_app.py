@@ -116,6 +116,7 @@ def get_user_data_path(user_id):
     safe_filename = hashlib.md5(user_id.encode()).hexdigest() + ".json"
     return DATA_DIR / safe_filename
 
+@st.cache_data
 def load_user_data(user_id):
     """Loads a user session history from a JSON file."""
     filepath = get_user_data_path(user_id)
@@ -137,6 +138,7 @@ def save_user_data(user_id, data):
     filepath = get_user_data_path(user_id)
     with open(filepath, 'w') as f:
         json.dump(data, f, indent=2)
+    load_user_data.clear() # Invalidate the cache to force a re-read on next access
 
 def log_user_error(user_id, error_tag, error_type):
     """Logs a specific error to the user's Error Genome."""
@@ -327,6 +329,7 @@ def answer_from_context(query, context):
     return response.text
 
 # --- AUTHENTICATION & SESSION MANAGEMENT ---
+@st.cache_resource
 def get_google_flow():
     try:
         client_config = {
@@ -891,13 +894,193 @@ def generate_feedback_on_performance(score, total, questions, user_answers, syll
     return response.text
 
 # --- AI & Utility Functions for Mastery Engine ---
-# ... (rest of Mastery Engine functions remain the same) ...
-def get_google_search_service(): return None # Placeholder
-def generate_allele_from_query(user_topic, context_chunks=None): return None # Placeholder
-def show_mastery_engine(): st.warning("Mastery Engine not implemented in this version.") # Placeholder
+@st.cache_resource
+def get_google_search_service():
+    """Initializes and returns the Google Custom Search API service, cached for performance."""
+    try:
+        api_key = st.secrets["google_search"]["api_key"]
+        return build('customsearch', 'v1', developerKey=api_key)
+    except KeyError:
+        st.error("Google Search API key ('api_key') not found in st.secrets.toml. Please add it.")
+        return None
+    except Exception as e:
+        st.error(f"Failed to build Google Search service: {e}")
+        return None
+
+def generate_allele_from_query(user_topic, context_chunks=None):
+    model = genai.GenerativeModel('gemini-2.5-flash-lite')
+    gene_name_response = model.generate_content(f"Provide a concise, 3-5 word conceptual name for the topic: '{user_topic}'. Output only the name.")
+    gene_name = gene_name_response.text.strip().replace('"', '') if gene_name_response.text else user_topic.title()
+    gene_id = f"USER_{hashlib.md5(user_topic.encode()).hexdigest()[:8].upper()}"
+    
+    service = get_google_search_service();
+    if not service: return None
+    try: cse_id = st.secrets["google_search"]["cse_id"]
+    except KeyError: st.error("Google Search CSE ID ('cse_id') not found in st.secrets.toml."); return None
+
+    search_queries, synthesis_prompt_template = [], ""
+    if context_chunks:
+        st.info("Context detected. Generating contextual search queries...")
+        full_context_text = " ".join([chunk.get('text', '') for chunk in context_chunks])
+        summary_response = model.generate_content(f"Summarize the key topics from this material in 2-3 sentences: {full_context_text[:8000]}")
+        context_summary = summary_response.text
+        query_gen_prompt = f"""A student is studying: "{context_summary}". They now want to learn about: "{user_topic}". Generate 3 specific Google search queries to find information connecting their existing knowledge to this new topic. Output ONLY a valid JSON object with a key "queries" which is a list of 3 strings."""
+        queries_response = model.generate_content(query_gen_prompt)
+        queries_json = resilient_json_parser(queries_response.text)
+        search_queries = queries_json['queries'] if queries_json and 'queries' in queries_json else [f"{user_topic} in context of {context_summary[:50]}"]
+        synthesis_prompt_template = f"""You are an expert tutor. A student's study material is about: "{context_summary}". They want to understand "{user_topic}". Based ONLY on the provided web search results, synthesize a clear explanation of "{user_topic}", connecting it to their existing knowledge.\n\n**Web Search Results:**\n---\n{{search_snippets}}\n---"""
+    else:
+        search_queries = [f"{user_topic} explanation", f"youtube video tutorial {user_topic}"]
+        synthesis_prompt_template = f"""Based ONLY on the web search results, provide a clear, comprehensive explanation of '{user_topic}'.\n\n**Web Search Results:**\n---\n{{search_snippets}}\n---"""
+
+    text_content, video_url = [], None
+    st.write("Performing targeted web search...")
+    for query in search_queries:
+        try:
+            res = service.cse().list(q=query, cx=cse_id, num=3).execute()
+            for item in res.get('items', []):
+                if "youtube.com/watch" in item.get('link', '') and not video_url: video_url = item.get('link')
+                if item.get('snippet'): text_content.append(item.get('snippet'))
+        except HttpError as e: st.error(f"Google Search API error: {e}. Check key, CSE ID, and quota."); return None
+        except Exception as e: st.warning(f"Search failed for query '{query}': {e}"); time.sleep(1)
+
+    if not text_content: st.error(f"Could not find relevant text for '{user_topic}'."); return None
+    
+    with st.spinner("Synthesizing explanation from search results..."):
+        synthesis_prompt = synthesis_prompt_template.format(search_snippets=" ".join(text_content))
+        final_explanation = model.generate_content(synthesis_prompt).text
+
+    content_alleles = []
+    if final_explanation: content_alleles.append({"type": "text", "content": final_explanation})
+    if video_url: content_alleles.append({"type": "video", "url": video_url})
+    return {"gene_id": gene_id, "gene_name": gene_name, "difficulty": 0, "content_alleles": content_alleles}
+
+# --- UI STATE FUNCTIONS for MASTERY ENGINE ---
+def show_mastery_engine():
+    st.header("🏆 Mastery Engine")
+    if 'mastery_stage' not in st.session_state: st.session_state.mastery_stage = 'course_selection'
+    if 'user_progress' not in st.session_state: st.session_state.user_progress = {}
+    if 'current_genome' not in st.session_state: st.session_state.current_genome = None
+
+    stage = st.session_state.mastery_stage
+    stage_map = {'course_selection': render_course_selection, 'skill_tree': render_skill_tree, 'content_viewer': render_content_viewer, 'boss_battle': render_boss_battle}
+    if stage in stage_map: stage_map[stage]()
+
+def render_course_selection():
+    st.subheader("Select Your Course or Create a New Concept")
+    st.markdown("### Pre-built Courses")
+    if st.button("Econ 101", use_container_width=True, type="primary"):
+        st.session_state.current_genome = json.loads(json.dumps(ECON_101_GENOME)) # Deep copy
+        progress = {}
+        all_node_ids = {node['gene_id'] for node in st.session_state.current_genome['nodes']}
+        destination_nodes = {edge['to'] for edge in st.session_state.current_genome['edges']}
+        root_nodes = all_node_ids - destination_nodes
+        for node_id in all_node_ids: progress[node_id] = 'unlocked' if node_id in root_nodes else 'locked'
+        st.session_state.user_progress = progress
+        st.session_state.mastery_stage = 'skill_tree'
+        st.rerun()
+
+    st.markdown("### Create Your Own Concept")
+    user_interest = st.text_input("What concept are you interested in learning about?", key="user_allele_query")
+    use_context = st.checkbox("Use context from 'Note & Lesson Engine' session", key="use_context", value=True)
+    if st.button("Generate Concept Allele", use_container_width=True, disabled=not user_interest):
+        context_chunks = st.session_state.get('all_chunks') if use_context else None
+        if use_context and not context_chunks: st.warning("Contextual generation selected, but no files have been processed in the 'Note & Lesson Engine'. Falling back to non-contextual generation.")
+        if st.session_state.current_genome is None: st.session_state.current_genome = {"subject": "My Custom Concepts", "version": "1.0", "nodes": [], "edges": []}
+        with st.spinner(f"Generating concept for '{user_interest}'..."):
+            new_allele = generate_allele_from_query(user_interest, context_chunks=context_chunks)
+            if new_allele:
+                if new_allele['gene_id'] not in {n['gene_id'] for n in st.session_state.current_genome['nodes']}:
+                    st.session_state.current_genome['nodes'].append(new_allele)
+                    st.success(f"Concept '{new_allele['gene_name']}' generated and unlocked!")
+                else: st.info(f"Concept '{new_allele['gene_name']}' already exists.")
+                st.session_state.user_progress[new_allele['gene_id']] = 'unlocked'
+                st.session_state.mastery_stage = 'skill_tree'
+                st.rerun()
+
+def render_skill_tree():
+    st.subheader(f"Skill Tree: {st.session_state.current_genome['subject']}")
+    nodes, progress = st.session_state.current_genome['nodes'], st.session_state.user_progress
+    for node in nodes:
+        node_id, node_name, status = node['gene_id'], node['gene_name'], progress.get(node_id, 'locked')
+        if status == 'mastered': st.success(f"**{node_name}** - ✅ Mastered!", icon="✅")
+        elif status == 'unlocked':
+            if st.button(f"🧠 Learn: {node_name}", key=node_id, use_container_width=True, type="primary"):
+                st.session_state.selected_node_id = node_id; st.session_state.mastery_stage = 'content_viewer'; st.rerun()
+        else: st.info(f"**{node_name}** - 🔒 Locked", icon="🔒")
+        st.markdown('<p style="text-align: center; margin: 0; padding: 0;">↓</p>', unsafe_allow_html=True)
+    st.markdown("---")
+    if st.button("Back to Course Selection"): st.session_state.mastery_stage = 'course_selection'; st.rerun()
+
+def render_content_viewer():
+    node_id = st.session_state.selected_node_id
+    node_data = next((n for n in st.session_state.current_genome['nodes'] if n['gene_id'] == node_id), None)
+    if not node_data: st.error("Error: Could not load node data."); st.session_state.mastery_stage = 'skill_tree'; st.rerun(); return
+    st.subheader(f"Learning: {node_data['gene_name']}")
+    st.markdown("---")
+    for allele in node_data['content_alleles']:
+        if allele['type'] == 'text': st.markdown(allele['content'])
+        elif allele['type'] == 'video': st.video(allele['url'])
+    st.markdown("---")
+    col1, col2 = st.columns([1, 1])
+    if col1.button("Back to Skill Tree"): st.session_state.mastery_stage = 'skill_tree'; st.rerun()
+    if col2.button(f"⚔️ Challenge Boss: {node_data['gene_name']}", type="primary"):
+        st.session_state.mastery_stage = 'boss_battle'
+        syllabus_parts = [a['content'] for a in node_data['content_alleles'] if a['type'] == 'text']
+        st.session_state.syllabus = f"Topic: {node_data['gene_name']}. Content: {' '.join(syllabus_parts)}"
+        st.session_state.test_stage = 'mcq_generating'
+        for key in ['questions', 'user_answers', 'score', 'feedback']:
+            if key in st.session_state: del st.session_state[key]
+        st.rerun()
+
+def render_boss_battle():
+    # Guardrail to prevent crash if state is lost
+    if 'selected_node_id' not in st.session_state:
+        st.warning("No concept selected for the boss battle. Redirecting to skill tree.")
+        st.session_state.mastery_stage = 'skill_tree'
+        # Also clean up any lingering test state to be safe
+        for key in ['test_stage', 'syllabus', 'questions', 'user_answers', 'score', 'feedback']:
+            if key in st.session_state: del st.session_state[key]
+        st.rerun()
+        return
+
+    node_id = st.session_state.selected_node_id
+    node_data = next((n for n in st.session_state.current_genome['nodes'] if n['gene_id'] == node_id), None)
+    st.subheader(f"Boss Battle: {node_data['gene_name']}")
+    
+    # Custom boss battle flow, separate from the main test generator's multi-stage logic
+    if 'test_stage' not in st.session_state: st.session_state.test_stage = 'mcq_generating'
+    stage = st.session_state.test_stage
+    
+    if stage == 'mcq_generating':
+        render_generating_questions('mcq', 'boss_mcq_test', 10)
+    elif stage == 'boss_mcq_test':
+        render_mcq_test('boss_mcq_results')
+    elif stage == 'boss_mcq_results':
+        score = st.session_state.score.get('mcq', 0)
+        total = 10
+        st.subheader(f"Battle Results: You scored {score} / {total}")
+        if score >= 7:
+            st.balloons()
+            st.success("Victory! You have mastered this concept.")
+            st.session_state.user_progress[node_id] = 'mastered'
+            for edge in st.session_state.current_genome.get('edges', []):
+                if edge['from'] == node_id:
+                    st.session_state.user_progress[edge['to']] = 'unlocked'
+            if st.button("Return to Skill Tree", type="primary"):
+                st.session_state.mastery_stage = 'skill_tree'
+                for key in ['test_stage', 'syllabus', 'questions', 'user_answers', 'score', 'feedback']:
+                    if key in st.session_state: del st.session_state[key]
+                st.rerun()
+        else:
+            st.error("Defeated. The concept is not yet mastered. Review the material and try again.")
+            if st.button("Return to Learning"):
+                st.session_state.mastery_stage = 'content_viewer'
+                for key in ['test_stage', 'syllabus', 'questions', 'user_answers', 'score', 'feedback']:
+                    if key in st.session_state: del st.session_state[key]
+                st.rerun()
 
 # --- UI STATE FUNCTIONS for THE TRIAGE ---
-# ... (The Triage functions remain the same but will now be more powerful) ...
 def show_the_triage_ui():
     st.header("⚡ The Triage: Your Five-Minute Fix")
     st.markdown("Point your camera at a problem. Get an instant, personalized hint. Beat procrastination.")
@@ -972,8 +1155,120 @@ def triage_problem_analysis(problem_image_file, user_id, global_context_chunks):
 
 
 # --- UI STATE FUNCTIONS for THE GAUNTLET ---
-# ... (The Gauntlet UI functions remain the same) ...
-def show_the_gauntlet_ui(): st.warning("Gauntlet UI not fully implemented in this version.") # Placeholder
+def show_the_gauntlet_ui():
+    st.header("⚔️ The Gauntlet: Challenge Your Understanding")
+    st.markdown("Watch through your synthesized notes and answer hidden challenge questions to earn Vekkam Credits!")
+
+    if 'final_notes' not in st.session_state or not st.session_state.final_notes:
+        st.warning("No synthesized notes found. Please use the 'Note & Lesson Engine' to create notes first.")
+        if st.button("Go to Note & Lesson Engine"):
+            st.session_state.tool_choice = "Note & Lesson Engine"
+            st.session_state.current_state = 'upload'
+            st.rerun()
+        return
+
+    if 'gauntlet_state' not in st.session_state:
+        st.session_state.gauntlet_state = {
+            'current_topic_index': 0,
+            'credits_earned_this_session': 0
+        }
+
+    current_topic_index = st.session_state.gauntlet_state['current_topic_index']
+    notes_count = len(st.session_state.final_notes)
+
+    st.subheader(f"Topic {current_topic_index + 1} of {notes_count}: {st.session_state.final_notes[current_topic_index]['topic']}")
+    st.markdown("---")
+
+    # Display the current note content
+    current_note = st.session_state.final_notes[current_topic_index]
+    st.markdown(current_note['content'])
+    st.markdown("---")
+
+    # Check for a challenge in the current note
+    challenge = current_note.get('challenge')
+    if challenge and not challenge['is_answered']:
+        st.info("🎯 **Challenge Ahead!**")
+        st.markdown(f"**Question:** {challenge['question_text']}")
+        
+        options_list = sorted(challenge['options'].items())
+        selected_option_label = st.radio("Select your answer:", [opt[1] for opt in options_list], key=f"gauntlet_challenge_{current_topic_index}")
+        
+        if st.button("Submit Answer", key=f"submit_gauntlet_{current_topic_index}", type="primary"):
+            user_selected_key = next(key for key, value in options_list if value == selected_option_label)
+            st.session_state.final_notes[current_topic_index]['challenge']['user_answer'] = user_selected_key
+            st.session_state.final_notes[current_topic_index]['challenge']['is_answered'] = True
+            
+            if user_selected_key == challenge['correct_answer_key']:
+                st.success(f"✅ Correct! You earned {VEKKAM_CREDITS_PER_CORRECT_ANSWER} Vekkam Credits!")
+                st.session_state.final_notes[current_topic_index]['challenge']['is_correct'] = True
+                st.session_state.gauntlet_state['credits_earned_this_session'] += VEKKAM_CREDITS_PER_CORRECT_ANSWER
+            else:
+                st.error(f"❌ Incorrect. The correct answer was **{challenge['correct_answer_key']}**: {challenge['options'][challenge['correct_answer_key']]}")
+                st.session_state.final_notes[current_topic_index]['challenge']['is_correct'] = False
+            
+            st.markdown(f"**Explanation:** {challenge['explanation']}")
+            st.rerun() # Rerun to show feedback immediately and allow navigation
+    elif challenge and challenge['is_answered']:
+        if challenge['is_correct']:
+            st.success("✅ You correctly answered this challenge!")
+        else:
+            st.error(f"❌ You answered this challenge incorrectly. Correct answer was **{challenge['correct_answer_key']}**: {challenge['options'][challenge['correct_answer_key']]}")
+        st.markdown(f"**Explanation:** {challenge['explanation']}")
+
+
+    st.markdown("---")
+    col1, col2, col3 = st.columns([1,1,1])
+    with col1:
+        if st.session_state.gauntlet_state['current_topic_index'] > 0:
+            if st.button("⬅️ Previous Topic", key="prev_gauntlet_topic"):
+                st.session_state.gauntlet_state['current_topic_index'] -= 1
+                st.rerun()
+    with col2:
+        if st.session_state.gauntlet_state['current_topic_index'] < notes_count - 1:
+            if st.button("Next Topic ➡️", key="next_gauntlet_topic", type="primary"):
+                st.session_state.gauntlet_state['current_topic_index'] += 1
+                st.rerun()
+        else:
+            if st.button("Finish Gauntlet & Save", key="finish_gauntlet", type="primary"):
+                user_id = st.session_state.user_info.get('id') or st.session_state.user_info.get('email')
+                credits_earned = st.session_state.gauntlet_state['credits_earned_this_session']
+                save_session_to_history(user_id, st.session_state.final_notes, credits_earned=credits_earned)
+                st.success(f"Gauntlet complete! You earned {credits_earned} Vekkam Credits this session.")
+                st.session_state.gauntlet_state = {'current_topic_index': 0, 'credits_earned_this_session': 0}
+                st.session_state.current_state = 'results' # Redirect to notes overview
+                st.rerun()
+    with col3:
+        if st.button("Exit Gauntlet", key="exit_gauntlet"):
+            user_id = st.session_state.user_info.get('id') or st.session_state.user_info.get('email')
+            credits_earned = st.session_state.gauntlet_state['credits_earned_this_session']
+            save_session_to_history(user_id, st.session_state.final_notes, credits_earned=credits_earned)
+            st.info(f"Exiting Gauntlet. You earned {credits_earned} Vekkam Credits this session.")
+            st.session_state.gauntlet_state = {'current_topic_index': 0, 'credits_earned_this_session': 0}
+            st.session_state.tool_choice = "Note & Lesson Engine"
+            st.session_state.current_state = 'results' # Redirect to notes overview
+            st.rerun()
+
+    st.markdown("### 🏆 Gauntlet Leaderboard")
+    user_id = st.session_state.user_info.get('id') or st.session_state.user_info.get('email')
+    
+    # Collect all user data to build leaderboard
+    all_user_files = DATA_DIR.glob("*.json")
+    leaderboard_data = []
+    for f_path in all_user_files:
+        try:
+            with open(f_path, 'r') as f:
+                data = json.load(f)
+                if 'vekkam_credits' in data and data['vekkam_credits'] > 0:
+                    leaderboard_data.append({"user": f"User_{f_path.stem[:4]}", "credits": data['vekkam_credits']})
+        except json.JSONDecodeError:
+            continue
+    
+    leaderboard_data.sort(key=lambda x: x['credits'], reverse=True)
+    
+    if leaderboard_data:
+        st.table(leaderboard_data)
+    else:
+        st.info("No one on the leaderboard yet! Be the first to earn Vekkam Credits.")
 
 
 # --- MAIN APP ---
@@ -1020,13 +1315,13 @@ def main():
     else:
         for i, session in enumerate(list(user_data["sessions"])):
             with st.sidebar.expander(f"{session.get('timestamp', 'N/A')} - {session.get('title', 'Untitled')}"):
-                # ... (Sidebar session history UI remains the same) ...
-                st.write(f"Topics: {', '.join([n['topic'] for n in session.get('notes', [])])}")
+                st.write(f"Topics: {', '.join([n['topic'] for n in session.get('notes', []) if 'topic' in n])}")
                 st.write(f"Credits Earned: {session.get('credits_earned', 0)}")
-                col1, col2, col3 = st.columns(3)
-                if col1.button("👁️ View", key=f"view_{session.get('id')}", use_container_width=True):
+                st.divider()
+                col1, col2 = st.columns(2)
+                if col1.button("👁️ View Notes", key=f"view_{session.get('id')}", use_container_width=True):
                     reset_session(); st.session_state.tool_choice = "Note & Lesson Engine"; st.session_state.final_notes = session.get('notes', []); st.session_state.current_state = 'results'; st.session_state.messages = []; st.rerun()
-                if col3.button("🗑️ Delete", key=f"del_{session.get('id')}", type="secondary", use_container_width=True):
+                if col2.button("🗑️ Delete", key=f"del_{session.get('id')}", type="secondary", use_container_width=True):
                     deleted_credits = user_data["sessions"][i].get('credits_earned', 0)
                     user_data["sessions"].pop(i)
                     user_data['vekkam_credits'] = max(0, user_data.get('vekkam_credits', 0) - deleted_credits)
@@ -1049,7 +1344,9 @@ def main():
     with st.sidebar.expander("View Your Cognitive Fingerprint"):
         error_genome = user_data.get('error_genome', {})
         if error_genome:
-            st.json(error_genome)
+            # Sort for better readability
+            sorted_genome = sorted(error_genome.items(), key=lambda item: item[1], reverse=True)
+            st.json(dict(sorted_genome))
         else:
             st.info("Your error patterns will appear here as you complete tests.")
 
