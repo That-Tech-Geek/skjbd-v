@@ -14,6 +14,7 @@ from functools import wraps
 from google.api_core import exceptions
 from pathlib import Path
 import uuid
+import random # For simulating challenge placement
 
 # --- GOOGLE OAUTH & API LIBRARIES ---
 try:
@@ -33,6 +34,8 @@ CHUNK_OVERLAP = 50
 MAX_RETRIES = 3
 DATA_DIR = Path("user_data")
 DATA_DIR.mkdir(exist_ok=True)
+VEKKAM_CREDITS_PER_CORRECT_ANSWER = 100
+GAUNTLET_CHALLENGE_COUNT = 3 # Number of challenges to insert per "video" (synthesized notes)
 
 # --- PAGE CONFIGURATION ---
 st.set_page_config(page_title="Vekkam Engine", page_icon="🧠", layout="wide", initial_sidebar_state="expanded")
@@ -119,10 +122,14 @@ def load_user_data(user_id):
     if filepath.exists():
         with open(filepath, 'r') as f:
             try:
-                return json.load(f)
+                data = json.load(f)
+                # Ensure vekkam_credits exist for older data
+                if 'vekkam_credits' not in data:
+                    data['vekkam_credits'] = 0
+                return data
             except json.JSONDecodeError:
-                return {"sessions": []}
-    return {"sessions": []}
+                return {"sessions": [], "vekkam_credits": 0}
+    return {"sessions": [], "vekkam_credits": 0}
 
 def save_user_data(user_id, data):
     """Saves a user session history to a JSON file."""
@@ -130,7 +137,7 @@ def save_user_data(user_id, data):
     with open(filepath, 'w') as f:
         json.dump(data, f, indent=2)
 
-def save_session_to_history(user_id, final_notes):
+def save_session_to_history(user_id, final_notes, credits_earned=0):
     """Saves the full note content from a completed session for a user."""
     user_data = load_user_data(user_id)
     session_title = final_notes[0]['topic'] if final_notes else "Untitled Session"
@@ -138,9 +145,11 @@ def save_session_to_history(user_id, final_notes):
         "id": str(uuid.uuid4()),
         "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
         "title": session_title,
-        "notes": final_notes
+        "notes": final_notes,
+        "credits_earned": credits_earned # Track credits for this session
     }
     user_data["sessions"].insert(0, new_session)
+    user_data['vekkam_credits'] = user_data.get('vekkam_credits', 0) + credits_earned
     save_user_data(user_id, user_data)
 
 # --- API SELF-DIAGNOSIS & UTILITIES ---
@@ -240,6 +249,30 @@ def generate_content_outline(all_chunks, existing_outline=None):
     return resilient_json_parser(response.text)
 
 @gemini_api_call_with_retry
+def generate_challenge_for_note(topic, content):
+    """Generates a multiple-choice challenge question for a given topic and content."""
+    model = genai.GenerativeModel('gemini-2.5-flash-lite')
+    prompt = f"""
+    You are a mischievous but brilliant AI tutor. Your task is to generate ONE multiple-choice question (MCQ) based on the following topic and content.
+    The question should contain a common conceptual error or require careful attention to detail.
+    Ensure there is one clear correct answer among four options (A, B, C, D).
+
+    **Topic:** {topic}
+    **Content:**
+    ---
+    {content}
+    ---
+
+    Output ONLY a valid JSON object with the following keys:
+    - `question_text`: (string) The challenge question.
+    - `options`: (object) An object with keys "A", "B", "C", "D" and their corresponding answer choices.
+    - `correct_answer_key`: (string) The key of the correct option (e.g., "B").
+    - `explanation`: (string) A brief explanation of why the correct answer is right and why common misconceptions are wrong.
+    """
+    response = model.generate_content(prompt)
+    return resilient_json_parser(response.text)
+
+@gemini_api_call_with_retry
 def synthesize_note_block(topic, relevant_chunks_text, instructions):
     model = genai.GenerativeModel('gemini-2.5-flash-lite')
     prompt = f"""
@@ -324,7 +357,7 @@ def show_landing_page(auth_url):
             .comparison-table-premium tbody tr:last-child td { border-bottom: none; }
             .comparison-table-premium .check { color: #1E90FF; font-weight: bold; text-align: center; font-size: 1.2rem; }
             .comparison-table-premium .cross { color: #B0B0B0; font-weight: bold; text-align: center; font-size: 1.2rem; }
-            .cta-button a { font-size: 1.1rem !important; font-weight: 600 !important; padding: 0.8rem 2rem !important; border-radius: 8px !important; background-image: linear-gradient(45deg, #007BFF, #0056b3) !important; border: none !important; transition: transform 0.2s, box-shadow 0.2s !important; }
+            .cta-button a { font-size: 1.1rem !important; font-weight: 600 !important; padding: 0.8rem 2rem !important; border-radius: 8px !important; background-image: linear-gradient(45deg, #007BFF, #0056b3) !important; border: none !important; transition: transform 0.2s, box_shadow 0.2s !important; }
             .cta-button a:hover { transform: scale(1.05); box-shadow: 0 6px 15px rgba(0, 123, 255, 0.3); }
             .section-header { text-align: center; color: #004080; font-weight: 700; margin-top: 4rem; margin-bottom: 2rem; }
         </style>
@@ -402,7 +435,7 @@ def show_workspace_state():
             initial_text = "\n".join([item.get('topic', '') for item in st.session_state.outline_data])
             st.session_state.editable_outline = st.text_area("Editable Outline:", value=initial_text, height=300)
             st.session_state.synthesis_instructions = st.text_area("Synthesis Instructions (Optional):", height=100, placeholder="e.g., 'Explain this like I'm 15' or 'Focus on key formulas'")
-            if st.button("Synthesize Notes", type="primary"):
+            if st.button("Synthesize Notes and Prepare Gauntlet", type="primary"):
                 st.session_state.current_state = 'synthesizing'
                 st.rerun()
     with col2:
@@ -417,12 +450,15 @@ def show_workspace_state():
                 st.info("File adding logic to be implemented.")
 
 def show_synthesizing_state():
-    st.header("Synthesizing Note Blocks...")
+    st.header("Synthesizing Note Blocks & Preparing The Gauntlet...")
     st.session_state.final_notes = []
     topics = [line.strip() for line in st.session_state.editable_outline.split('\n') if line.strip()]
     chunks_map = {c['chunk_id']: c['text'] for c in st.session_state.all_chunks}
     original_outline_map = {item['topic']: item.get('relevant_chunks', []) for item in st.session_state.outline_data}
+    
     bar = st.progress(0, "Starting synthesis...")
+    challenges_to_insert = random.sample(range(len(topics)), min(len(topics), GAUNTLET_CHALLENGE_COUNT))
+    
     for i, topic in enumerate(topics):
         bar.progress((i + 1) / len(topics), f"Synthesizing: {topic}")
         matched_chunks = original_outline_map.get(topic, [])
@@ -432,11 +468,30 @@ def show_synthesizing_state():
                     matched_chunks = chunk_ids; break
         text_to_synthesize = "\n\n---\n\n".join([chunks_map.get(cid, "") for cid in matched_chunks if cid in chunks_map])
         content = "Could not find source text for this topic." if not text_to_synthesize.strip() else synthesize_note_block(topic, text_to_synthesize, st.session_state.synthesis_instructions)
-        st.session_state.final_notes.append({"topic": topic, "content": content, "source_chunks": matched_chunks})
-    if st.session_state.get('user_info') and st.session_state.final_notes:
-        user_id = st.session_state.user_info.get('id') or st.session_state.user_info.get('email')
-        save_session_to_history(user_id, st.session_state.final_notes)
-    st.session_state.current_state = 'results'
+        
+        # Insert a challenge if this topic is selected
+        challenge_data = None
+        if i in challenges_to_insert and content.strip() != "Could not find source text for this topic.":
+            st.info(f"Generating challenge for topic: {topic}...")
+            challenge_json = generate_challenge_for_note(topic, content)
+            if challenge_json:
+                challenge_data = {
+                    "question_text": challenge_json.get("question_text"),
+                    "options": challenge_json.get("options"),
+                    "correct_answer_key": challenge_json.get("correct_answer_key"),
+                    "explanation": challenge_json.get("explanation"),
+                    "is_answered": False,
+                    "is_correct": False,
+                    "user_answer": None
+                }
+        
+        st.session_state.final_notes.append({"topic": topic, "content": content, "source_chunks": matched_chunks, "challenge": challenge_data})
+    
+    # We will save the session when the user completes the gauntlet or leaves
+    # if st.session_state.get('user_info') and st.session_state.final_notes:
+    #     user_id = st.session_state.user_info.get('id') or st.session_state.user_info.get('email')
+    #     save_session_to_history(user_id, st.session_state.final_notes)
+    st.session_state.current_state = 'gauntlet_intro'
     st.rerun()
 
 def show_results_state():
@@ -458,13 +513,22 @@ def show_results_state():
         st.subheader("Content Viewer")
         if st.session_state.selected_note_index is not None:
             selected_note = st.session_state.final_notes[st.session_state.selected_note_index]
-            tab1, tab2 = st.tabs(["Formatted Output", "Source Chunks"])
+            tab1, tab2, tab3 = st.tabs(["Formatted Output", "Source Chunks", "Challenge (if any)"])
             with tab1:
                 st.markdown(f"### {selected_note['topic']}")
                 st.markdown(selected_note['content'])
             with tab2:
                 st.markdown("These are the raw text chunks used to generate the note.")
                 st.code('\n\n'.join(selected_note['source_chunks']))
+            with tab3:
+                if selected_note['challenge']:
+                    st.markdown(f"**Challenge Question:** {selected_note['challenge']['question_text']}")
+                    for key, value in selected_note['challenge']['options'].items():
+                        st.markdown(f"- **{key}**: {value}")
+                    st.markdown(f"**Correct Answer:** {selected_note['challenge']['correct_answer_key']} - {selected_note['challenge']['options'][selected_note['challenge']['correct_answer_key']]}")
+                    st.markdown(f"**Explanation:** {selected_note['challenge']['explanation']}")
+                else:
+                    st.info("No specific challenge generated for this topic.")
         else:
             st.info("👆 Select a topic from the left to view its details.")
     st.divider()
@@ -957,6 +1021,221 @@ def render_boss_battle():
                     if key in st.session_state: del st.session_state[key]
                 st.rerun()
 
+# --- UI STATE FUNCTIONS for THE TRIAGE ---
+def show_the_triage_ui():
+    st.header("⚡ The Triage: Your Five-Minute Fix")
+    st.markdown("Point your camera at a problem. Get an instant, personalized hint. Beat procrastination.")
+
+    user_id = st.session_state.user_info.get('id') or st.session_state.user_info.get('email')
+    
+    uploaded_camera_image = st.camera_input("Point at your problem...")
+
+    if uploaded_camera_image is not None:
+        with st.spinner("Analyzing your problem..."):
+            triage_result = triage_problem_analysis(uploaded_camera_image, user_id, st.session_state.get('all_chunks', []))
+            
+            if triage_result:
+                st.markdown("### Your Instant Insight:")
+                st.success(triage_result['insight'])
+                if triage_result.get('common_trap'):
+                    st.warning(f"⚠️ **Common Trap:** {triage_result['common_trap']}")
+                if triage_result.get('next_step'):
+                    st.info(f"💡 **Next Step:** {triage_result['next_step']}")
+            else:
+                st.error("Could not analyze the problem. Please try again or ensure the image is clear.")
+    
+    st.markdown("---")
+    st.markdown("### How this works:")
+    st.markdown("""
+    * **Snap & Go:** No uploading, just point your camera at a problem in your textbook or notes.
+    * **AI Smarts:** Vekkam identifies the problem type and, based on *your* past performance, predicts common pitfalls.
+    * **Instant Edge:** You get a specific, actionable hint to get unstuck, without giving away the answer.
+    """)
+
+# --- AI Function for Triage ---
+@gemini_api_call_with_retry
+def triage_problem_analysis(problem_image_file, user_id, global_context_chunks):
+    model = genai.GenerativeModel('gemini-2.5-flash-lite-vision')
+    
+    user_data = load_user_data(user_id)
+    user_error_profile = ""
+    if user_data and user_data.get("sessions"):
+        past_feedback_snippets = []
+        for session in user_data["sessions"]:
+            for note in session.get("notes", []):
+                # Placeholder: In a real scenario, this would come from structured error logs
+                if "feedback" in note: # Assumes feedback is stored here, to be refined
+                    past_feedback_snippets.append(f"In a session on '{note['topic']}', feedback included: {note['feedback']}")
+                # Also check challenges from Gauntlet sessions
+                if note.get('challenge') and note['challenge']['is_answered'] and not note['challenge']['is_correct']:
+                    past_feedback_snippets.append(f"Made a mistake in a challenge on '{note['topic']}' (Question: {note['challenge']['question_text']}). Explanation: {note['challenge']['explanation']}")
+        user_error_profile = "\n".join(past_feedback_snippets)
+    
+    global_context_text = ""
+    if global_context_chunks:
+        global_context_text = " ".join([c['text'] for c in global_context_chunks if c.get('text')])
+        global_context_text = (global_context_text[:1000] + '...') if len(global_context_text) > 1000 else global_context_text
+
+    pil_image = Image.open(problem_image_file)
+    
+    prompt = f"""
+    Analyze the provided image which contains a study problem (e.g., from a textbook or notes).
+    Your goal is to provide a concise, immediate, and actionable "triage" insight for a student who might be procrastinating or stuck.
+    DO NOT solve the problem. Instead, identify the type of problem, a common generic trap, and if possible, a personalized common trap based on the user's past performance, and suggest a very small, immediate next step.
+
+    **Focus:**
+    1.  **Problem Type:** What academic concept or skill does this problem primarily test? (e.g., "Stoichiometry problem involving limiting reagents", "Calculus: related rates", "Economic elasticity calculation").
+    2.  **Generic Common Trap:** What's a frequent, easy-to-make mistake for this type of problem?
+    3.  **Personalized Common Trap (if applicable):** Based on the user's past error patterns, what specific mistake might *this user* be prone to?
+    4.  **Immediate Next Step:** What's the absolute smallest, easiest, first action the student can take to get started or unstuck?
+
+    **User's Past Learning Context/Error Patterns (if available):**
+    ---
+    {user_error_profile if user_error_profile else "No specific error patterns found for this user."}
+    ---
+    
+    **Broader Study Context (from uploaded notes, if available):**
+    ---
+    {global_context_text if global_context_text else "No broader study context available."}
+    ---
+
+    Output ONLY a valid JSON object with the following keys:
+    - `problem_type`: (string) e.g., "Stoichiometry problem involving limiting reagents"
+    - `common_trap`: (string) e.g., "Forgetting to balance the initial equation."
+    - `personalized_trap`: (string, optional) e.g., "Based on your history, you often misinterpret significant figures in calculations."
+    - `next_step`: (string) e.g., "First, identify all given quantities and their units."
+    - `insight`: (string) A single concise summary of the most critical hint. Combine problem type, generic trap, and next step. Example: "This is a stoichiometry problem. The most common trap is forgetting to balance the initial equation. Start by listing the reactants."
+    """
+    response = model.generate_content([prompt, pil_image])
+    return resilient_json_parser(response.text)
+
+
+# --- UI STATE FUNCTIONS for THE GAUNTLET ---
+def show_the_gauntlet_ui():
+    st.header("⚔️ The Gauntlet: Challenge Your Understanding")
+    st.markdown("Watch through your synthesized notes and answer hidden challenge questions to earn Vekkam Credits!")
+
+    if 'final_notes' not in st.session_state or not st.session_state.final_notes:
+        st.warning("No synthesized notes found. Please use the 'Note & Lesson Engine' to create notes first.")
+        if st.button("Go to Note & Lesson Engine"):
+            st.session_state.tool_choice = "Note & Lesson Engine"
+            st.session_state.current_state = 'upload'
+            st.rerun()
+        return
+
+    if 'gauntlet_state' not in st.session_state:
+        st.session_state.gauntlet_state = {
+            'current_topic_index': 0,
+            'credits_earned_this_session': 0
+        }
+
+    current_topic_index = st.session_state.gauntlet_state['current_topic_index']
+    notes_count = len(st.session_state.final_notes)
+
+    st.subheader(f"Topic {current_topic_index + 1} of {notes_count}: {st.session_state.final_notes[current_topic_index]['topic']}")
+    st.markdown("---")
+
+    # Display the current note content
+    current_note = st.session_state.final_notes[current_topic_index]
+    st.markdown(current_note['content'])
+    st.markdown("---")
+
+    # Check for a challenge in the current note
+    challenge = current_note.get('challenge')
+    if challenge and not challenge['is_answered']:
+        st.info("🎯 **Challenge Ahead!**")
+        st.markdown(f"**Question:** {challenge['question_text']}")
+        
+        options_list = sorted(challenge['options'].items())
+        selected_option_label = st.radio("Select your answer:", [opt[1] for opt in options_list], key=f"gauntlet_challenge_{current_topic_index}")
+        
+        if st.button("Submit Answer", key=f"submit_gauntlet_{current_topic_index}", type="primary"):
+            user_selected_key = next(key for key, value in options_list if value == selected_option_label)
+            st.session_state.final_notes[current_topic_index]['challenge']['user_answer'] = user_selected_key
+            st.session_state.final_notes[current_topic_index]['challenge']['is_answered'] = True
+            
+            if user_selected_key == challenge['correct_answer_key']:
+                st.success(f"✅ Correct! You earned {VEKKAM_CREDITS_PER_CORRECT_ANSWER} Vekkam Credits!")
+                st.session_state.final_notes[current_topic_index]['challenge']['is_correct'] = True
+                st.session_state.gauntlet_state['credits_earned_this_session'] += VEKKAM_CREDITS_PER_CORRECT_ANSWER
+            else:
+                st.error(f"❌ Incorrect. The correct answer was **{challenge['correct_answer_key']}**: {challenge['options'][challenge['correct_answer_key']]}")
+                st.session_state.final_notes[current_topic_index]['challenge']['is_correct'] = False
+            
+            st.markdown(f"**Explanation:** {challenge['explanation']}")
+            st.rerun() # Rerun to show feedback immediately and allow navigation
+    elif challenge and challenge['is_answered']:
+        if challenge['is_correct']:
+            st.success("✅ You correctly answered this challenge!")
+        else:
+            st.error(f"❌ You answered this challenge incorrectly. Correct answer was **{challenge['correct_answer_key']}**: {challenge['options'][challenge['correct_answer_key']]}")
+        st.markdown(f"**Explanation:** {challenge['explanation']}")
+
+
+    st.markdown("---")
+    col1, col2, col3 = st.columns([1,1,1])
+    with col1:
+        if st.session_state.gauntlet_state['current_topic_index'] > 0:
+            if st.button("⬅️ Previous Topic", key="prev_gauntlet_topic"):
+                st.session_state.gauntlet_state['current_topic_index'] -= 1
+                st.rerun()
+    with col2:
+        if st.session_state.gauntlet_state['current_topic_index'] < notes_count - 1:
+            if st.button("Next Topic ➡️", key="next_gauntlet_topic", type="primary"):
+                st.session_state.gauntlet_state['current_topic_index'] += 1
+                st.rerun()
+        else:
+            if st.button("Finish Gauntlet & Save", key="finish_gauntlet", type="primary"):
+                user_id = st.session_state.user_info.get('id') or st.session_state.user_info.get('email')
+                credits_earned = st.session_state.gauntlet_state['credits_earned_this_session']
+                save_session_to_history(user_id, st.session_state.final_notes, credits_earned=credits_earned)
+                st.success(f"Gauntlet complete! You earned {credits_earned} Vekkam Credits this session.")
+                st.session_state.gauntlet_state = {'current_topic_index': 0, 'credits_earned_this_session': 0}
+                st.session_state.current_state = 'results' # Redirect to notes overview
+                st.rerun()
+    with col3:
+        if st.button("Exit Gauntlet", key="exit_gauntlet"):
+            user_id = st.session_state.user_info.get('id') or st.session_state.user_info.get('email')
+            credits_earned = st.session_state.gauntlet_state['credits_earned_this_session']
+            save_session_to_history(user_id, st.session_state.final_notes, credits_earned=credits_earned)
+            st.info(f"Exiting Gauntlet. You earned {credits_earned} Vekkam Credits this session.")
+            st.session_state.gauntlet_state = {'current_topic_index': 0, 'credits_earned_this_session': 0}
+            st.session_state.tool_choice = "Note & Lesson Engine"
+            st.session_state.current_state = 'results' # Redirect to notes overview
+            st.rerun()
+
+    st.markdown("### 🏆 Gauntlet Leaderboard")
+    user_id = st.session_state.user_info.get('id') or st.session_state.user_info.get('email')
+    
+    # Collect all user data to build leaderboard
+    all_user_files = DATA_DIR.glob("*.json")
+    leaderboard_data = []
+    for f_path in all_user_files:
+        try:
+            with open(f_path, 'r') as f:
+                data = json.load(f)
+                if 'vekkam_credits' in data and data['vekkam_credits'] > 0:
+                    # In a real app, user names would be stored more robustly.
+                    # For this example, we'll try to infer a display name or use ID.
+                    sessions = data.get('sessions', [])
+                    display_name = "Unknown User"
+                    if sessions:
+                         # Attempt to get the name from the original user_info, or a mock name if unavailable
+                        if st.session_state.user_info and st.session_state.user_info.get('id') == hashlib.md5(f_path.stem.split('.')[0].encode()).hexdigest():
+                            display_name = st.session_state.user_info.get('given_name', 'You')
+                        else:
+                            display_name = f"User_{f_path.stem[:4]}" # A generic name for other users
+                    leaderboard_data.append({"user": display_name, "credits": data['vekkam_credits']})
+        except json.JSONDecodeError:
+            continue
+    
+    leaderboard_data.sort(key=lambda x: x['credits'], reverse=True)
+    
+    if leaderboard_data:
+        st.table(leaderboard_data)
+    else:
+        st.info("No one on the leaderboard yet! Be the first to earn Vekkam Credits.")
+
 
 # --- MAIN APP ---
 def main():
@@ -989,11 +1268,16 @@ def main():
     user_id = user.get('id') or user.get('email')
     st.sidebar.image(user['picture'], width=80)
     st.sidebar.subheader(f"Welcome, {user['given_name']}")
+    
+    # Display Vekkam Credits
+    user_data = load_user_data(user_id)
+    st.sidebar.markdown(f"**Vekkam Credits:** {user_data.get('vekkam_credits', 0)}")
+
     if st.sidebar.button("Logout"): st.session_state.clear(); st.rerun()
     st.sidebar.divider()
 
     st.sidebar.subheader("Study Session History")
-    user_data = load_user_data(user_id)
+    # user_data = load_user_data(user_id) # Already loaded above
     if not user_data["sessions"]:
         st.sidebar.info("Your saved sessions will appear here.")
     else:
@@ -1009,6 +1293,7 @@ def main():
                         st.session_state.editing_session_id = None; st.rerun()
                 else:
                     for note in session.get('notes', []): st.write(f"• {note.get('topic', 'No Topic')}")
+                    st.write(f"Credits earned: {session.get('credits_earned', 0)}")
                     st.divider()
                     col1, col2, col3 = st.columns(3)
                     if col1.button("👁️ View", key=f"view_{session.get('id')}", use_container_width=True):
@@ -1016,10 +1301,15 @@ def main():
                     if col2.button("✏️ Edit", key=f"edit_{session.get('id')}", use_container_width=True):
                         st.session_state.editing_session_id = session.get('id'); st.rerun()
                     if col3.button("🗑️ Delete", key=f"del_{session.get('id')}", type="secondary", use_container_width=True):
-                        user_data["sessions"].pop(i); save_user_data(user_id, user_data); st.rerun()
+                        # Ensure credits are removed upon session deletion
+                        deleted_credits = user_data["sessions"][i].get('credits_earned', 0)
+                        user_data["sessions"].pop(i)
+                        user_data['vekkam_credits'] = max(0, user_data.get('vekkam_credits', 0) - deleted_credits) # Prevent negative credits
+                        save_user_data(user_id, user_data); st.rerun()
 
     st.sidebar.divider()
-    tool_choice = st.sidebar.radio("Select a Tool", ("Note & Lesson Engine", "Personal TA", "Mock Test Generator", "Mastery Engine"), key='tool_choice')
+    # MODIFICATION: Add "The Triage" and "The Gauntlet" to the tool choice
+    tool_choice = st.sidebar.radio("Select a Tool", ("Note & Lesson Engine", "The Gauntlet", "The Triage", "Personal TA", "Mock Test Generator", "Mastery Engine"), key='tool_choice')
     
     if 'last_tool_choice' not in st.session_state: st.session_state.last_tool_choice = tool_choice
     if st.session_state.last_tool_choice != tool_choice:
@@ -1033,8 +1323,12 @@ def main():
     # --- Tool Routing ---
     if tool_choice == "Note & Lesson Engine":
         if 'current_state' not in st.session_state: st.session_state.current_state = 'upload'
-        state_map = { 'upload': show_upload_state, 'processing': show_processing_state, 'workspace': show_workspace_state, 'synthesizing': show_synthesizing_state, 'results': show_results_state }
+        state_map = { 'upload': show_upload_state, 'processing': show_processing_state, 'workspace': show_workspace_state, 'synthesizing': show_synthesizing_state, 'results': show_results_state, 'gauntlet_intro': show_the_gauntlet_ui } # gauntlet_intro can route directly to gauntlet
         state_map.get(st.session_state.current_state, show_upload_state)()
+    elif tool_choice == "The Gauntlet":
+        show_the_gauntlet_ui()
+    elif tool_choice == "The Triage":
+        show_the_triage_ui()
     elif tool_choice == "Personal TA": show_personal_ta_ui()
     elif tool_choice == "Mock Test Generator": show_mock_test_generator()
     elif tool_choice == "Mastery Engine": show_mastery_engine()
